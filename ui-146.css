@@ -1,0 +1,106 @@
+
+/* Loading screen shown while a chat opens or the party travels. It covers the stage, the dialogue
+   and the HUD, but sits below SillyTavern's own panels, drawers, popups and toasts (2000+), so a
+   window opened while a place loads stays usable on top of it. */
+#gi-loading{position:fixed;inset:0;z-index:1990;display:grid;grid-template-rows:1fr auto auto;justify-items:center;background:#25252b;color:#d3bc8e;font-family:"Silly Teyvat Dialogue",serif;opacity:0;transition:opacity .4s ease;pointer-events:all;contain:strict}
+#gi-loading[hidden]{display:none}
+#gi-loading.gi-loading-in{opacity:1}
+#gi-loading.gi-loading-out{opacity:0;pointer-events:none;transition-duration:.55s}
+#gi-loading .gi-loading-emblem{align-self:center;width:clamp(120px,19vmin,210px);aspect-ratio:1;background:#d3bc8e;-webkit-mask:var(--gi-emblem) center/contain no-repeat;mask:var(--gi-emblem) center/contain no-repeat;transition:opacity .3s ease}
+#gi-loading .gi-loading-emblem.gi-loading-swap{opacity:0}
+#gi-loading .gi-loading-tip{box-sizing:border-box;max-width:min(820px,86vw);text-align:center;padding:0 0 1.6rem;min-height:9.5rem;transition:opacity .3s ease}
+#gi-loading .gi-loading-tip.gi-loading-swap{opacity:0}
+#gi-loading h2{margin:0 0 .55rem;font-size:clamp(1.15rem,2.6vmin,1.6rem);font-weight:700;color:#d3bc8e}
+#gi-loading p{margin:0;font-size:clamp(.95rem,2.2vmin,1.3rem);line-height:1.5;color:#d3bc8e}
+#gi-loading .gi-loading-elements{box-sizing:border-box;position:relative;display:flex;justify-content:center;gap:clamp(.6rem,1.6vmin,1.1rem);width:100%;padding:.9rem 0 calc(1.4rem + env(safe-area-inset-bottom));border-top:1px solid rgba(255,255,255,.14)}
+#gi-loading .gi-loading-elements span{position:relative;width:clamp(26px,4.2vmin,40px);aspect-ratio:1}
+#gi-loading .gi-loading-elements img{position:absolute;inset:0;width:100%;height:100%}
+#gi-loading .gi-loading-dim{opacity:.18}
+#gi-loading .gi-loading-fill{clip-path:inset(0 100% 0 0)}
+@media (max-height:520px){#gi-loading .gi-loading-tip{min-height:6.5rem;padding-bottom:.9rem}#gi-loading .gi-loading-emblem{width:clamp(84px,24vmin,150px)}}
+/* Silly Teyvat's own HUD (Paimon, the minimap, the top-right drawer icons) waits under the screen.
+   Open SillyTavern panels keep their place above it. */
+body.gi-loading-active :is(#gi-launcher,#gi-toolbar,#gi-minimap,.gi-region-banner,#gi-choices,#gi-cg-window){visibility:hidden !important}
+body.gi-loading-active #top-settings-holder>.drawer>.drawer-toggle,body.gi-loading-active #top-bar{visibility:hidden}
+@media (prefers-reduced-motion:reduce){#gi-loading,#gi-loading .gi-loading-tip,#gi-loading .gi-loading-emblem{transition:none}}
+body.gi-reduced-motion #gi-loading,body.gi-reduced-motion #gi-loading .gi-loading-tip{transition-duration:.01s}
+/* Phone keyboard open (keyboard-frame.js): the scene layers keep their pre-keyboard height, anchored
+   to the bottom, so the background, sprites and CG rise together with the dialogue and reply box. */
+body.gi-keyboard :is(#gi-background-stage,#gi-sprite-stage,#gi-cg-stage,#gi-letterbox){top:auto !important;bottom:0 !important;height:var(--gi-scene-height,100%) !important}
+/* Character Customization → Scenes: compact artwork tiles with two-line labels, and the editor in
+   titled sections like the other panels. */
+#gi-wardrobe .gi-cg-intro{margin:0 0 10px;font-size:12.5px;line-height:1.45;color:var(--ty-cream-2,#d8cfbd)}
+#gi-wardrobe .gi-cg-grid{grid-template-columns:repeat(auto-fill,minmax(108px,1fr));gap:10px;margin-bottom:4px}
+#gi-wardrobe .gi-cg-grid button{height:auto;min-height:0;padding:4px 4px 6px;gap:6px;overflow:hidden}
+#gi-wardrobe .gi-cg-grid :is(img,.gi-slot-placeholder){height:auto;aspect-ratio:1;width:100%;object-fit:cover}
+#gi-wardrobe .gi-cg-grid button>span:not(.gi-slot-placeholder){display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;line-clamp:2;overflow:hidden;min-height:2.4em;padding:0 3px;font-size:12px;line-height:1.2;text-align:center;overflow-wrap:normal;word-break:normal}
+#gi-wardrobe .gi-cg-section{margin-top:6px}
+#gi-wardrobe .gi-cg-section>label{display:grid;gap:5px;margin-bottom:10px}
+#gi-wardrobe .gi-cg-section .gi-wardrobe-row{flex-wrap:wrap}
+#gi-wardrobe .gi-cg-section .gi-wardrobe-row>button{flex:1 1 auto}
+@media (max-width:600px) and (orientation:portrait){#gi-wardrobe .gi-cg-grid{grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:8px}#gi-wardrobe .gi-cg-section .gi-wardrobe-row>:first-child{flex-basis:auto}}
+/* Side-by-side wardrobe (desktop and phones on their side): every column is bounded by the body, so
+   a short screen scrolls the tab rail instead of running it under the status bar. */
+@media (orientation:landscape){
+    #gi-wardrobe .gi-wardrobe-body{grid-template-rows:minmax(0,1fr)}
+    #gi-wardrobe .gi-wardrobe-tabs{min-height:0;overflow-y:auto;justify-content:safe center;scrollbar-width:none}
+    #gi-wardrobe .gi-wardrobe-preview{min-height:0;overflow:hidden}
+}
+
+/* Settings > Share */
+#gi-settings .gi-set-tabs { flex-wrap: wrap; justify-content: center; }
+#gi-settings .gi-set-tabs button { padding-inline: 4px; font-size: 12px; }
+#gi-settings .gi-set-actions .menu_button { width: auto; white-space: nowrap; }
+#gi-settings .gi-share-progress { display: block; width: 100%; height: 8px; margin: 10px 0 4px; accent-color: var(--ty-cream); }
+#gi-settings .gi-share-progress[hidden] { display: none; }
+
+/* Video CGs and the per-CG preview */
+#gi-cg-stage video{width:100%;height:100%;object-fit:contain}
+#gi-cg-window>video{display:block;flex:1;min-height:0;width:100%;object-fit:contain;background:#101b2a}
+:is(#gi-cg-stage,#gi-cg-window,#gi-cg-preview) :is(img,video)[hidden]{display:none !important}
+#gi-cg-preview{box-sizing:border-box;width:64vw;height:50dvh;max-width:calc(100vw - 12px);max-height:calc(100dvh - 12px);padding:0;overflow:hidden;border:2px solid #d7bd84;border-radius:10px;color:#f6e6c1;background:#101b2a;box-shadow:0 12px 40px #0009}
+#gi-cg-preview[open]{display:flex;flex-direction:column}
+#gi-cg-preview::backdrop{background:#0009}
+#gi-cg-preview header{display:flex;flex:0 0 auto;align-items:center;justify-content:space-between;gap:8px;min-height:36px;padding:0 6px 0 12px;background:linear-gradient(100deg,#40526a,#26374d);font:14px/1.3 "Silly Teyvat Dialogue",sans-serif}
+#gi-cg-preview header button{min-width:36px;min-height:36px;border:0;color:inherit;background:transparent;cursor:pointer;font-size:24px}
+#gi-cg-preview :is(img,video){display:block;flex:1;min-height:0;width:100%;object-fit:contain}
+#gi-cg-preview[data-display="scene"]{width:100vw;height:100dvh;max-width:none;max-height:none;border:0;border-radius:0;background:#141c27}
+#gi-wardrobe .gi-cg-grid video{display:block;height:auto;aspect-ratio:1;width:100%;object-fit:cover}
+#gi-wardrobe .gi-cg-video-preview{width:100%;height:100%;object-fit:contain}
+#gi-wardrobe:not([data-tab="cgs"]) .gi-cg-video-preview{display:none}
+#gi-wardrobe .gi-cg-section small{opacity:.75;font-size:11.5px}
+#gi-wardrobe .gi-cg-video-tools{display:grid;gap:8px;margin-bottom:10px}
+#gi-wardrobe .gi-cg-section :is(output){float:right}
+
+/* Waypoint image button and the wilderness window */
+#gi-world-map .gi-map-artwork-button{position:relative;display:block;width:100%;min-height:0;margin:0 0 12px;padding:0;overflow:hidden;border:0;border-radius:6px;background:#ece5d814;box-shadow:none;cursor:pointer}
+#gi-world-map .gi-map-artwork-button:not(:has(img)){aspect-ratio:16/9}
+#gi-world-map .gi-map-artwork-button .gi-map-artwork{margin:0}
+#gi-world-map .gi-map-artwork-button span{position:absolute;right:8px;bottom:8px;padding:3px 10px;border-radius:13px;font-size:12px;color:#fff;background:#0b1320cc;opacity:0;transition:opacity .15s}
+#gi-world-map .gi-map-artwork-button:is(:hover,:focus-visible) span,#gi-world-map .gi-map-artwork-button:not(:has(img)) span{opacity:1}
+#gi-world-map .gi-map-artwork-button:focus-visible{outline:2px solid #f1d79c;outline-offset:2px}
+@media (hover:none){#gi-world-map .gi-map-artwork-button span{opacity:1}}
+.gi-wilderness-menu{box-sizing:border-box;width:min(760px,94vw);height:min(780px,90dvh);max-width:none;max-height:none;margin:auto;padding:0;overflow:hidden;border:2px solid #cdb98c;border-radius:14px;color:#f4efe4;background:radial-gradient(ellipse at 20% 0,#2c4163,#141f33 70%)}
+.gi-wilderness-menu[open]{display:flex;flex-direction:column}
+.gi-wilderness-menu::backdrop{background:#081626b8;backdrop-filter:blur(5px)}
+.gi-wilderness-menu *{box-sizing:border-box}
+:is(#gi-world-map,#gi-wardrobe) .gi-wilderness-menu header{display:flex;flex:none;align-items:center;justify-content:space-between;gap:12px;width:auto;min-height:0;margin:0;padding:12px 18px;border:0;border-bottom:1px solid #d7cda344;background:none}
+:is(#gi-world-map,#gi-wardrobe) .gi-wilderness-menu header>div{display:block;min-width:0}
+:is(#gi-world-map,#gi-wardrobe) .gi-wilderness-menu header small{display:block !important;font-size:12px;color:#cdd6df}
+:is(#gi-world-map,#gi-wardrobe) .gi-wilderness-menu h2{margin:2px 0 0;padding:0;border:0;font-size:22px;color:#f1d797}
+:is(#gi-world-map,#gi-wardrobe) .gi-wilderness-menu header button{flex:none;width:38px;min-width:38px;height:38px;min-height:38px;padding:0;border:1px solid #cfbf9560;border-radius:50%;color:inherit;background:#d7e0e711;box-shadow:none;font-size:22px;cursor:pointer}
+:is(#gi-world-map,#gi-wardrobe) .gi-wilderness-menu .gi-wilderness-panel{display:flex;flex:1;flex-direction:column;gap:6px;min-height:0;margin:0;padding:10px 18px;border:0;background:none}
+:is(#gi-world-map,#gi-wardrobe) .gi-wilderness-menu .gi-wilderness-panel>label{display:flex;flex:none;flex-direction:row;align-items:center;justify-content:space-between;gap:10px;min-height:38px;margin:0;padding:4px 10px;border-radius:6px;background:#ece5d80f}
+:is(#gi-world-map,#gi-wardrobe) .gi-wilderness-menu .gi-wilderness-panel>label.gi-check{flex-direction:row-reverse;justify-content:flex-end}
+:is(#gi-world-map,#gi-wardrobe) .gi-wilderness-menu .gi-wilderness-panel>label.gi-check input{margin-left:auto}
+:is(#gi-world-map,#gi-wardrobe) .gi-wilderness-menu .gi-wilderness-panel input[type="number"]{flex:none;width:72px;text-align:center}
+:is(#gi-world-map,#gi-wardrobe) .gi-wilderness-menu .gi-wilderness-panel input[type="search"]{flex:none;width:100%;min-height:36px;margin:0;padding:6px 12px;border:1px solid #cfbf9560;border-radius:18px;color:inherit;background:#0b1320a6}
+:is(#gi-world-map,#gi-wardrobe) .gi-wilderness-menu .gi-enemy-region{display:block !important;flex:none;font-size:12px;color:#cdd6df}
+:is(#gi-world-map,#gi-wardrobe) .gi-wilderness-menu .gi-enemy-pool{display:grid;flex:1;grid-template-columns:repeat(auto-fill,minmax(116px,1fr));grid-auto-rows:max-content;gap:8px;align-content:start;min-height:0;max-height:none;margin:0;padding:2px;overflow:auto;overscroll-behavior:contain}
+:is(#gi-world-map,#gi-wardrobe) .gi-wilderness-menu .gi-enemy-pool button{display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:3px;width:auto;min-width:0;height:158px;min-height:0;margin:0;padding:4px;overflow:hidden;border:1px solid #cfbf9560;border-radius:8px;color:#f4efe4;background:#d7e0e711;box-shadow:none;font:inherit;text-align:center;cursor:pointer}
+:is(#gi-world-map,#gi-wardrobe) .gi-wilderness-menu .gi-enemy-pool button[hidden]{display:none}
+:is(#gi-world-map,#gi-wardrobe) .gi-wilderness-menu .gi-enemy-pool button[aria-pressed="true"]{padding:3px;border:2px solid #85d8ff;background:linear-gradient(#3b9ddb99,#245b9d77)}
+:is(#gi-world-map,#gi-wardrobe) .gi-wilderness-menu .gi-enemy-pool span{font-size:11.5px;line-height:1.15;overflow-wrap:break-word}
+:is(#gi-world-map,#gi-wardrobe) .gi-wilderness-menu .gi-enemy-pool small{display:block !important;font-size:10px;color:#cdd6df}
+:is(#gi-world-map,#gi-wardrobe) .gi-wilderness-menu .gi-wilderness-panel>button{flex:none;width:100%;min-height:38px;margin:0;padding:8px 16px;border:0;border-radius:19px;color:var(--ty-ink,#20283a);background:var(--ty-cream,#ece5d8);font:inherit;cursor:pointer}
+:is(#gi-world-map,#gi-wardrobe) .gi-wilderness-menu footer{flex:none;min-height:30px;margin:0;padding:6px 18px;border:0;border-top:1px solid #d7cda344;background:none;font-size:12px}

@@ -1,0 +1,288 @@
+import {trustChange,stripTrustTags,hideTrustTags} from './trust-tags.js';
+import {TRUST_BANDS,askThoughts,cleanThoughts,messageTrust,presentCharacters,savedThoughts,stripPromptTrustTags,syncTrustPrompt,thoughtsPrompt,trustBand,trustLevels,trustOf,trustPrompt,trustRoster} from './trust.js';
+import {GIFT_CHANGE,giftNarration,giftReplyPrompt,giftVerdict,giveGift} from './gifts.js';
+import {RELATIONSHIP_TRUST,UNRATED_TRUST,relationshipNames,resetStartingTrust,setStartingTrust,startingTrust,startingTrustList} from './relationship-trust.js';
+import {PROMPT_GROUPS,defaultPrompt,fillPrompt,promptText,setPromptText} from './prompt-templates.js';
+import {renderPromptLibrary,roleplayPromptText,setRoleplayPrompt} from './roleplay-prompts.js';
+import {choicePrompt} from './choices-api.js';
+import {combatTriggerPrompt} from './enemy-actions.js';
+import {worldScalePrompt} from './world-data.js';
+import {ABYSS_HOME,abyssAvatar,abyssGreeting,freshenTwinPersonas,keepAbyssGreeting,playedTwin,restoreTwinCards,syncTwinPrompt,twinRoles,twinRolesPrompt,wearTwinCards} from './twin-roles.js';
+import {locationResidents} from './location-encounters.js';
+import {defaultCharacterLocation,homeDefaults} from './location-cast.js';
+import {CHARACTER_TASTES,tastesOf} from './character-tastes.js';
+import {ITEMS,addToBag,applyDiceItem,itemArt,rollLoot} from './battle-items.js';
+import {resolveRound,resonanceOf} from './battle-engine.js';
+import {defaultKit} from './combat-kits.js';
+import {dialoguePages} from './narration.js';
+import {mountInventory} from './inventory.js';
+import {mountTrust,mountStartingTrust} from './trust-ui.js';
+import {seedWorldLocations} from './starter-locations.js';
+import {alignEnemyPools,LOCATION_POOLS} from './enemy-regions.js';
+import {seedCharacterHomes} from './character-homes.js';
+
+// The Trust system, gifts, the 1.53 item cards, and Starfell Lake.
+export async function runTrustTests(){
+    const out=[],check=(name,ok)=>{out.push(`${ok?'PASS':'FAIL'} ${name}`);if(!ok)throw Error(out.join('\n'));};
+    const card=(name,role='character')=>({name,avatar:`${name}.png`,data:{extensions:{silly_teyvat:{role,playable:role==='character'}}}});
+    const context=(chat=[],settings={})=>{
+        const ctx={name1:'Lumine',groupId:'g',groups:[{id:'g',members:['Klee.png','Amber.png','Hilichurl Fighter.png'],disabled_members:[]}],characters:[card('Klee'),card('Amber'),card('Venti'),card('Unknown Friend'),card('Hilichurl Fighter','enemy')],chat,chatMetadata:{},
+            extensionSettings:{genshin_dialogue_ui:{trustSystem:true,characterProperties:{'Hilichurl Fighter.png':{role:'enemy'}},...settings}},getCurrentChatId:()=>'chat-1',saveMetadataDebounced(){},async saveChat(){},addOneMessage(){},saveSettingsDebounced(){}};
+        return ctx;
+    };
+    const says=(name,mes)=>({name,mes,is_user:false,is_system:false,original_avatar:`${name}.png`,extra:{}});
+    try{
+        check('a trust tag reads as a signed change',trustChange('"Hi!"\n[Trust +0.5]')===.5&&trustChange('[Trust -1]')===-1&&trustChange('[trust: +0.2]')===.2&&trustChange('[TRUST -.3]')===-.3&&trustChange('[Trust 0.4]')===.4&&trustChange('[Trust −0.5]')===-.5);
+        check('one message moves trust by at most 1, in tenths',trustChange('[Trust +3]')===1&&trustChange('[Trust -7]')===-1&&trustChange('[Trust +0.7] [Trust +0.7]')===1&&trustChange('[Trust +0.25]')===.3);
+        check('plain text is not a trust tag',trustChange('Trust +1')===0&&trustChange('[Trust me]')===0&&trustChange('')===0);
+        check('tags are removed from text',stripTrustTags('"Hello."\n\n[Trust +0.5]')==='"Hello."');
+        const root=document.createElement('div');
+        root.innerHTML='<p>"Hello."</p><p>[Trust +0.5]</p>';hideTrustTags(root);
+        check('a tag on its own line leaves nothing behind',root.children.length===1&&root.textContent==='"Hello."');
+        root.innerHTML='<p>"Hello." [Trust +0.5]</p>';hideTrustTags(root);check('a tag at the end of a line is hidden',root.textContent==='"Hello."');
+        root.innerHTML='<p>"Hello."</p><p>[Tru</p>';hideTrustTags(root);check('a half-written tag is hidden while streaming',!root.textContent.includes('['));
+        root.innerHTML='<p>[Grins] "Look, [trust] me."</p>';hideTrustTags(root);check('other brackets stay',root.textContent==='[Grins] "Look, [trust] me."');
+        root.innerHTML='<p>Wind rises.</p><p>"Hi!"</p><p>[Trust -1]</p>';
+        check('dialogue pages never show a tag',dialoguePages(root,{narration:true,narrationMode:'quotes'},{}).every(p=>!p.textContent.includes('Trust'))&&dialoguePages(root,{narration:true,narrationMode:'quotes'},{}).length===2);
+
+        const chat=[says('Klee','"Hi" [Trust +0.5]'),{name:'Lumine',is_user:true,mes:'[Trust +5]',extra:{}},says('Amber','"Hm." [Trust +1]'),says('Klee','"Yay!" [Trust +0.3]'),says('Hilichurl Fighter','Grr [Trust +1]'),{name:'Narrator',is_user:false,mes:'[Trust +1]',extra:{type:'narrator'}}];
+        let ctx=context(chat);
+        check('levels add up per character',trustOf(ctx,'Klee.png')===.8&&trustOf(ctx,'Amber.png')===1);
+        check('the player, narrator and enemies never change trust',Object.keys(trustLevels(ctx)).length===2);
+        check('a solo message without an avatar is matched by name',messageTrust(ctx,{name:'Klee',mes:'[Trust +0.2]',extra:{}})?.avatar==='Klee.png');
+        ctx=context(Array.from({length:8},()=>says('Klee','[Trust +1]')));check('trust stops at 5',trustOf(ctx,'Klee.png')===5);
+        ctx.chat.push(...Array.from({length:7},()=>says('Klee','[Trust -1]')));check('trust stops at 0',trustOf(ctx,'Klee.png')===0);
+        ctx.chat.push(says('Klee','[Trust +0.4]'));check('it climbs back up from the floor',trustOf(ctx,'Klee.png')===.4);
+        ctx=context([says('Klee','[Trust +1]')]);ctx.chat[0].mes='Regenerated.';check('a regenerated reply replaces its change',trustOf(ctx,'Klee.png')===0);
+        ctx=context([says('Klee','[Trust +1]'),says('Klee','[Trust +0.5]')]);ctx.chat.pop();check('a deleted reply takes its change with it',trustOf(ctx,'Klee.png')===1);
+        ctx=context([says('Venti','[Trust +1]')]);
+        check('someone left behind keeps their trust',!presentCharacters(ctx).includes('Venti.png')&&trustOf(ctx,'Venti.png')===1&&trustRoster(ctx).find(r=>r.avatar==='Venti.png')?.present===false);
+        check('a new chat starts at zero',trustOf(context([]),'Venti.png')===0);
+        ctx=context([says('Venti','"Hello"')]);
+        const roster=trustRoster(ctx);
+        check('the menu lists everyone met, party first, never enemies',roster[0].present&&roster.some(r=>r.card.name==='Venti')&&!roster.some(r=>r.card.name==='Hilichurl Fighter')&&roster.at(-1).card.name==='Venti');
+        check('bands cover 0 to 5',trustBand(0).name==='Stranger'&&trustBand(.9).name==='Stranger'&&trustBand(1).name==='Acquaintance'&&trustBand(3.5).name==='Trusted'&&trustBand(5).name==='Close Bond'&&TRUST_BANDS.length===5);
+
+        ctx=context([says('Klee','[Trust +1.5]'),says('Klee','[Trust +0.5]'),says('Venti','[Trust +1]')]);
+        let prompt=trustPrompt(ctx);
+        check('the prompt carries the levels of everyone present',prompt.includes('Klee: 1.5 of 5 (Acquaintance)')&&prompt.includes('Amber: 0 of 5 (Stranger)'));
+        check('nobody absent or hostile is listed',!prompt.includes('Venti:')&&!prompt.includes('Hilichurl Fighter:'));
+        check('the prompt explains the tags and what low trust means',prompt.includes('[Trust +0.5]')&&prompt.includes('[Trust -1]')&&prompt.includes('never means they dislike')&&prompt.includes('even ones they would otherwise refuse'));
+        check('present characters\' likes and dislikes are in the prompt',prompt.includes('Fish and Chips')&&prompt.includes('Butter Crab')&&prompt.includes('Likes')&&prompt.includes('Dislikes'));
+        check('turning it off sends nothing',trustPrompt(context(ctx.chat,{trustSystem:false}))==='');
+        const injected={};ctx.setExtensionPrompt=(key,value)=>{injected[key]=value;};syncTrustPrompt(ctx);
+        check('text completion gets it as an extension prompt',injected.silly_teyvat_trust===prompt);
+        syncTrustPrompt(ctx,false);check('and it is cleared on the way out',injected.silly_teyvat_trust==='');
+        const sent=[{role:'assistant',content:'"Hi." [Trust +0.5]'},{role:'user',content:'Hello'}];stripPromptTrustTags(sent);check('old tags are left out of the prompt',sent[0].content==='"Hi."');
+
+        check('every taste names real cards',Object.values(CHARACTER_TASTES).every(t=>t.likes.length>=2&&t.dislikes.length>=1&&[...t.likes,...t.dislikes].every(id=>ITEMS[id])&&t.note));
+        check('nobody likes and dislikes the same card',Object.values(CHARACTER_TASTES).every(t=>!t.likes.some(id=>t.dislikes.includes(id))));
+        check('tastes follow the wiki',tastesOf('Klee').dislikes.includes('butter-crab')&&tastesOf('Tighnari').likes.includes('mushroom-pizza')&&tastesOf('Sucrose').dislikes.includes('mushroom-pizza')&&tastesOf('Zhongli').dislikes.includes('sashimi-platter')&&tastesOf('Kirara').likes.includes('sashimi-platter'));
+        check('a gift is liked, disliked or neither',giftVerdict('Klee','fish-and-chips')==='liked'&&giftVerdict('Klee','butter-crab')==='disliked'&&giftVerdict('Klee','starsigns')==='neutral'&&giftVerdict('Nobody','starsigns')==='neutral');
+
+        const giftContext=(reply='"Oh! For me?"\n[Trust +1]',chat=[])=>{
+            const c=context(chat);c.chatMetadata.silly_teyvat_combat={version:2,visits:{},events:[],bag:{'fish-and-chips':2,'butter-crab':1,'starsigns':1}};
+            c.generateQuietPrompt=async options=>{c.lastQuiet=options;return reply;};return c;
+        };
+        const script={isGenerating:()=>false,isChatSaving:false};
+        const gift=(c,id,avatar='Klee.png')=>giveGift(()=>c,{id,avatar},{loadScript:async()=>script});
+        ctx=giftContext();const given=await gift(ctx,'fish-and-chips');
+        check('a liked gift raises trust',given.verdict==='liked'&&trustOf(ctx,'Klee.png')===GIFT_CHANGE.liked);
+        check('the card leaves the bag',ctx.chatMetadata.silly_teyvat_combat.bag['fish-and-chips']===1);
+        check('the gift is narrated',ctx.chat[0].extra.type==='narrator'&&ctx.chat[0].mes===giftNarration(ctx,ctx.characters[0],ITEMS['fish-and-chips'])&&ctx.chat[0].mes.includes('Lumine')&&ctx.chat[0].mes.includes('Fish and Chips')&&ctx.chat[0].mes.includes('Klee'));
+        check('the character answers in a saved reply without the tag',ctx.chat[1].name==='Klee'&&ctx.chat[1].original_avatar==='Klee.png'&&ctx.chat[1].mes==='"Oh! For me?"'&&ctx.chat.length===2);
+        check('a tag in the reply cannot count twice',trustOf(ctx,'Klee.png')===.5&&!messageTrust(ctx,{...ctx.chat[1],mes:'[Trust +1]'}));
+        check('the reply is told how the gift landed',ctx.lastQuiet.quietPrompt.includes('really likes this')&&ctx.lastQuiet.forceChId===0&&ctx.lastQuiet.quietToLoud===true);
+        ctx=giftContext();await gift(ctx,'butter-crab');
+        check('a disliked gift lowers trust, and the last card empties its slot',ctx.chat[0].extra.silly_teyvat_gift.verdict==='disliked'&&ctx.lastQuiet.quietPrompt.includes('does not like this')&&!('butter-crab' in ctx.chatMetadata.silly_teyvat_combat.bag));
+        ctx=giftContext('"Thanks."',[says('Klee','[Trust +2]'),says('Klee','[Trust +0.5]')]);await gift(ctx,'butter-crab');
+        check('gift changes add to earned trust',trustOf(ctx,'Klee.png')===1);
+        ctx=giftContext();await gift(ctx,'starsigns');check('a card with no strong feeling adds a very little',GIFT_CHANGE.neutral===.1&&trustOf(ctx,'Klee.png')===.1&&ctx.chat.length===2&&ctx.chat[0].extra.silly_teyvat_gift.change===.1);
+        const fails=async(c,id,avatar,s=script)=>{try{await giveGift(()=>c,{id,avatar},{loadScript:async()=>s});return false;}catch{return true;}};
+        ctx=giftContext();
+        check('only someone in the scene can receive a gift',await fails(ctx,'starsigns','Venti.png')&&await fails(ctx,'starsigns','Hilichurl Fighter.png')&&ctx.chat.length===0&&ctx.chatMetadata.silly_teyvat_combat.bag.starsigns===1);
+        check('a card you do not have cannot be given',await fails(ctx,'sweet-madame','Klee.png'));
+        check('a gift waits for the current reply',await fails(ctx,'starsigns','Klee.png',{isGenerating:()=>true})&&ctx.chatMetadata.silly_teyvat_combat.bag.starsigns===1);
+        ctx=giftContext();ctx.onlineStatus='no_connection';
+        check('with no connection the gift stands and the error says so',await fails(ctx,'fish-and-chips','Klee.png')&&ctx.chat.length===1&&trustOf(ctx,'Klee.png')===.5);
+        check('the gift prompt carries their tastes and trust',giftReplyPrompt(context(),card('Klee'),ITEMS['butter-crab'],'disliked',2).includes(tastesOf('Klee').note)&&giftReplyPrompt(context(),card('Klee'),ITEMS['butter-crab'],'disliked',2).includes('2 of 5'));
+
+        ctx=context([says('Klee','"Hi" [Trust +2]')]);
+        const thoughts=thoughtsPrompt(ctx,ctx.characters[0],2);
+        check('the thoughts prompt has the player and the trust level',thoughts.includes('Lumine')&&thoughts.includes('2 of 5')&&thoughts.includes('Friendly')&&thoughts.includes('Low trust does not mean dislike'));
+        check('a stranger is not called by a name they never gave',thoughts.includes('Use a name only if Klee has actually learned it'));
+        check('stray formatting is cleaned from the thoughts',cleanThoughts('Klee: *"She seems nice."* [Trust +1]','Klee')==='She seems nice.');
+        ctx.generateQuietPrompt=async options=>{ctx.lastQuiet=options;return 'Klee: She gave me a bomb. I like her!';};
+        const entry=await askThoughts(()=>ctx,'Klee.png',{loadScript:async()=>script});
+        check('thoughts use the chat without changing it, and are remembered',entry.text==='She gave me a bomb. I like her!'&&ctx.chat.length===1&&savedThoughts(ctx,'Klee.png')?.text===entry.text&&ctx.lastQuiet.quietToLoud===false&&ctx.lastQuiet.forceChId===0);
+
+        const unit=(id,side,name,element)=>{const kit=defaultKit(name,{element,enemy:side==='enemy'});return {id,side,name,card:name,img:'',element,hp:Math.floor(kit.hp/2),maxHp:kit.hp,energy:0,maxEnergy:3,shield:0,statuses:[],aura:null,kit,evasion:0,cooldowns:{},armor:0,enraged:false,usedRage:false,intent:null};};
+        const board=()=>{const units=[unit('k','party','Klee','Pyro'),unit('b','party','Bennett','Pyro'),unit('h','enemy','Hydro Slime','Hydro')];return {key:'t',round:1,summons:[],units,resonance:resonanceOf(units)};};
+        const added=Object.entries(ITEMS).filter(([id])=>!id.startsWith('woven-'));
+        for(const [id,item] of added){
+            if(item.dice)continue;
+            const state=board(),before=structuredClone(state.units.find(u=>u.id==='k')),result=resolveRound(state,{steps:[],items:[{id,target:item.target==='ally'||item.target==='downed'?'k':null,item}]},{random:()=>.5,strikeBack:false});
+            if(item.target==='downed')continue;
+            const after=result.state.units.find(u=>u.id==='k');
+            check(`${item.name} does something in battle`,result.timeline.some(e=>e.type==='item')&&(item.target==='none'||after.hp!==before.hp||after.shield!==before.shield||after.energy!==before.energy||after.statuses.length>0||result.timeline.some(e=>e.type==='buff')));
+        }
+        check('item text promises Omni dice that really arrive',applyDiceItem(ITEMS['treasure-seelie'],[],new Set()).length===1&&applyDiceItem(ITEMS['parametric-transformer'],[],new Set()).filter(d=>d.face==='Omni').length===2);
+        let seed=7;const random=()=>(seed=seed*16807%2147483647)/2147483647;
+        const dropped=new Set(Array.from({length:4000},()=>rollLoot([{element:'Physical',maxHp:60}],{random})).flat());
+        check('the new cards drop as loot',added.every(([id])=>dropped.has(id))&&Object.keys(addToBag({},['sashimi-platter'])).length===1);
+        const art=await Promise.all(Object.keys(ITEMS).map(id=>fetch(itemArt(id),{method:'HEAD'}).then(r=>r.ok)));
+        check('every card has art',art.every(Boolean));
+
+        const host=document.createElement('div');host.id='gi-root';document.body.append(host);
+        let giftCalled=null,trust,inv;
+        try{
+            ctx=giftContext();ctx.chatId='chat-1';
+            const people=c=>c.extensionSettings.genshin_dialogue_ui.trustSystem?presentCharacters(c).map(a=>c.characters.find(x=>x.avatar===a)):null;
+            inv=mountInventory({host,getContext:()=>ctx,gift:{people,give:(id,avatar)=>{giftCalled=[id,avatar];}}});
+            inv.open();
+            const dialog=host.querySelector('#gi-inventory'),section=()=>dialog.querySelector('.gi-inv-d-gift');
+            check('the Inventory offers a Gift button',!section().hidden&&section().querySelector('.gi-inv-gift-open').textContent==='Gift');
+            section().querySelector('.gi-inv-gift-open').click();
+            check('it lists the party',[...section().querySelectorAll('.gi-inv-gift-to')].map(b=>b.textContent).join()==='Klee,Amber'&&!section().querySelector('.gi-inv-gift-people').hidden);
+            section().querySelector('.gi-inv-gift-to').click();
+            check('choosing someone gives the card',giftCalled?.[1]==='Klee.png'&&ITEMS[giftCalled[0]]);
+            await new Promise(r=>setTimeout(r,260));
+            ctx.extensionSettings.genshin_dialogue_ui.trustSystem=false;inv.open();
+            check('Gift is hidden while the Trust system is off',section().hidden);
+            inv.dispose();inv=null;
+            ctx=context([says('Klee','"Hi" [Trust +1]'),says('Klee','[Trust +0.5]'),says('Venti','"Hey"')]);
+            ctx.chatMetadata.silly_teyvat_thoughts={'Klee.png':{text:'She seems nice.',level:1.5}};
+            trust=mountTrust({host,getContext:()=>ctx});trust.open();
+            const box=host.querySelector('#gi-trust');
+            check('the Trust menu lists everyone with five hearts',box.open&&[...box.querySelectorAll('.gi-trust-person b')].map(b=>b.textContent).join()==='Klee,Amber,Venti'&&box.querySelectorAll('.gi-trust-person:first-child .gi-hearts i').length===5);
+            check('a partial heart fills to the tenth',box.querySelector('.gi-trust-person .gi-hearts i:nth-child(2)').style.getPropertyValue('--fill')==='50%');
+            check('the question is there, with saved thoughts below it',box.querySelector('.gi-trust-ask').textContent==='What do they think of you?'&&box.querySelector('.gi-thought p').textContent==='She seems nice.');
+            box.querySelectorAll('.gi-trust-person')[2].click();
+            check('choosing someone else shows them',box.querySelector('.gi-trust-who h3').textContent==='Venti'&&!box.querySelector('.gi-thought'));
+            trust.close();
+            ctx.chat.push(says('Klee','[Trust +0.5]'));trust.noteMessage(3);trust.noteMessage(3);trust.noteMessage(0);
+            check('a change shows one toast, for the newest reply only',host.querySelectorAll('.gi-trust-toast').length===1&&host.querySelector('.gi-trust-toast').textContent==='Klee +0.5');
+            check('the menu says only that a new chat resets trust',host.querySelector('.gi-trust-foot').textContent==='Trust resets when you start a new chat.');
+        }finally{inv?.dispose();trust?.dispose();host.remove();}
+
+        // Starting trust, from the Relationships in each card.
+        const friends=(played,settings={},chat=[])=>{const c=context(chat,settings);c.characters.push(card('Albedo'),card('Jean'),card('Aether'),card('Lumine'),card('Paimon'),card('Alhaitham'));c.groups[0].members.push('Albedo.png');c.name1=played;c.powerUserSettings={};return c;};
+        const trustIn=(c,name)=>startingTrust(c,`${name}.png`);
+        check('every rating is on the heart scale, in half steps',Object.values(RELATIONSHIP_TRUST).flatMap(Object.values).every(v=>v>=.5&&v<=5&&v*2===Math.round(v*2)));
+        ctx=friends('Klee');check('someone close starts high when you play as their family',trustIn(ctx,'Albedo')===4.5&&trustIn(ctx,'Jean')===3&&trustOf(ctx,'Albedo.png')===4.5);
+        check('a warmer bond starts higher than a working one',trustIn(ctx,'Jean')>startingTrust(friends('Amber'),'Jean.png')&&RELATIONSHIP_TRUST.Qiqi['Hu Tao']<RELATIONSHIP_TRUST.Qiqi.Baizhu);
+        check('anyone with no relationship starts at 0',trustIn(friends('Stranger'),'Albedo')===0&&trustIn(friends('Venti'),'Albedo')===0);
+        check('enemies never start with trust',startingTrust(friends('Klee'),'Hilichurl Fighter.png')===0);
+        check('the Travelers have only just arrived, so everyone starts at 0 with them',['Aether','Lumine'].every(name=>trustIn(friends(name),'Alhaitham')===0&&trustIn(friends(name),'Paimon')===0)&&trustIn(friends('Paimon'),'Aether')===0);
+        check('except the twins, with each other',trustIn(friends('Lumine'),'Aether')===5&&trustIn(friends('Aether'),'Lumine')===5);
+        check('nobody in the table knows the Travelers or Paimon',Object.entries(RELATIONSHIP_TRUST).every(([owner,list])=>Object.keys(list).every(name=>!/traveler|paimon/i.test(name)&&(!/^(Aether|Lumine)$/.test(name)||/^(Aether|Lumine)$/.test(owner)))));
+        ctx=friends('Noe',{personaCharacters:{'noe.png':'Klee.png'}});ctx.userAvatar='noe.png';
+        check('a persona linked to a card counts as that character',trustIn(ctx,'Albedo')===4.5);
+        ctx=friends('Klee',{},[says('Albedo','"Hi" [Trust +0.3]')]);
+        check('the chat builds on the starting level',trustOf(ctx,'Albedo.png')===4.8&&trustRoster(ctx).find(r=>r.avatar==='Albedo.png').level===4.8);
+        ctx=friends('Klee',{},[says('Albedo','[Trust +1]')]);check('and still stops at 5',trustOf(ctx,'Albedo.png')===5);
+        ctx=friends('Klee');check('the menu and the prompt show the starting level',trustRoster(ctx).find(r=>r.avatar==='Albedo.png')?.level===4.5&&trustPrompt(ctx).includes('Albedo: 4.5 of 5 (Close Bond)'));
+        ctx=friends('Noe');const albedo=ctx.characters.find(c=>c.name==='Albedo');
+        check('the list comes from the card, warmest first',startingTrustList(ctx,albedo)[0].name==='Klee'&&startingTrustList(ctx,albedo)[0].value===4.5);
+        setStartingTrust(ctx,albedo,'Noe',2.3);check('a persona can be added',trustIn(ctx,'Albedo')===2.3&&startingTrustList(ctx,albedo).some(e=>e.name==='Noe'));
+        setStartingTrust(ctx,albedo,'Noe',9);check('a level stays on the scale',trustIn(ctx,'Albedo')===5);
+        setStartingTrust(ctx,albedo,'Klee',1);check('a card rating can be changed',startingTrustList(ctx,albedo).find(e=>e.name==='Klee').value===1);
+        setStartingTrust(ctx,albedo,'Klee',null);check('a card rating can be removed',!startingTrustList(ctx,albedo).some(e=>e.name==='Klee'));
+        setStartingTrust(ctx,albedo,'Noe',null);check('an added row goes away for good',!('Noe' in ctx.extensionSettings.genshin_dialogue_ui.startingTrust['Albedo.png']));
+        resetStartingTrust(ctx,albedo);check('reset goes back to the card',startingTrustList(ctx,albedo).find(e=>e.name==='Klee').value===4.5);
+        const imported={name:'New Friend',avatar:'New Friend.png',data:{description:'A new card.\n\nRelationships:\n\nKlee: Her small friend.\n\nThe Traveler and Jean: Allies.\n\nHilichurl Fighter: Food.\n\nSomeone Unknown: Who?\n\n{{user}} is anyone.'}};
+        ctx=friends('Klee');ctx.characters.push(imported);
+        check('and it never counts the Travelers or Paimon',!relationshipNames(ctx,{...imported,data:{description:'Relationships:\n\nLumine and Paimon: Old friends.'}}).length);
+        check('a card outside the table still lists its Relationships',relationshipNames(ctx,imported).join()===['Klee','Jean'].join()&&startingTrust(ctx,'New Friend.png')===UNRATED_TRUST);
+        ctx=friends('Noe');let pick=ctx.characters.find(c=>c.name==='Albedo');const panel=document.createElement('details'),notes=[];
+        const editor=mountStartingTrust({panel,getContext:()=>ctx,getCharacter:()=>pick,status:t=>notes.push(t)});editor.refresh();
+        const rows=()=>[...panel.querySelectorAll('.gi-start-trust-row span')].map(s=>s.textContent);
+        check('Character Customization lists who this character trusts',rows()[0]==='Klee'&&panel.querySelector('.gi-start-trust-row input').value==='4.5');
+        panel.querySelector('.gi-start-trust-add input[type="text"]').value='Noe';panel.querySelector('.gi-start-trust-add input[type="number"]').value='3.5';panel.querySelector('form').dispatchEvent(new Event('submit',{cancelable:true}));
+        check('more characters can be added to the list',rows().includes('Noe')&&trustIn(ctx,'Albedo')===3.5);
+        const input=[...panel.querySelectorAll('.gi-start-trust-row')].find(r=>r.textContent.includes('Noe')).querySelector('input');input.value='4.2';input.dispatchEvent(new Event('change'));
+        check('a level can be typed in',trustIn(ctx,'Albedo')===4.2);
+        [...panel.querySelectorAll('.gi-start-trust-row')].find(r=>r.textContent.includes('Noe')).querySelector('button').click();
+        check('a row can be removed',!rows().includes('Noe')&&trustIn(ctx,'Albedo')===0);
+        pick=ctx.characters.find(c=>c.name==='Hilichurl Fighter');editor.refresh();check('enemies have no list',panel.hidden);
+        editor.dispose();
+
+        // The twins: two versions of each card, chosen by who the player is.
+        const twins=(played,settings={})=>{const c=friends(played,settings);for(const name of ['Aether','Lumine']){const t=c.characters.find(x=>x.name===name);Object.assign(t,{description:`${name} Traveler card`,personality:'Curious',scenario:'At the gate',first_mes:'Hello'});Object.assign(t.data,{description:`${name} Traveler card`,personality:'Curious',scenario:'At the gate'});}return c;};
+        check('playing a twin makes the other one the Abyss twin',twinRoles(twins('Lumine')).abyss==='Aether'&&twinRoles(twins('Aether')).abyss==='Lumine'&&playedTwin(twins('Lumine'))==='Lumine');
+        ctx=twins('Noe',{personaCharacters:{'noe.png':'Lumine.png'}});ctx.userAvatar='noe.png';check('a persona linked to a twin counts as that twin',twinRoles(ctx).abyss==='Aether');
+        check('playing neither twin follows the setting',twinRoles(twins('Klee')).abyss==='Lumine'&&twinRoles(twins('Klee',{travelerTwin:'Aether'})).traveler==='Aether'&&twinRoles(twins('Klee',{travelerTwin:'Lumine'})).abyss==='Aether');
+        check('the setting never overrides the twin you play',twinRoles(twins('Aether',{travelerTwin:'Lumine'})).traveler==='Aether');
+        ctx=twins('Lumine');let abyssTwin=ctx.characters.find(c=>c.name==='Aether'),travelerTwin=ctx.characters.find(c=>c.name==='Lumine');
+        wearTwinCards(ctx);
+        check('the Abyss twin wears the Abyss card',abyssTwin.description.includes('Abyss Prince')&&abyssTwin.data.description.includes('Abyss Prince')&&abyssTwin.scenario.includes('Abyss Order business')&&abyssTwin.personality==='');
+        check('the Abyss card is written for its own twin',!abyssTwin.description.includes('Abyss Princess')&&abyssTwin.description.startsWith('Aether is')&&abyssGreeting(ctx,abyssTwin).includes('young man'));
+        check('the Traveler twin keeps their own card',travelerTwin.description==='Lumine Traveler card'&&abyssGreeting(ctx,travelerTwin)==='');
+        wearTwinCards(ctx);restoreTwinCards();restoreTwinCards();
+        check('afterwards the card is exactly as it was, even after two swaps',abyssTwin.description==='Aether Traveler card'&&abyssTwin.data.description==='Aether Traveler card'&&abyssTwin.personality==='Curious'&&abyssTwin.scenario==='At the gate');
+        setRoleplayPrompt(ctx,'abyss_aether','Edited Abyss card');wearTwinCards(ctx);check('the Abyss card can be edited in Prompts',abyssTwin.description==='Edited Abyss card');restoreTwinCards();
+        ctx=twins('Klee',{travelerTwin:'Lumine'});wearTwinCards(ctx);check('playing neither, the chosen twin wears it',ctx.characters.find(c=>c.name==='Aether').description.includes('Abyss Prince')&&ctx.characters.find(c=>c.name==='Lumine').description==='Lumine Traveler card');restoreTwinCards();
+        check('the model is told who is who only when you play neither',twinRolesPrompt(twins('Lumine'))===''&&twinRolesPrompt(twins('Klee')).startsWith('Aether is the active Traveler')&&twinRolesPrompt(twins('Klee')).includes('other characters do not know it'));
+        const sentNote={};ctx=twins('Klee');ctx.setExtensionPrompt=(key,value)=>{sentNote[key]=value;};syncTwinPrompt(ctx);check('and the note is sent',sentNote.silly_teyvat_twins.includes('Lumine'));syncTwinPrompt(ctx,false);check('and cleared when off',sentNote.silly_teyvat_twins==='');
+        const homeOf=(c,id)=>locationResidents(c,id).map(r=>r.name);
+        ctx=twins('Lumine');ctx.extensionSettings.genshin_dialogue_ui.backgroundRegions=[{id:'m',name:'Mondstadt',locations:[{id:'guild',label:'Guild',residents:['Aether.png','Jean.png']},{id:ABYSS_HOME,label:'Chasm',residents:[]}]}];
+        check('the Abyss twin leaves their usual home for the Chasm',abyssAvatar(ctx)==='Aether.png'&&homeOf(ctx,'guild').join()==='Jean'&&homeOf(ctx,ABYSS_HOME).join()==='Aether');
+        ctx.name1='Aether';ctx.userAvatar='a.png';ctx.powerUserSettings={personas:{'a.png':'Aether'}};check('and the twin you play is never a resident',homeOf(ctx,'guild').join()==='Jean'&&!homeOf(ctx,ABYSS_HOME).includes('Aether'));
+        ctx=twins('Klee');const cove='home-mondstadt-travelers-cove',moves=['Aether','Lumine'].map(name=>({name,from:'guild',to:cove,unplaced:true}));
+        const covePrefs=ctx.extensionSettings.genshin_dialogue_ui;covePrefs.travelerTwin='Lumine';covePrefs.defaultCharacterLocations={'Aether.png':'guild','Lumine.png':'guild'};
+        covePrefs.backgroundRegions=[{id:'m',name:'Mondstadt',locations:[{id:'guild',label:'Guild',residents:['Lumine.png']},{id:cove,label:'Cove',residents:[]},{id:ABYSS_HOME,label:'Chasm',residents:[]}]}];
+        seedCharacterHomes(ctx,{version:4,relocations:moves,characters:[]});
+        check('the Traveler you do not play is found at the Cove, unplaced or not, and the Abyss twin is not',homeOf(ctx,cove).join()==='Lumine'&&homeOf(ctx,ABYSS_HOME).join()==='Aether'&&homeOf(ctx,'guild').length===0);
+        check('a chat with either twin opens where they are found',defaultCharacterLocation(ctx,'Lumine.png')?.id===cove&&defaultCharacterLocation(ctx,'Aether.png')?.id===ABYSS_HOME);
+        covePrefs.travelerTwin='Aether';check('and swapping the roles swaps them',homeOf(ctx,cove).join()==='Aether'&&homeOf(ctx,ABYSS_HOME).join()==='Lumine');
+        const empty=twins('Klee'),loaded=empty.characters;empty.characters=[];empty.extensionSettings.genshin_dialogue_ui.homeBindingsVersion=3;empty.extensionSettings.genshin_dialogue_ui.defaultCharacterLocations={'Aether.png':'guild'};empty.extensionSettings.genshin_dialogue_ui.backgroundRegions=[{id:'m',name:'Mondstadt',locations:[{id:'guild',label:'Guild',residents:['Aether.png']},{id:cove,label:'Cove',residents:[]}]}];
+        seedCharacterHomes(empty,{version:4,relocations:moves,characters:[]});check('a catalog is not used up before the cards have loaded',empty.extensionSettings.genshin_dialogue_ui.homeBindingsVersion===3);
+        empty.characters=loaded;seedCharacterHomes(empty,{version:4,relocations:moves,characters:[]});check('and its moves run once they have',empty.extensionSettings.genshin_dialogue_ui.defaultCharacterLocations['Aether.png']===cove&&empty.extensionSettings.genshin_dialogue_ui.homeBindingsVersion===4);
+        ctx=twins('Klee');ctx.extensionSettings.genshin_dialogue_ui.defaultCharacterLocations={'Aether.png':'guild'};ctx.extensionSettings.genshin_dialogue_ui.backgroundRegions=[{id:'m',name:'Mondstadt',locations:[{id:'guild',label:'Guild',residents:[]},{id:'inn',label:'Inn',residents:['Aether.png']},{id:cove,label:'Cove',residents:[]}]}];
+        seedCharacterHomes(ctx,{version:4,relocations:moves,characters:[]});check('a Traveler the user moved stays put',homeOf(ctx,'inn').join()==='Aether'&&homeOf(ctx,cove).length===0);
+        ctx=twins('Klee',{travelerTwin:'Aether'});ctx.characterId=ctx.characters.findIndex(c=>c.name==='Lumine');ctx.groupId=null;
+        ctx.chat=[{mes:'The tide slides up the sand',swipes:['The tide slides up the sand','Beach','Mondstadt'],swipe_id:1,swipe_info:[{},{},{}]}];
+        check('a new solo chat with the Abyss twin opens on the Abyss greeting, with no Traveler swipes left',keepAbyssGreeting(ctx)&&ctx.chat[0].mes.includes('edge of the dark')&&!('swipes' in ctx.chat[0])&&!('swipe_id' in ctx.chat[0]));
+        check('and their home for arrivals is the Chasm',homeDefaults(ctx)['Lumine.png']===ABYSS_HOME);
+        ctx.characterId=ctx.characters.findIndex(c=>c.name==='Aether');ctx.chat=[{mes:'Tide',swipes:['Tide','Other'],swipe_id:0}];check('the Traveler keeps their greetings',!keepAbyssGreeting(ctx)&&ctx.chat[0].swipes.length===2);
+        ctx.characterId=ctx.characters.findIndex(c=>c.name==='Lumine');ctx.chat=[{mes:'a'},{mes:'b'}];check('and a chat already under way is left alone',!keepAbyssGreeting(ctx)&&ctx.chat[0].mes==='a');
+        ctx=twins('Aether');ctx.powerUserSettings={persona_descriptions:{'teyvat-persona-aether.png':{description:"Keep this. His story is not a single frozen search. Across the game's quests he meets his twin, learns more about Teyvat and Khaenri'ah, and faces difficult questions about their separate paths. Later chapters add new meetings and complications. Set the relationship with Lumine, the Abyss Order, and Dainsleif according to the chosen point in the story."}},persona_description:'If the player chooses a later timeline'};
+        check('the personas lose their later-story text, once',freshenTwinPersonas(ctx)===true&&ctx.powerUserSettings.persona_descriptions['teyvat-persona-aether.png'].description==='Keep this. This is the very beginning of his story. He knows almost nothing about Teyvat, its nations or its gods, and he has not met anyone here. All he knows is that his twin is gone, and finding her matters more to him than anything else.'&&freshenTwinPersonas(ctx)===false);
+
+        // Every prompt can be edited in Settings → Prompts.
+        ctx=context([says('Klee','"Hi"')]);
+        check('words in braces are filled, macros are left alone, and a line left empty goes',fillPrompt('{a} {{char}} {unknown}\n{b}\nend',{a:'x',b:''})==='x {{char}} {unknown}\nend');
+        check('each prompt has one id and a default',new Set(PROMPT_GROUPS.flatMap(g=>g.prompts.map(p=>p.id))).size===PROMPT_GROUPS.flatMap(g=>g.prompts).length&&PROMPT_GROUPS.flatMap(g=>g.prompts).every(p=>p.text.trim()));
+        check('a default names only words the game fills in',PROMPT_GROUPS.flatMap(g=>g.prompts).every(p=>[...p.text.matchAll(/(?<!\{)\{([a-z_]+)\}(?!\})/g)].every(m=>(p.fills || []).includes(m[1]))));
+        const edit=(id,text)=>setRoleplayPrompt(ctx,id,text);
+        edit('choices','Give {{user}} three replies.');ctx.substituteParams=t=>t.replace('{{user}}','Lumine');
+        check('Teyvat Choices uses the edited prompt',choicePrompt(ctx)[0].content==='Give Lumine three replies.');
+        edit('choices','');check('clearing a prompt the game needs restores it',choicePrompt(ctx)[0].content===defaultPrompt('choices'));
+        edit('thoughts','{character} on {player} at {level}/{max}: {band}.');check('What do they think of you uses the edited prompt',thoughtsPrompt(ctx,ctx.characters[0],2)==='Klee on Lumine at 2/5: Friendly.');
+        edit('trust_levels',defaultPrompt('trust_levels').replace('They are comfortable with the player.','Pals.'));
+        edit('thoughts','{band_meaning}');check('level meanings can be edited, line by line',thoughtsPrompt(ctx,ctx.characters[0],2).startsWith('Pals.')&&thoughtsPrompt(ctx,ctx.characters[0],0).startsWith('They barely know'));
+        edit('trust_levels','Nothing useful');check('a missing level falls back to its default',thoughtsPrompt(ctx,ctx.characters[0],0).startsWith('They barely know'));
+        edit('trust','Levels: {characters}');check('the Trust rules can be edited',trustPrompt(ctx).startsWith('Levels: Klee: 0 of 5'));
+        edit('trust','');check('clearing the Trust rules sends nothing',trustPrompt(ctx)==='');
+        edit('gift_disliked','{character} hates it.');check('gift reactions can be edited',giftReplyPrompt(ctx,ctx.characters[0],ITEMS['butter-crab'],'disliked',0).includes('Klee hates it.'));
+        edit('combat_trigger','Say {phrase}');check('the combat prompts can be edited',combatTriggerPrompt('[go]',ctx)==='Say [go]'&&combatTriggerPrompt('',ctx)==='');
+        edit('choices',null);check('reset goes back to the bundled text',promptText(ctx,'choices')===defaultPrompt('choices')&&ctx.extensionSettings.genshin_dialogue_ui.roleplayPrompts.choices===null);
+        check('a roleplay prompt still goes through the same store',roleplayPromptText(ctx,'style').startsWith('[Silly Teyvat: Writing style]')&&roleplayPromptText(ctx,'gift_disliked')==='{character} hates it.');
+        setPromptText(ctx,'cg','Which: {{options}}');check('the CG classifier keeps its existing setting',ctx.extensionSettings.genshin_dialogue_ui.cgPrompt==='Which: {{options}}'&&promptText(ctx,'cg')==='Which: {{options}}');
+        const page=document.createElement('div');page.innerHTML='<div id="gi-prompt-library"></div>';renderPromptLibrary(page);renderPromptLibrary(page);
+        check('the Prompts tab offers every prompt, with Reset, once',page.querySelectorAll('textarea[data-gi-prompt]').length===PROMPT_GROUPS.flatMap(g=>g.prompts).length&&page.querySelectorAll('[data-gi-prompt-reset]').length===page.querySelectorAll('textarea').length&&PROMPT_GROUPS.flatMap(g=>g.prompts).every(p=>page.querySelector(`[data-gi-prompt="${p.id}"]`)));
+
+        const lake={id:'expansion-starfell-lake',label:'Starfell Lake',path:new URL('assets/world-locations/expansion-starfell-lake.webp',import.meta.url).pathname,wilderness:true,enemyEncounterRate:40,enemyPool:['Hilichurl Fighter.png'],residents:[],description:'A lake in Starfell Valley, with a Statue of The Seven on the island. The point and archive image show the in-game overlook.',waypoint:{mapId:'teyvat',x:0,y:0}};
+        const settings={starterLocationsVersion:11,backgroundRegions:[{id:'m',name:'Mondstadt',locations:[lake]}],media:undefined};
+        const catalog=await fetch(new URL('assets/world-locations/catalog.json',import.meta.url)).then(r=>r.json());
+        check('Starfell Lake is no longer on the wilderness list',catalog.version>=12&&!catalog.locations.find(l=>l.id==='expansion-starfell-lake').wilderness&&!LOCATION_POOLS['expansion-starfell-lake']);
+        ctx={characters:[card('Paimon')],extensionSettings:{genshin_dialogue_ui:settings},saveSettingsDebounced(){}};
+        seedWorldLocations(ctx,catalog);alignEnemyPools(ctx);
+        check('an existing install stops rolling enemies there',lake.wilderness===false&&lake.enemyPool.length===0&&settings.starterLocationsVersion===catalog.version);
+        check('its description follows the new image',!lake.description.includes('overlook'));
+        const homes=await fetch(new URL('assets/world-locations/character-homes.json',import.meta.url)).then(r=>r.json());
+        seedCharacterHomes(ctx,homes);
+        check('Paimon lives at Starfell Lake',lake.residents.includes('Paimon.png')&&settings.defaultCharacterLocations['Paimon.png']==='expansion-starfell-lake');
+    }catch(error){if(!/FAIL/.test(error.message))out.push(`FAIL ${error.stack}`);else return error.message;}
+    return out.join('\n');
+}
