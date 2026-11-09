@@ -20,10 +20,14 @@ If you chose **Not now**, open **Extensions → Silly Teyvat → Share → Check
 
 For changing expressions, use SillyTavern's **Character Expressions** classifier settings; the extension uses that classifier and the included sprite folders. Chatting, choices and scene classification use your own configured model connection.
 
+## Version 1.77.1: First-run configuration
+
+- Load packaged game settings before filling extension defaults, so new installations start with story view and the published game configuration enabled. Existing preferences and disabled installations are preserved.
+
 ## Version 1.77.0: Complete game download
 
-- A fresh install offers the full game-data pack automatically, with progress, checksums and retry support.
-- Versioned download parts work directly from the public GitHub assets repository; updates can fetch only changed files.
+- A fresh install starts with the game configuration and offers the full game-data pack automatically, with progress, checksums and retry support.
+- Versioned download parts install one at a time directly from the public GitHub assets repository, avoiding a multi-gigabyte browser buffer; updates can fetch only changed files.
 - Bundled backgrounds and scene paths follow the installed extension folder, including `silly-teyvat-dist`.
 
 # Silly Teyvat 1.76.12: Centred NPC faces
