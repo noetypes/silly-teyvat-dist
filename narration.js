@@ -1,6 +1,7 @@
 import {enemyDialoguePages} from './enemy-actions.js';
 import { splitDialoguePages } from './dialogue-pages.js';
 import { hideTrustTags } from './trust-tags.js';
+import { hideNameTagPages } from './name-tags.js';
 // Quotes in HTML attributes are excluded by the caller. Apostrophes inside
 // words aren't speech marks. One double quote also counts while streaming.
 export function hasSpeech(text = '') {
@@ -19,19 +20,20 @@ export function plainMessage(message) {
 }
 export function dialoguePages(root, prefs, message = {}) {
     if (!message.is_user) hideTrustTags(root);
-    const pages = enemyDialoguePages(splitDialoguePages(root),message,typeof prefs.combatTriggerPhrase === 'string' ? prefs.combatTriggerPhrase.trim() : undefined);
+    let pages = enemyDialoguePages(splitDialoguePages(root),message,typeof prefs.combatTriggerPhrase === 'string' ? prefs.combatTriggerPhrase.trim() : undefined);
+    // Name tags ("Navia:") a model put before a line are hidden while the reply streams in (name-tags.js).
+    if (!message.is_user && message.nameTags?.length) pages = hideNameTagPages(pages, message.nameTags).filter(page => page.textContent.trim() || page.querySelector?.('img,video,audio'));
     if(message.is_narrator || message.extra?.type==='narrator'){for(const page of pages)page.giNarration=true;return pages;}
     if (!prefs.narration || message.is_user || message.is_system) return pages;
-    if (prefs.narrationMode !== 'keyword') {
-        for (const page of pages) page.giNarration = isNarration(message, page.textContent || '');
-        return pages;
-    }
-    const keyword = prefs.narrationKeyword?.trim();
-    if (!keyword) return pages;
+    // Both rules apply: a page without quotes is narration, and so is everything after the keyword
+    // ("Narrator:") on a page. Speaker parts that start with "Narrator:" are already narration messages.
+    const quotes = page => { page.giNarration = isNarration(message, page.textContent || ''); return page; };
+    const keyword = typeof prefs.narrationKeyword === 'string' ? prefs.narrationKeyword.trim() : 'Narrator:';
+    if (!keyword) return pages.map(quotes);
     const result = [];
     for (const page of pages) {
         const index = page.textContent.indexOf(keyword);
-        if (index < 0) { result.push(page); continue; }
+        if (index < 0) { result.push(quotes(page)); continue; }
         // Ranges preserve inline formatting even if the marker spans text nodes.
         const doc = root.ownerDocument;
         const walker = doc.createTreeWalker(page, NodeFilter.SHOW_TEXT);
@@ -41,7 +43,7 @@ export function dialoguePages(root, prefs, message = {}) {
             return [page, page.childNodes.length];
         };
         const before = doc.createRange(); before.setStart(page, 0); before.setEnd(...at(index));
-        const first = before.cloneContents(); if (first.textContent.trim()) result.push(first);
+        const first = before.cloneContents(); if (first.textContent.trim()) result.push(quotes(first));
         const after = doc.createRange(); after.setStart(...at(index + keyword.length)); after.setEnd(page, page.childNodes.length);
         const narration = after.cloneContents(); narration.giNarration = true;
         // Repeated literal markers on the same line are hidden too.

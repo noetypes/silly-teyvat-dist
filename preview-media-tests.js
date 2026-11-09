@@ -1,12 +1,16 @@
 import { mountPageSprites } from './page-sprites.js';
-import { mountSceneMedia, createSpriteSoundPlayer, cgCategories, fittedFrame } from './scene-media.js';
-import { mediaSettings, spriteAudioKey, registerExpression, migrateCGDisplay } from './media-store.js';
+import { mountSceneMedia, createSpriteSoundPlayer, cgCategories, cgAllowed, sceneCGs, discoveredCGs, fittedFrame, restCG, cgResting } from './scene-media.js';
+import { mediaSettings, spriteAudioKey, registerExpression, migrateCGDisplay, cgPromptMessages } from './media-store.js';
 export async function runMediaTests() {
     const results=[],pause=ms=>new Promise(r=>setTimeout(r,ms));
     const check=(name,ok)=>{results.push(`${ok?'PASS':'FAIL'} ${name}`);if(!ok)throw new Error(name);};
     const host=document.createElement('div');document.body.append(host);let media,sprites;
     const ctx={characterId:0,chatId:'media-tests',characters:[{name:'Klee',avatar:'Klee.png'}],extensionSettings:{genshin_dialogue_ui:{cgEnabled:true,spriteAudio:true,cgAudio:true,spriteVolume:.6},expressions:{api:0}},chat:[{name:'Klee',original_avatar:'Klee.png',mes:'“A picnic!”\nA blanket.\n“Let’s eat!”'}],saveChat(){},saveSettingsDebounced(){}};
     const artwork=new URL('preview-landscape.svg',location.href).pathname;
+    {const c={chatMetadata:{},extensionSettings:{genshin_dialogue_ui:{}}},cg={id:'picnic'};restCG(c,cg,4);
+    check('a closed CG rests for the next 10 messages by default',cgResting(c,cg,5)&&cgResting(c,cg,14)&&!cgResting(c,cg,15)&&!cgResting(c,{id:'other'},5));
+    c.extensionSettings.genshin_dialogue_ui.cgCooldown=2;check('the rest follows the setting',cgResting(c,cg,6)&&!cgResting(c,cg,7));
+    c.extensionSettings.genshin_dialogue_ui.cgCooldown=0;check('0 lets it return at once',!cgResting(c,cg,5));}
     let cgCalls=[],playCalls=[],stops=0;
     const sound={play:async files=>{playCalls.push(files[0].name);},stop:()=>{stops++;},dispose(){},unlock:async()=>{}};
     const adapter={classifyCG:async(_ctx,message,categories)=>{cgCalls.push({text:message.mes,categories});await pause(20);return /picnic/i.test(message.mes)?categories[0].id:null;}};
@@ -24,7 +28,7 @@ export async function runMediaTests() {
         media.dispose();media=mountSceneMedia({host,getContext:()=>ctx,adapter,sound});sync(0,1);check('CG metadata survives a remount',cgCalls.length===1&&!host.querySelector('#gi-cg-window').hidden);
         Object.values(prefs.characterCGs).flat().forEach(c=>c.display='scene');sync(1);check('replacement CG ends after its message',!document.body.classList.contains('gi-cg-replace'));
         ctx.chat.push({name:'Klee',original_avatar:'Klee.png',mes:'“Hello!”'});sync(2);await pause(40);sync(2);check('no matching scene is cached',ctx.chat[2].extra.silly_teyvat.cgs[0].cg===null&&cgCalls.length===2);
-        ctx.chat[2].mes='“A picnic again!”';sync(2);await pause(40);check('edited messages reclassify their CG',cgCalls.length===3&&ctx.chat[2].extra.silly_teyvat.cgs[0].cg.id==='picnic');
+        ctx.chat[2].mes='“A picnic again!”';sync(2);await pause(40);check('edited messages reclassify their CG',cgCalls.length===3&&ctx.chat[2].extra.silly_teyvat.cgs[0].cg.id==='picnic');{const grown=ctx.chat[2].mes;ctx.chat[2].mes=grown+' And more words still streaming';sync(2);await pause(40);check('a latest reply still growing is not classified yet',cgCalls.length===3);await pause(1000);check('it is classified once its text has settled, as a whole',cgCalls.length===4&&cgCalls[3].text.endsWith('still streaming'));ctx.chat[2].mes=grown;sync(2);await pause(60);cgCalls.length=3;}
         ctx.chat[2].swipe_id=1;sync(2);await pause(40);check('CGs are saved separately for each swipe',cgCalls.length===4&&ctx.chat[2].extra.silly_teyvat.cgs[1].cg.id==='picnic');
         ctx.chat.push({name:'Klee',original_avatar:'Klee.png',mes:'“A picnic later!”'});sync(3,0,{generating:true});await pause(30);check('CG classifier waits until streaming is complete',cgCalls.length===4);
         sync(3);sync(0);await pause(40);check('late CG cannot paint over another message',cgCalls.length===5&&host.querySelector('#gi-cg-stage img').getAttribute('src')===artwork&&!ctx.chat[3].extra?.silly_teyvat?.cgs?.[0]);
@@ -104,6 +108,61 @@ export async function runMediaTests() {
         check('a framed preview matches its image',Math.abs(previewImage.width/previewImage.height-imageRatio)<.02);host.querySelector('#gi-cg-preview header button').click();await pause(10);
         const legacy={cgMode:'window',characterCGs:{'Klee.png':[{id:'a'},{id:'b',display:'scene'}]}};
         check('the old global mode moves onto each CG',migrateCGDisplay(legacy)&&legacy.cgMode===undefined&&legacy.characterCGs['Klee.png'][0].display==='frame'&&legacy.characterCGs['Klee.png'][1].display==='scene'&&!migrateCGDisplay(legacy));
+        // 1.59: one prompt for the whole scene, conditions per CG, and a gallery of what this chat has shown.
+        media.dispose();media=undefined;
+        const party={groupId:'g1',groups:[{id:'g1',members:['Klee.png','Albedo.png']}],characters:[{name:'Klee',avatar:'Klee.png'},{name:'Albedo',avatar:'Albedo.png'},{name:'Jean',avatar:'Jean.png'}],
+            chatMetadata:{silly_teyvat_world:{regionId:'mond',location:{id:'lake'}}},extensionSettings:{genshin_dialogue_ui:{cgEnabled:true,characterCGs:{
+                'Klee.png':[{id:'k-bday',label:'Birthday',path:artwork},{id:'k-duo',label:'Chalk drawing',path:artwork,requiredCharacters:['Albedo.png']},{id:'k-jean',label:'Confinement',path:artwork,requiredCharacters:['Jean.png']},{id:'k-lake',label:'Fish Blasting',path:artwork,requiredLocations:['lake']},{id:'k-cave',label:'Cave',path:artwork,requiredLocations:['cave']}],
+                'Albedo.png':[{id:'a-bday',label:'Birthday',path:artwork}],'Jean.png':[{id:'j-bday',label:'Birthday',path:artwork}]}}},
+            chat:[{name:'Klee',original_avatar:'Klee.png',mes:'“Happy birthday, big brother Albedo!”'}],saveChat(){},saveSettingsDebounced(){},saveMetadataDebounced(){}};
+        const scene=sceneCGs(party,party.chat[0]),ids=scene.entries.map(e=>e.id);
+        check('the scene offers every present character’s CGs together',ids.includes('k-bday')&&ids.includes('a-bday')&&!ids.includes('j-bday'));
+        check('a CG needing a present character is offered',ids.includes('k-duo'));
+        check('a CG needing an absent character is left out',!ids.includes('k-jean'));
+        check('a CG tied to the current location is offered and others are not',ids.includes('k-lake')&&!ids.includes('k-cave'));
+        check('conditions combine: both characters and location must hold',!cgAllowed({requiredCharacters:['Albedo.png'],requiredLocations:['cave']},{present:new Set(['Albedo.png']),location:'lake'})&&cgAllowed({requiredCharacters:['Albedo.png'],requiredLocations:['cave','lake']},{present:new Set(['Albedo.png']),location:'lake'}));
+        const named=cgCategories(scene.entries,scene.owners).map(c=>c.label);
+        check('two characters’ scenes with the same name stay apart, named by character',named.includes('Klee: Birthday')&&named.includes('Albedo: Birthday'));
+        const prompt=cgPromptMessages({mes:'x'},cgCategories(scene.entries,scene.owners))[0].content,single=cgPromptMessages({mes:'x'},cgCategories([{id:'a',label:'Picnic'}]))[0].content;
+        check('with several characters the prompt says each option shows its character',/whose birthday it is/.test(prompt)&&!/whose birthday it is/.test(single));
+        const asked=[];media=mountSceneMedia({host,getContext:()=>party,sound,adapter:{classifyCG:async(_ctx,_m,options)=>{asked.push(options);return options.find(o=>o.label==='Albedo: Birthday')?.id;}}});
+        media.sync({on:true,id:0,page:0,generating:false});await pause(40);
+        check('one classification request covers the whole scene',asked.length===1&&asked[0].some(o=>o.label==='Klee: Birthday')&&asked[0].some(o=>o.label==='Albedo: Birthday'));
+        check('the chosen CG can belong to a listener',party.chat[0].extra.silly_teyvat.cgs[0].cg.id==='a-bday');
+        party.chat.push({name:'Klee',original_avatar:'Klee.png',mes:'Another line.',extra:{silly_teyvat:{cgs:{0:{signature:'x',cg:{id:'k-duo',label:'Chalk drawing',path:artwork}},1:{signature:'y',cg:{id:'a-bday',label:'Birthday',path:artwork}}}}}});
+        const found=discoveredCGs(party);
+        check('the gallery lists each discovered CG once, in order, with its owner',found.length===2&&found[0].cg.id==='a-bday'&&found[0].avatar==='Albedo.png'&&found[0].messages.join()==='0,1'&&found[1].avatar==='Klee.png');
+        check('the gallery opens with a tile per discovered CG',media.openGallery()===2&&host.querySelectorAll('#gi-cg-gallery .gi-cg-gallery-grid button').length===2&&host.querySelector('#gi-cg-gallery').open);
+        const pick=host.querySelector('#gi-cg-gallery select');pick.value='Klee.png';pick.dispatchEvent(new Event('change'));
+        check('the gallery filters by character with a discovered count',host.querySelectorAll('#gi-cg-gallery .gi-cg-gallery-grid button').length===1&&/Klee \(1 of 5\)/.test(pick.selectedOptions[0].textContent));
+        host.querySelector('#gi-cg-gallery header button').click();check('the gallery closes',!host.querySelector('#gi-cg-gallery').open);
+
+        // Trust gates only new scene selections, using each owner's level at this reply.
+        media.dispose();media=undefined;
+        const pp=mediaSettings(party);pp.trustSystem=true;
+        const birthday=pp.characterCGs['Albedo.png'][0];birthday.requiredTrust=2.5;
+        party.chat=[{name:'Klee',original_avatar:'Klee.png',mes:'Happy birthday!'}];
+        check('a listener CG is excluded below its required Trust',!sceneCGs(party,party.chat[0]).entries.includes(birthday));
+        const gift={name:'Narrator',mes:'A gift.',extra:{type:'narrator',silly_teyvat_gift:{avatar:'Albedo.png',change:2.5}}};
+        party.chat.unshift(gift);
+        check('a listener CG becomes eligible at the exact fractional threshold',sceneCGs(party,party.chat[1]).entries.includes(birthday));
+        birthday.requiredTrust=2.6;
+        const gatedCalls=[];
+        media=mountSceneMedia({host,getContext:()=>party,sound,adapter:{classifyCG:async(_ctx,_message,options)=>{gatedCalls.push(options);return birthday.id;}}});
+        media.sync({on:true,id:1,page:0,generating:false});await pause(40);
+        check('locked CGs never reach the classifier or get selected by a stray response',gatedCalls.length===1&&!gatedCalls[0].some(c=>c.id===birthday.id)&&party.chat[1].extra.silly_teyvat.cgs[0].cg===null);
+        birthday.requiredTrust=2.5;media.reclassifyCurrent();media.sync({on:true,id:1,page:0,generating:false});await pause(40);
+        check('rechecking selects a CG after meeting its Trust requirement',party.chat[1].extra.silly_teyvat.cgs[0].cg.id===birthday.id);
+        birthday.requiredTrust=5;media.sync({on:true,id:1,page:0,generating:false});
+        check('recorded scenes keep replaying after requirements change',party.chat[1].extra.silly_teyvat.cgs[0].cg.id===birthday.id&&!host.querySelector('#gi-cg-stage').hidden);
+        pp.trustSystem=false;
+        check('Trust gates are inactive when the Trust system is off',sceneCGs(party,party.chat[1]).entries.includes(birthday));
+        media.dispose();media=undefined;pp.trustSystem=true;birthday.requiredTrust=0;
+        delete party.chat[1].extra.silly_teyvat.cgs;
+        let finishClassification;
+        media=mountSceneMedia({host,getContext:()=>party,sound,adapter:{classifyCG:()=>new Promise(resolve=>{finishClassification=resolve;})}});
+        media.sync({on:true,id:1,page:0,generating:false});birthday.requiredTrust=5;finishClassification(birthday.id);await pause(40);
+        check('a pending classification cannot select a CG whose Trust requirement is no longer met',party.chat[1].extra.silly_teyvat.cgs[0].cg===null);
     } catch(error) {results.push(`ERROR ${error.message}`);}
     finally{sprites?.dispose();media?.dispose();host.remove();}
     return results.join('; ');

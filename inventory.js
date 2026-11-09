@@ -5,7 +5,7 @@
 // item squares, since a Silly Teyvat bag holds a handful of cards rather than hundreds.
 import {cue} from './ui-sound.js';
 import {ITEMS,itemArt,bagCount} from './battle-items.js';
-import {partyBag} from './battle-state.js';
+import {partyBag,partyDeck,setDeckCount,DECK_MAX} from './battle-state.js';
 import {combatState,partyStatus,partyStore,USER_KEY} from './combat-state.js';
 import {activePersonaAvatar} from './persona-wardrobe.js';
 import {circularCharacterAvatar} from './character-avatars.js';
@@ -16,6 +16,10 @@ const ICON={
     food:'<svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><path d="M3 12h18a9 9 0 0 1-6 8.5V22H9v-1.5A9 9 0 0 1 3 12Zm4.5-9c1.5 1.5-1 3 .5 4.5M12 2c1.5 1.5-1 3 .5 4.5M16.5 3c1.5 1.5-1 3 .5 4.5" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>',
     event:'<svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><path d="M6 2h12a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1Zm6 5-1.5 3.2L7 10.6l2.6 2.3-.7 3.6L12 14.8l3.1 1.7-.7-3.6 2.6-2.3-3.5-.4z"/></svg>',
     dice:'<svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><path d="M12 1.5 21 6.7v10.6L12 22.5 3 17.3V6.7zm0 4.3a1.6 1.6 0 1 0 0 3.2 1.6 1.6 0 0 0 0-3.2Zm-4.5 6.6a1.6 1.6 0 1 0 0 3.2 1.6 1.6 0 0 0 0-3.2Zm9 0a1.6 1.6 0 1 0 0 3.2 1.6 1.6 0 0 0 0-3.2Z"/></svg>',
+    weapon:'<svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><path d="M19.5 2 22 4.5 10.6 15.9l-2.5-2.5zM7.4 14.1l2.5 2.5-1.6 1.6 1.2 1.2-1.4 1.4-1.2-1.2L4.6 22 2 19.4l2.4-2.3-1.2-1.2 1.4-1.4 1.2 1.2z"/></svg>',
+    artifact:'<svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><path d="M12 2c2.5 2.6 5.6 3.4 8 3.3.2 7.4-2.6 13-8 16.7C6.6 18.3 3.8 12.7 4 5.3 6.4 5.4 9.5 4.6 12 2Zm0 5.2-1.3 2.7-3 .4 2.2 2-.6 3 2.7-1.5 2.7 1.5-.6-3 2.2-2-3-.4z"/></svg>',
+    support:'<svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><path d="M12 2 2.5 8v2h19V8zM4.5 11h2.5v7H4.5zm6.25 0h2.5v7h-2.5zm6.25 0h2.5v7H17zM2.5 19.5h19V22h-19z"/></svg>',
+    summon:'<svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><path d="M12 2.5 14 9l6.5-1.5L16 12l4.5 4.5L14 15l-2 6.5L10 15l-6.5 1.5L8 12 3.5 7.5 10 9z"/></svg>',
     close:'<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="m6 6 12 12M18 6 6 18"/></svg>',
     sort:'<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 4v16M4 8l4-4 4 4M16 20V4M12 16l4 4 4-4"/></svg>',
 };
@@ -23,6 +27,10 @@ export const INVENTORY_GROUPS=[
     {id:'food',label:'Food',use:'In battle, eaten before anyone acts, one dish per member each round. Dishes that heal or revive can also be eaten here between battles.'},
     {id:'event',label:'Event Cards',use:'Played during the Action Phase, before anyone acts.'},
     {id:'dice',label:'Dice Cards',use:'Changes your elemental dice the moment it is played.'},
+    {id:'weapon',label:'Weapons',use:'Equipped by a party member who wields that weapon type, for the rest of the fight. A new Weapon replaces the old one.'},
+    {id:'artifact',label:'Artifacts',use:'Equipped by one party member for the rest of the fight. A new Artifact replaces the old one.'},
+    {id:'support',label:'Support Cards',use:'Stays in play during the fight and acts each round (four supports at most). Usages run down as it acts.'},
+    {id:'summon',label:'Summon Cards',use:'Brings out a summon that acts at each End Phase for as many rounds as its Usages.'},
 ];
 const TABS=[{id:'all',label:'All'},...INVENTORY_GROUPS];
 const SORTS={rarity:'Quality',count:'Quantity',cost:'Cost',name:'Name'};
@@ -49,8 +57,8 @@ export function eatOutsideBattle(ctx,id,avatar){
 }
 
 // Cards in the bag with how many there are, and whether any arrived since the bag was last opened.
-export function inventoryCards(bag,seen={}){
-    return Object.entries(bag || {}).filter(([id,n])=>ITEMS[id]&&n>0).map(([id,count])=>({id,count,item:ITEMS[id],isNew:count>(seen[id] || 0)}));
+export function inventoryCards(bag,seen={},deck=null){
+    return Object.entries(bag || {}).filter(([id,n])=>ITEMS[id]&&n>0).map(([id,count])=>({id,count,item:ITEMS[id],isNew:count>(seen[id] || 0),...(deck?{inDeck:deck[id] || 0}:{})}));
 }
 export function sortCards(cards,sort){
     const by={
@@ -87,9 +95,9 @@ export function mountInventory({host,getContext,announce=()=>{},onEat=()=>{},onC
     let tab='all',sort='rarity',reversed=false,selected='',seen={},closeTimer=0;
     const state=()=>{const ctx=getContext();return ctx?.chatId || ctx?.getCurrentChatId?.()?{ctx,bag:partyBag(ctx)}:{ctx,bag:null};};
     function tile(card){
-        const {id,count,item,isNew}=card,b=el('button',`gi-inv-card gi-q-${quality(item.rarity)}`);b.type='button';b.dataset.item=id;
-        b.setAttribute('aria-pressed',String(id===selected));b.setAttribute('aria-label',`${item.name}, ${count} in bag${isNew?', new':''}`);
-        b.innerHTML=`<span class="gi-inv-art"><img alt="" loading="lazy" draggable="false"><b class="gi-inv-count">×${count}</b>${isNew?'<i class="gi-inv-new">New</i>':''}<span class="gi-inv-stars" aria-hidden="true">${'★'.repeat(stars(item.rarity))}</span></span><span class="gi-inv-name"></span>`;
+        const {id,count,item,isNew,inDeck}=card,b=el('button',`gi-inv-card gi-q-${quality(item.rarity)}`);b.type='button';b.dataset.item=id;
+        b.setAttribute('aria-pressed',String(id===selected));b.setAttribute('aria-label',`${item.name}, ${count} in bag${inDeck===undefined?'':`, ${inDeck} in deck`}${isNew?', new':''}`);
+        b.innerHTML=`<span class="gi-inv-art"><img alt="" loading="lazy" draggable="false"><b class="gi-inv-count">×${count}</b>${inDeck>0?`<i class="gi-inv-deck-mark" title="In your deck">Deck ${inDeck}</i>`:''}${isNew?'<i class="gi-inv-new">New</i>':''}<span class="gi-inv-stars" aria-hidden="true">${'★'.repeat(stars(item.rarity))}</span></span><span class="gi-inv-name"></span>`;
         b.querySelector('img').src=itemArt(id);b.querySelector('.gi-inv-name').textContent=item.name;
         on(b,'click',()=>{selected=id;paint();});
         return b;
@@ -102,6 +110,7 @@ export function mountInventory({host,getContext,announce=()=>{},onEat=()=>{},onC
         box.className=`gi-inv-detail gi-q-${quality(item.rarity)}`;
         box.innerHTML=`<header class="gi-inv-d-head"><h3></h3></header>
             <div class="gi-inv-d-hero"><small></small><div class="gi-inv-d-stat"><span>Cost</span><strong></strong></div><span class="gi-inv-d-stars" aria-label="${stars(item.rarity)} stars">${'★'.repeat(stars(item.rarity))}</span><img alt="" draggable="false"></div>
+            <section class="gi-inv-d-deck" hidden><h4>Combat deck</h4><div class="gi-inv-deck-row"><button type="button" class="gi-inv-deck-minus" aria-label="Remove one from the deck">−</button><output class="gi-inv-deck-n" aria-live="polite"></output><button type="button" class="gi-inv-deck-plus" aria-label="Add one to the deck">+</button></div><small class="gi-inv-deck-note"></small></section>
             <section class="gi-inv-d-eat" hidden><h4></h4><div class="gi-inv-d-party" role="group"></div></section>
             <div class="gi-inv-d-body"><div class="gi-inv-d-row"><b class="gi-inv-d-count"></b></div><ul class="gi-inv-d-effects"></ul><p class="gi-inv-d-set"></p><p class="gi-inv-d-use"></p></div>
             <section class="gi-inv-d-gift" hidden><button type="button" class="gi-inv-gift-open" aria-expanded="false">Gift</button><div class="gi-inv-gift-people" role="group" hidden></div></section>
@@ -115,8 +124,34 @@ export function mountInventory({host,getContext,announce=()=>{},onEat=()=>{},onC
         box.querySelector('.gi-inv-d-set').textContent=`${group?.label || 'Card'}:`;
         box.querySelector('.gi-inv-d-use').textContent=`${group?.use || ''} ${item.target==='ally'?'Choose one party member.':item.target==='downed'?'Choose a downed party member.':item.target==='party'?'Affects the whole party.':''}`.trim();
         box.querySelector('.gi-inv-d-foot span').textContent=`In your bag: ${count}`;
+        paintDeck(box,card);
         paintEat(box,card);
         paintGift(box,card);
+    }
+    // Combat deck: how many copies of this card battles deal from (at most DECK_MAX cards in all).
+    function paintDeck(box,{id,count}){
+        const {ctx,bag}=state(),section=box.querySelector('.gi-inv-d-deck');
+        if(!bag){section.hidden=true;return;}
+        section.hidden=false;
+        const minus=section.querySelector('.gi-inv-deck-minus'),plus=section.querySelector('.gi-inv-deck-plus'),n=section.querySelector('.gi-inv-deck-n'),note=section.querySelector('.gi-inv-deck-note');
+        const show=()=>{
+            const deck=partyDeck(ctx),mine=deck[id] || 0,total=bagCount(deck);
+            n.textContent=`${mine} / ${count} in deck`;minus.disabled=mine<=0;plus.disabled=mine>=count||total>=DECK_MAX;
+            note.textContent=`Deck ${total} / ${DECK_MAX}. ${total<DECK_MAX?'New cards join it automatically while there is room.':'The deck is full: remove a card to add another.'}`;
+            $('.gi-inv-total').textContent=`Cards ${bagCount(bag)} · Deck ${total}/${DECK_MAX}`;
+        };
+        const change=delta=>{const now=partyDeck(ctx)[id] || 0;setDeckCount(ctx,id,now+delta);cue('use');show();paintTileDeck(id);};
+        on(minus,'click',()=>change(-1));on(plus,'click',()=>change(1));
+        show();
+    }
+    // Updates the deck mark on one tile without redrawing the grid (and losing focus).
+    function paintTileDeck(id){
+        const mine=partyDeck(getContext())[id] || 0;
+        for(const t of dialog.querySelectorAll(`.gi-inv-card[data-item="${CSS.escape(id)}"]`)){
+            let mark=t.querySelector('.gi-inv-deck-mark');
+            if(mine>0){if(!mark){mark=el('i','gi-inv-deck-mark');mark.title='In your deck';t.querySelector('.gi-inv-art').append(mark);}mark.textContent=`Deck ${mine}`;}
+            else mark?.remove();
+        }
     }
     // Gift: everyone in the scene. The Trust system supplies them, and this section stays hidden without it.
     function paintGift(box,{id,item}){
@@ -165,9 +200,9 @@ export function mountInventory({host,getContext,announce=()=>{},onEat=()=>{},onC
         }));
     }
     function paint(){
-        const {bag}=state(),all=sortCards(inventoryCards(bag,seen),sort),cards=reversed?all.reverse():all;
+        const {bag}=state(),all=sortCards(inventoryCards(bag,seen,bag?partyDeck(getContext()):null),sort),cards=reversed?all.reverse():all;
         for(const b of dialog.querySelectorAll('.gi-inv-tabs [data-tab]')){const onTab=b.dataset.tab===tab;b.setAttribute('aria-selected',String(onTab));b.tabIndex=onTab?0:-1;}
-        $('.gi-inv-total').textContent=bag?`Cards ${bagCount(bag)}`:'';
+        $('.gi-inv-total').textContent=bag?`Cards ${bagCount(bag)} · Deck ${bagCount(partyDeck(getContext()))}/${DECK_MAX}`:'';
         const shown=cards.filter(c=>tab==='all'||c.item.kind===tab),groups=$('.gi-inv-groups');groups.replaceChildren();
         for(const g of INVENTORY_GROUPS){
             const list=shown.filter(c=>c.item.kind===g.id);if(!list.length)continue;

@@ -1,6 +1,6 @@
 // Character Customization → Moveset: edit a character's or enemy's three moves and
 // their effects. Saved per card (or per persona) and used from the next battle round.
-import {WEAPONS,ROLES,EFFECT_TYPES,BUFF_STATS,DEBUFF_STATS,TARGETS,KIND_LABEL,describeMove,escapeHtml,saveKitOverride,resetKitOverride} from './combat-kits.js';
+import {WEAPONS,ROLES,EFFECT_TYPES,BUFF_STATS,DEBUFF_STATS,TARGETS,KIND_LABEL,describeMove,describeEffect,escapeHtml,saveKitOverride,resetKitOverride} from './combat-kits.js';
 import {kitForCard} from './battle-state.js';
 import {characterProperties} from './character-properties.js';
 import {linkedCard} from './persona-link.js';
@@ -17,15 +17,17 @@ export function mountMovesetEditor({panel,getContext,getCharacter,status=()=>{}}
     panel.classList.add('gi-moveset');
     const saveKey=()=>card?.isPersona?(linkedCard(getContext(),card.personaAvatar)?.avatar || card.avatar):card?.avatar;
     function effectRow(effect,moveIndex,effectIndex){
+        // Genius Invokation mechanics the form cannot edit (Nightsoul, Techniques, created cards…) are shown as text and kept as they are.
+        if(!EFFECT_TYPES.includes(effect.type))return `<div class="gi-effect gi-effect-fixed" data-move="${moveIndex}" data-effect="${effectIndex}" data-fixed="true"><p>${esc(describeEffect(effect,kit?.element) || effect.type)}</p><button type="button" data-remove-effect aria-label="Remove effect">×</button></div>`;
         const t=effect.type,valueKey={damage:'power',heal:'amount',shield:'amount',buff:'amount',debuff:'amount',summon:'power',energy:'amount',hpcost:'amount'}[t];
         const stat=t==='buff'?BUFF_STATS:t==='debuff'?DEBUFF_STATS:null;
         return `<div class="gi-effect" data-move="${moveIndex}" data-effect="${effectIndex}">
             <label>Effect<select data-f="type">${EFFECT_TYPES.map(x=>opt(x,TYPE_NAMES[x])).join('')}</select></label>
             ${stat?`<label>Stat<select data-f="stat">${stat.map(x=>opt(x,STAT_NAMES[x])).join('')}</select></label>`:t==='summon'?`<label>Name<input data-f="name" maxlength="60" value="${esc(effect.name)}"></label>`:'<label hidden></label>'}
-            ${valueKey?`<label>${t==='damage'||t==='summon'?'Power':t==='hpcost'?'Percent':'Amount'}<input data-f="${valueKey}" type="number" min="0" max="${t==='hpcost'||t==='buff'||t==='debuff'?100:99}" value="${effect[valueKey] ?? 0}"></label>`:'<label hidden></label>'}
+            ${valueKey?`<label>${t==='damage'||t==='summon'?'Power':t==='hpcost'?'Percent':'Amount'}<input data-f="${valueKey}" type="number" min="0" max="${t==='hpcost'||t==='buff'||t==='debuff'?100:99}" value="${esc(effect[valueKey] ?? 0)}"></label>`:'<label hidden></label>'}
             <label>Target<select data-f="target">${Object.entries(TARGETS).map(([k,v])=>opt(k,v)).join('')}</select></label>
-            ${t==='buff'||t==='debuff'||t==='summon'?`<label>Rounds<input data-f="rounds" type="number" min="1" max="9" value="${effect.rounds ?? 2}"></label>`:t==='damage'?`<label>Hits<input data-f="hits" type="number" min="1" max="8" value="${effect.hits ?? 1}"></label>`:'<label hidden></label>'}
-            ${t==='summon'?`<label>Heal<input data-f="heal" type="number" min="0" max="99" value="${effect.heal ?? 0}"></label>`:''}
+            ${t==='buff'||t==='debuff'||t==='summon'?`<label>Rounds<input data-f="rounds" type="number" min="1" max="9" value="${esc(effect.rounds ?? 2)}"></label>`:t==='damage'?`<label>Hits<input data-f="hits" type="number" min="1" max="8" value="${esc(effect.hits ?? 1)}"></label>`:'<label hidden></label>'}
+            ${t==='summon'?`<label>Heal<input data-f="heal" type="number" min="0" max="99" value="${esc(effect.heal ?? 0)}"></label>`:''}
             <button type="button" data-remove-effect aria-label="Remove effect">×</button></div>`;
     }
     function render(){
@@ -33,39 +35,41 @@ export function mountMovesetEditor({panel,getContext,getCharacter,status=()=>{}}
         const ctx=getContext(),props=characterProperties(ctx,card),enemy=props.role==='enemy';
         kit=structuredClone(kitForCard(ctx,card));
         const element=enemy?kit.element:props.element;
-        panel.innerHTML=`<p class="gi-moveset-note">${enemy?'Enemies use their Attack every round and their Special when its cooldown is ready (or at once when enraged below half health).':'Normal Attacks are free but can miss. Elemental Skills and Bursts spend dice of this character\'s element (Omni counts, and two spare dice tune into one). Bursts also need full Energy.'} Maximum HP (${props.maxHp}) is set in Profile.${kit.custom?' <b>Edited.</b>':''}</p>
+        panel.innerHTML=`<h3 class="gi-cs-heading">Stats</h3>
             <div class="gi-moveset-head">
                 <label>Role<select data-k="role">${[...ROLES,'Enemy'].map(x=>opt(x)).join('')}</select></label>
                 ${enemy?`<label>Element<select data-k="element">${['Physical',...ELEMENTS].map(x=>opt(x)).join('')}</select></label>
-                <label>Shield<input data-k="shield" type="number" min="0" max="99" value="${kit.shield || 0}"></label>
-                <label>Shield weak to / weakness<select data-k="weakTo">${opt('','None')}${ELEMENTS.map(x=>opt(x)).join('')}</select></label>
-                <label>Armor (% less damage)<input data-k="armor" type="number" min="0" max="90" value="${kit.armor || 0}"></label>
+                <label>Shield<input data-k="shield" type="number" min="0" max="99" value="${esc(kit.shield || 0)}"></label>
+                <label>Shield weakness<select data-k="weakTo">${opt('','None')}${ELEMENTS.map(x=>opt(x)).join('')}</select></label>
+                <label>Armor (% less damage)<input data-k="armor" type="number" min="0" max="90" value="${esc(kit.armor || 0)}"></label>
                 <label>Armor broken by<select data-k="armorBreak">${opt('','Nothing')}${ELEMENTS.map(x=>opt(x)).join('')}</select></label>
-                <label>Evasion (%)<input data-k="evasion" type="number" min="0" max="80" value="${kit.evasion || 0}"></label>`
+                <label>Evasion (%)<input data-k="evasion" type="number" min="0" max="80" value="${esc(kit.evasion || 0)}"></label>
+                <label class="gi-check" title="Physical attacks deal this unit's element instead, from the start of every fight, like an infused Normal Attack in Genius Invokation"><input type="checkbox" data-k="infusion">Elemental infusion</label>`
                 :`<label>Weapon<select data-k="weapon">${WEAPONS.map(x=>opt(x,x==='none'?'None (unarmed)':x[0].toUpperCase()+x.slice(1))).join('')}</select></label>
-                <label>Burst Energy<input data-k="energy" type="number" min="1" max="5" value="${kit.energy || 2}"></label>
-                <label>Dodge (%)<input data-k="evasion" type="number" min="0" max="90" value="${kit.evasion || 0}"></label>`}
+                <label>Burst Energy<input data-k="energy" type="number" min="1" max="5" value="${esc(kit.energy || 2)}"></label>
+                <label>Dodge (%)<input data-k="evasion" type="number" min="0" max="90" value="${esc(kit.evasion || 0)}"></label>
+                <label class="gi-check" title="Normal Attacks deal this character's element instead of Physical damage, from the start of every fight"><input type="checkbox" data-k="infusion">Elemental infusion</label>`}
             </div>
+            <h3 class="gi-cs-heading">Attacks</h3>
             ${kit.moves.map((move,i)=>`<section class="gi-move-edit" data-move="${i}">
                 <div class="gi-move-head"><small>${KIND_LABEL[move.kind]}</small><input data-m="name" maxlength="80" value="${esc(move.name)}" aria-label="${KIND_LABEL[move.kind]} name"></div>
                 <div class="gi-move-row">
-                    ${move.kind==='normal'?`<label>Miss chance (%)<input data-m="miss" type="number" min="0" max="95" value="${move.miss ?? 20}"></label>`:''}
-                    ${move.kind==='skill'||move.kind==='burst'?`<label>Dice cost<input data-m="cost" type="number" min="0" max="8" value="${move.cost ?? 2}"></label>`:''}
-                    ${move.kind==='special'?`<label>Cooldown (rounds)<input data-m="cooldown" type="number" min="1" max="9" value="${move.cooldown ?? 3}"></label>`:''}
-                    <label>Element<select data-m="element">${opt('',`Default (${move.kind==='normal'&&!enemy?(kit.weapon==='catalyst'?element:'Physical'):element})`)}${['Physical',...ELEMENTS].map(x=>opt(x)).join('')}</select></label>
+                    ${move.kind==='normal'||move.kind==='skill'||move.kind==='burst'?`<label>Dice cost<input data-m="cost" type="number" min="0" max="8" value="${esc(move.cost ?? 3)}"></label>`:''}
+                    ${move.kind==='special'?`<label>Cooldown (rounds)<input data-m="cooldown" type="number" min="1" max="9" value="${esc(move.cooldown ?? 3)}"></label>`:''}
+                    <label>Element<select data-m="element">${opt('',`Default (${esc(move.kind==='normal'&&!enemy?(kit.weapon==='catalyst'?element:'Physical'):element)})`)}${['Physical',...ELEMENTS].map(x=>opt(x)).join('')}</select></label>
                 </div>
                 <div class="gi-effects">${(move.effects || []).map((e,j)=>effectRow(e,i,j)).join('')}</div>
                 <button type="button" data-add-effect="${i}">+ Add effect</button>
                 <p class="gi-move-desc"></p>
             </section>`).join('')}
-            <div class="gi-wardrobe-row"><button type="button" data-save-kit>Save moveset</button><button type="button" data-reset-kit>Reset to default</button></div>`;
+            <div class="gi-wardrobe-row"><button type="button" data-save-kit>Save moveset</button><button type="button" data-reset-kit${kit.custom?'':' disabled title="This moveset has not been edited."'}>Reset to default</button></div>`;
         const set=(selector,value)=>{const node=panel.querySelector(selector);if(node)node.value=value ?? '';};
-        set('[data-k="role"]',kit.role);set('[data-k="weapon"]',kit.weapon);set('[data-k="element"]',kit.element);set('[data-k="weakTo"]',kit.weakTo || '');set('[data-k="armorBreak"]',kit.armorBreak || '');
+        set('[data-k="role"]',kit.role);set('[data-k="weapon"]',kit.weapon);set('[data-k="element"]',kit.element);set('[data-k="weakTo"]',kit.weakTo || '');set('[data-k="armorBreak"]',kit.armorBreak || '');{const box=panel.querySelector('[data-k="infusion"]');if(box)box.checked=kit.infusion===true;}
         kit.moves.forEach((move,i)=>{
             const section=panel.querySelector(`.gi-move-edit[data-move="${i}"]`);
             const normalDefault=move.kind==='normal'&&!enemy&&move.element===(kit.weapon==='catalyst'?element:'Physical');
             section.querySelector('[data-m="element"]').value=normalDefault?'':move.element || '';
-            (move.effects || []).forEach((e,j)=>{const row=section.querySelector(`[data-effect="${j}"]`);row.querySelector('[data-f="type"]').value=e.type;if(row.querySelector('[data-f="stat"]'))row.querySelector('[data-f="stat"]').value=e.stat;row.querySelector('[data-f="target"]').value=e.target;});
+            (move.effects || []).forEach((e,j)=>{const row=section.querySelector(`[data-effect="${j}"]`);if(row.dataset.fixed)return;row.querySelector('[data-f="type"]').value=e.type;if(row.querySelector('[data-f="stat"]'))row.querySelector('[data-f="stat"]').value=e.stat;row.querySelector('[data-f="target"]').value=e.target;});
         });
         describe();
     }
@@ -73,17 +77,18 @@ export function mountMovesetEditor({panel,getContext,getCharacter,status=()=>{}}
         const ctx=getContext(),props=characterProperties(ctx,card),enemy=props.role==='enemy';
         const value=selector=>panel.querySelector(selector)?.value;
         const next={...kit,role:value('[data-k="role"]') || kit.role};
+        next.infusion=Boolean(panel.querySelector('[data-k="infusion"]')?.checked);
         if(enemy){next.element=value('[data-k="element"]') || kit.element;next.shield=num(value('[data-k="shield"]'),0,99,0);next.weakTo=value('[data-k="weakTo"]') || '';next.armor=num(value('[data-k="armor"]'),0,90,0);next.armorBreak=value('[data-k="armorBreak"]') || '';next.evasion=num(value('[data-k="evasion"]'),0,80,0);}
         else{next.weapon=value('[data-k="weapon"]') || kit.weapon;next.energy=num(value('[data-k="energy"]'),1,5,2);next.evasion=num(value('[data-k="evasion"]'),0,90,0);}
         const element=enemy?next.element:props.element;
         next.moves=kit.moves.map((move,i)=>{
             const section=panel.querySelector(`.gi-move-edit[data-move="${i}"]`),field=name=>section.querySelector(`[data-m="${name}"]`)?.value;
             const out={...move,name:String(field('name') || move.name).trim().slice(0,80) || move.name};
-            if(move.kind==='normal')out.miss=num(field('miss'),0,95,20);
-            if(move.kind==='skill'||move.kind==='burst')out.cost=num(field('cost'),0,8,move.cost);
+            if(move.kind==='normal'||move.kind==='skill'||move.kind==='burst')out.cost=num(field('cost'),0,8,move.cost ?? 3);
             if(move.kind==='special')out.cooldown=num(field('cooldown'),1,9,3);
             const chosen=field('element');out.element=chosen || (move.kind==='normal'&&!enemy?(next.weapon==='catalyst'?element:'Physical'):undefined);if(!out.element)delete out.element;
             out.effects=[...section.querySelectorAll('.gi-effect')].map(row=>{
+                if(row.dataset.fixed)return structuredClone(move.effects?.[Number(row.dataset.effect)]);
                 // Options the form has no field for (a decoy, or an element of its own) stay with their effect.
                 const f=name=>row.querySelector(`[data-f="${name}"]`),type=f('type').value,original=move.effects?.[Number(row.dataset.effect)];
                 const e={...(original?.type===type?original:{}),type,target:f('target').value};

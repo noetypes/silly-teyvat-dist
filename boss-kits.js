@@ -3,14 +3,21 @@
 // 1.45 balance: HP and damage were tuned in simulated fights against a four-member party (auto-played, no food) so a
 // normal boss takes 8 to 11 rounds and costs about half to two thirds of the party's health; weekly bosses are harder.
 // Enemy HP and damage still scale with party size (see partyScale), and card-authored HP never overrides these rows.
-const D=(power,target='one',o={})=>({type:'damage',power,target,...o});
-const S=(name,power,rounds,target='one',o={})=>({type:'summon',name,power,rounds,target,...o});
+// 1.61: bosses now act twice a round on Genius Invokation turns, against one active character, so these
+// tables are scaled to half their HP and three fifths of their damage (simulated: 8 to 12 rounds for four).
+// 1.67: with the Genius Invokation kits, rerolls and Elemental Tuning a party is much stronger. Bosses have 55% of
+// these tables' health and 90% of their damage. Simulated (tools/simulate-battles.mjs, four characters): the Auto
+// planner wins about 98% in a median of 8 rounds (90th percentile 12), losing about 40% of the party's health;
+// a naive player (no tuning) wins about 70%.
+const BOSS_HP=.55,BOSS_DAMAGE=.9,dmg=power=>Math.max(1,Math.round(power*BOSS_DAMAGE));
+const D=(power,target='one',o={})=>({type:'damage',power:dmg(power),target,...o});
+const S=(name,power,rounds,target='one',o={})=>({type:'summon',name,power:dmg(power),rounds,target,...o});
 const H=(amount,target='self')=>({type:'heal',amount,target});
 const SH=(amount)=>({type:'shield',amount,target:'self'});
 const B=(stat,amount,rounds)=>({type:'buff',stat,amount,rounds,target:'self'});
 const V=(amount,rounds,target='one')=>({type:'debuff',stat:'vuln',amount,rounds,target});
 // name, element, HP, normal, burst, cooldown, defenses, skill, extra attacks
-export const BOSS_ROWS=[
+const ROWS=[
  ['All-Devouring Narwhal','Hydro',140,['Shattering Waves',[D(5)],'Physical'],['Ravaging Devourer',[D(4,'all'),S('Dark Shadow',3,2)]],3,{armor:10},['Starfall Shower',[D(5),H(3)]]],
  ['Azhdaha','Geo',150,['Sundering Charge',[D(5)],'Physical'],['Decimating Rockfall',[D(5,'all')]],3,{armor:20},['Aura of Majesty',[D(5),SH(4)]],[['Frostspike Wave',[D(5)],'Cryo'],['Torrential Rebuke',[D(5)],'Hydro'],['Blazing Rebuke',[D(5)],'Pyro'],['Thunderstorm Wave',[D(5)],'Electro']]],
  ['Cryo Hypostasis','Cryo',153,['Icespike Shot',[D(5)]],['Plunging Ice Shards',[D(4,'all'),S('Piercing Iceridge',2,2)]],3,{shield:8,weakTo:'Pyro'},['Ice Ring Waltz',[D(6),D(1,'all')]]],
@@ -25,12 +32,20 @@ export const BOSS_ROWS=[
  ['Hydro Hypostasis','Hydro',153,['Droplet Diffusion',[D(6)]],['Calamitous Tides',[D(8),S('Water Droplet',3,2,'one',{heal:2})]],3,{shield:8},['Surging Tides',[D(5,'one',{hits:2})]],[[ 'Overflow',[D(5)]]]],
  ['Hydro Tulpa','Hydro',138,['Savage Swell',[D(6)]],['Thundering Tide',[D(11),S('Half-Tulpa',3,2)]],3,{},['Storm Surge',[D(8),S('Half-Tulpa',3,2)]]],
  ['Jadeplume Terrorshroom','Dendro',204,['Majestic Dance',[D(7)],'Physical'],['Feather Spreading',[D(11),B('atk',15,1)]],3,{weakTo:'Pyro'},['Volatile Spore Cloud',[D(8)]]],
+ // La Signora (1.65): a boss at her Tenshukaku arena. Might of Delusion: the Ice-Sealed Crimson Witch of Embers breaks
+ // when she uses Carmine Chrysalis, when a round starts with her at 40% HP or less, or when a blow would defeat her
+ // (she survives at 1 HP). She then fights as the Crimson Witch for the rest of the encounter and keeps that sprite
+ // (crimson_witch.png) after it. The form's moves are scaled here like the rest of the row.
+ ['La Signora','Cryo',150,['Frostblade Hailstorm',[D(6)]],['Carmine Chrysalis',[D(10),H(8)]],3,{shield:8,weakTo:'Pyro',transform:{
+  name:'Crimson Witch of Embers',element:'Pyro',weakTo:'Hydro',below:.4,seal:true,sprite:'crimson_witch',art:'Crimson Witch of Embers',
+  basic:['Crimson Lotus Moth',[D(6)]],skill:['Decimating Lash',[D(6),S('Blazing Heat',3,1)]],special:['Whirling Blaze',[D(14)]]}},['Biting Shards',[D(6),S('Sheer Cold',3,1)]]],
  ['Lord of Eroded Primal Fire','Pyro',155,['Void Claw Strike',[D(5)],'Physical'],['Severing Primal Fire',[D(5,'all'),B('atk',20,2)]],3,{armor:15},['Eroded Flaming Feathers',[D(5)]]],
  ['Maguu Kenki','Anemo',120,['Ichimonji',[D(8)],'Physical'],['Pseudo Tengu Sweeper',[D(11),S('Shadowsword: Lone Gale',3,1)]],3,{armor:10},['Blustering Blade',[S('Shadowsword: Lone Gale',5,2)]],[[ 'Frosty Assault',[S('Shadowsword: Galloping Frost',5,2,'one',{element:'Cryo'})],'Cryo']]],
  ['Millennial Pearl Seahorse','Electro',127,['Tail Sweep',[D(6)],'Physical'],['Fontemer Hoarthunder',[D(4,'all'),SH(6),S('Resonant Coral Orb',2,2)]],3,{shield:10},['Swirling School of Fish',[D(7),SH(3)]]],
  ['Rhodeia of Loch','Hydro',150,['Surge',[D(6)]],['Tide and Torrent',[D(10),S('Oceanid Mimic',3,2)]],3,{evasion:10},['Oceanid Mimic Summoning',[S('Oceanid Mimic',4,2)]],[[ 'The Myriad Wilds',[S('Oceanid Mimics',6,2)]]]],
  ['Thunder Manifestation','Electro',165,['Thunderous Wingslash',[D(6)]],['Thundering Shackles',[D(6),S('Thundering Shackles',4,2)]],3,{evasion:15},['Strifeful Lightning',[D(7),V(20,1)]]],
 ];
+export const BOSS_ROWS=ROWS.map(row=>{const copy=[...row];copy[2]=Math.round(row[2]*BOSS_HP);return copy;});
 const normalize=name=>String(name || '').toLowerCase().replace(/[^a-z0-9]+/g,'');
 const names=new Set(BOSS_ROWS.map(row=>normalize(row[0])));
 export const isTcgBoss=name=>names.has(normalize(name));

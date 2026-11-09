@@ -1,7 +1,7 @@
 import {activeGroup,inPartyChat} from './party.js';
 import {beginOpeningScene,openingCharacter} from './opening-scene.js';
 import {isEnemy} from './character-properties.js';
-import {activeEnemies,healParty} from './combat-state.js';
+import {activeEnemies,friendlyEnemies,healParty} from './combat-state.js';
 import {backgroundRegions,travelState,saveTravel} from './backgrounds.js';
 import {mediaSettings} from './media-store.js';
 import {deliverLocationGreeting} from './location-greetings.js';
@@ -13,6 +13,8 @@ import {newLocalId} from './local-id.js';
 import {playedAvatars} from './persona-link.js';
 import {ABYSS_HOME,abyssAvatar} from './twin-roles.js';
 import {NARRATOR_AVATAR,narratorAvatar} from './narrator.js';
+import {isGuildStaff} from './guild.js';
+import {companionSide,playingEnemy} from './enemy-persona.js';
 
 export const castIdentity=ctx=>`${ctx.groupId || ctx.characterId}:${ctx.getCurrentChatId?.() || ctx.chatId || ''}`;
 export function locationCastState(ctx){
@@ -75,15 +77,17 @@ export function castMembership(ctx){
     const members=original.filter(a=>!played.has(a)),taken=original.filter(a=>played.has(a));
     const opening=openingCharacter(ctx);
     if(opening){const next=members.includes(opening)?[opening]:ctx.characters?.some(c=>c.avatar===opening)?[opening]:members.slice(0,1);const removed=original.filter(a=>!next.includes(a)),added=next.filter(a=>!members.includes(a));return {core:[...next],members:next,managed:[],added,removed,changed:added.length>0||removed.length>0,forced:null};}
-    let core=[...(state.core || members.filter(a=>!state.managed.includes(a)))].filter(a=>!isEnemy(ctx,a)&&!played.has(a));
-    const wanted=[...(mediaSettings(ctx).locationEncounters===false?members.filter(a=>!isEnemy(ctx,a)):residentsAt(ctx,travelState(ctx).location?.id).map(c=>c.avatar)),...activeEnemies(ctx).map(e=>e.avatar)].filter(a=>!played.has(a));
-    let removed=[...taken,...members.filter(a=>(state.managed.includes(a)||isEnemy(ctx,a))&&!wanted.includes(a)&&!core.includes(a))];
+    let core=[...(state.core || members.filter(a=>!state.managed.includes(a)))].filter(a=>companionSide(ctx,a)&&!played.has(a));
+    const wanted=[...(mediaSettings(ctx).locationEncounters===false?members.filter(a=>companionSide(ctx,a)):residentsAt(ctx,travelState(ctx).location?.id).map(c=>c.avatar)),...activeEnemies(ctx).map(e=>e.avatar),...friendlyEnemies(ctx)].filter(a=>!played.has(a));
+    // Katheryne is part of the scene only at a Guild branch, even when a chat began with her.
+    core=core.filter(a=>!isGuildStaff(ctx,a)||wanted.includes(a));
+    let removed=[...taken,...members.filter(a=>(state.managed.includes(a)||!companionSide(ctx,a)||isEnemy(ctx,a)||isGuildStaff(ctx,a))&&!wanted.includes(a)&&!core.includes(a))];
     const added=wanted.filter(a=>!members.includes(a));
     let next=[...new Set([...members.filter(a=>!removed.includes(a)),...added])];
     const forced=null; // The player is a complete party even with no NPC members.
     const managed=[...new Set([...state.managed.filter(a=>wanted.includes(a)&&!core.includes(a)),...added.filter(a=>!core.includes(a))])];
     // The Narrator is the party only while no other card is in it, and is never one of its members in any other sense.
-    const narrator=narratorAvatar(ctx),alone=Boolean(group&&narrator&&!next.length),had=Boolean(group?.members?.includes(NARRATOR_AVATAR));
+    const narrator=narratorAvatar(ctx),alone=Boolean(narrator&&!next.length&&(group||state.guildStaffDefeatedAt)),had=Boolean(group?.members?.includes(NARRATOR_AVATAR));
     if(alone){next=[narrator];if(!had)added.push(narrator);}else if(had)removed=[...removed,NARRATOR_AVATAR];
     return {core:[...core],members:next,managed,added,removed,changed:added.length>0||removed.length>0,forced};
 }
@@ -92,23 +96,25 @@ export function castMembership(ctx){
 export async function planTeleportParty(ctx,destination,ask,isCurrent=()=>true){
     const from=travelState(ctx).location?.id,members=partyAvatars(ctx),state=locationCastState(ctx);
     const group=activeGroup(ctx),disabled=group?.disabled_members || [];
-    const base={key:castIdentity(ctx),from,destination:destination.id,members:[...members],disabled:[...disabled],decisions:[],travellers:members.filter(a=>!isEnemy(ctx,a))};
+    // Guild staff stay at the counter: never a traveller, and never asked to come along.
+    const goes=a=>companionSide(ctx,a)&&!isGuildStaff(ctx,a);
+    const base={key:castIdentity(ctx),from,destination:destination.id,members:[...members],disabled:[...disabled],decisions:[],travellers:members.filter(goes)};
     if(from===destination.id)return base;
     // Roll once before asking about followers. Cancellation discards this draft;
     // Arrival membership uses the sampled residents, even when none are present.
     base.encounter=rollLocationEncounter(ctx,destination.id,base.travellers);
-    if(mediaSettings(ctx).locationEncounters===false)return base;
+    if(mediaSettings(ctx).locationEncounters===false&&!playingEnemy(ctx))return base;
     const flexible=Boolean(mediaSettings(ctx).allowMainDeparture);
     const main=[ctx.characters?.[ctx.characterId]?.avatar,state.source?.avatar,...(state.core || []),members[0]].find(a=>members.includes(a));
     const guestAvatars=residentsAt(ctx,from).filter(c=>state.managed.includes(c.avatar)&&!state.core?.includes(c.avatar)).map(c=>c.avatar);
-    const candidates=(ctx.characters || []).filter(c=>members.includes(c.avatar)&&!isEnemy(ctx,c)&&(flexible||guestAvatars.includes(c.avatar))).sort((a,b)=>Number(a.avatar===main)-Number(b.avatar===main));
+    const candidates=(ctx.characters || []).filter(c=>members.includes(c.avatar)&&goes(c.avatar)&&(playingEnemy(ctx)||flexible||guestAvatars.includes(c.avatar))).sort((a,b)=>Number(a.avatar===main)-Number(b.avatar===main));
     for(let index=0;index<candidates.length;index++){
         const character=candidates[index],forced=false;
         const answer=await ask(character,destination);
         if(answer==null||!isCurrent())return null;
         base.decisions.push({avatar:character.avatar,from,to:destination.id,take:answer,forced});
     }
-    base.travellers=members.filter(a=>!isEnemy(ctx,a)&&!base.decisions.some(d=>d.avatar===a&&!d.take));
+    base.travellers=members.filter(a=>goes(a)&&!base.decisions.some(d=>d.avatar===a&&!d.take));
     base.flexible=flexible;return base;
 }
 export function commitTeleportParty(ctx,plan){
@@ -199,7 +205,7 @@ export function mountLocationCast({host,getContext,adapter=createLocationCastAda
     const dialog=document.createElement('dialog');dialog.id='gi-travel-party';dialog.setAttribute('aria-labelledby','gi-travel-party-title');
     dialog.innerHTML='<small>Silly Teyvat · Travel companions</small><h2 id="gi-travel-party-title"></h2><p></p><div><button type="button" data-party="yes">Yes, come along</button><button type="button" data-party="no">No, stay here</button><button type="button" data-party="cancel">Cancel teleport</button></div>';
     host.append(dialog);const abort=new AbortController();let disposed=false,busy=false,generating=false,enabled=false,revision=0,signature='',failed='',pendingAnswer=null;
-    const signatureFor=ctx=>JSON.stringify([mediaSettings(ctx).locationEncounters,mediaSettings(ctx).wildernessEncounters,castIdentity(ctx),travelState(ctx).location?.id,locations(ctx).map(l=>[l.id,l.residents]),activeEnemies(ctx).map(e=>[e.key,e.avatar,e.hp]),locationCastState(ctx),activeGroup(ctx)?.members,(ctx.characters || []).map(c=>c.avatar)]);
+    const signatureFor=ctx=>JSON.stringify([mediaSettings(ctx).locationEncounters,mediaSettings(ctx).wildernessEncounters,castIdentity(ctx),travelState(ctx).location?.id,locations(ctx).map(l=>[l.id,l.residents]),activeEnemies(ctx).map(e=>[e.key,e.avatar,e.hp]),friendlyEnemies(ctx),locationCastState(ctx),activeGroup(ctx)?.members,(ctx.characters || []).map(c=>c.avatar)]);
     const current=(key,token)=>!disposed&&token===revision&&castIdentity(getContext())===key;
     function finishAnswer(value){if(dialog.open)dialog.close();const resolve=pendingAnswer;pendingAnswer=null;resolve?.(value);}
     function ask(character,destination){
@@ -232,7 +238,7 @@ export function mountLocationCast({host,getContext,adapter=createLocationCastAda
                 // when an existing journey is reopened after this upgrade.
                 state.pendingGreetings=(state.pendingGreetings || []).filter(entry=>entry.policyVersion===2);
                 const arrival=state.arrival?.locationId===travelState(ctx).location.id&&!state.arrival.handled?state.arrival:null;
-                const sceneResidents=[...(mediaSettings(ctx).locationEncounters===false?[]:residentsAt(ctx,arrival?.locationId)),...activeEnemies(ctx).map(e=>ctx.characters.find(c=>c.avatar===e.avatar)).filter(Boolean)];
+                const sceneResidents=[...(mediaSettings(ctx).locationEncounters===false?[]:residentsAt(ctx,arrival?.locationId)),...activeEnemies(ctx).map(e=>ctx.characters.find(c=>c.avatar===e.avatar)).filter(Boolean),...friendlyEnemies(ctx).map(a=>ctx.characters.find(c=>c.avatar===a)).filter(Boolean)];
                 const reply=arrival?narratorArrival(ctx,plan,arrival) || arrivalReply(ctx,plan,sceneResidents,homeDefaults(ctx)):null;
                 plan.greetings=reply?[reply]:[];
                 if(plan.changed){
@@ -249,7 +255,7 @@ export function mountLocationCast({host,getContext,adapter=createLocationCastAda
                 saveTravel(ctx);
                 while(state.pendingGreetings?.length&&adapter.greet){
                     const entry=state.pendingGreetings[0];
-                    const valid=()=>current(key,token)&&enabled&&locationCastState(getContext()).arrival?.key===entry.key&&travelState(getContext()).location?.id===entry.locationId&&(entry.mode==='narrator'?activeGroup(getContext())?.members:[...residentsAt(getContext(),entry.locationId).map(c=>c.avatar),...activeEnemies(getContext()).map(e=>e.avatar)])?.includes(entry.avatar);
+                    const valid=()=>current(key,token)&&enabled&&locationCastState(getContext()).arrival?.key===entry.key&&travelState(getContext()).location?.id===entry.locationId&&(entry.mode==='narrator'?activeGroup(getContext())?.members:[...residentsAt(getContext(),entry.locationId).map(c=>c.avatar),...activeEnemies(getContext()).map(e=>e.avatar),...friendlyEnemies(getContext())])?.includes(entry.avatar);
                     if(!valid()){if(!current(key,token)||!enabled)return;state.pendingGreetings.shift();saveTravel(ctx);continue;}
                     if(!await adapter.greet(entry,valid))return;
                     if(!current(key,token))return;

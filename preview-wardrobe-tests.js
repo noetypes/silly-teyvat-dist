@@ -5,6 +5,7 @@ import {nextSlotName,spriteDrafts} from './wardrobe-slots.js';
 import {mountPageSprites} from './page-sprites.js';
 import {mountSceneMedia} from './scene-media.js';
 import {regenerationState,regenerateReply} from './regeneration.js';
+import {holdGroupReply,releaseGroupReply,forgetGroupReply,replySections,sceneSpeakers,splitReceivedReply,finishSplitReply,restoreSwipedSpeaker,rewriteGroupNudge,repairGroupTrimming,startGroupRound,draftGroupMember,endGroupRound,skipSpokenMember} from './group-reply.js';
 export async function runWardrobeAndCanvasTests(){
     const results=[],pause=ms=>new Promise(r=>setTimeout(r,ms));
     const check=(name,ok)=>{results.push(`${ok?'PASS':'FAIL'} ${name}`);if(!ok)throw new Error(name);};
@@ -14,11 +15,20 @@ export async function runWardrobeAndCanvasTests(){
     const adapter={list:async()=>files,upload:async(folder,file,name,label)=>{uploads.push({folder,name,label});files.push({label,path:`/characters/${folder}/${name}.${file.name.split('.').at(-1)}`});},refreshNative:async()=>nativeRefreshes++,remove:async()=>{removals++;}};
     const mediaAdapter={upload:async(file,kind)=>({id:newLocalId(),name:file.name,path:new URL(kind==='audio'?'preview-silence.wav':'preview-landscape.svg',location.href).pathname}),classifyCG:async(_ctx,_message,categories)=>{cgCalls++;return categories[0].id;}};
     const open=async()=>{wardrobe=mountWardrobe({host,getContext:()=>ctx,adapter,mediaAdapter});await wardrobe.open();};
-    const $=selector=>host.querySelector(selector),click=async action=>{$(`[data-w="${action}"]`).click();await pause(15);};
+    const $=selector=>host.querySelector(selector);
+    const settled=async()=>{
+        for(let i=0;i<300;i++){if(!$('.gi-wardrobe-controls')?.inert&&!$('#gi-wardrobe')?.hasAttribute('aria-busy'))return;await pause(10);}
+        throw new Error('Wardrobe loading timed out');
+    };
+    const click=async action=>{$(`[data-w="${action}"]`).click();await pause(15);await settled();};
     const attach=(selector,name,type)=>{const transfer=new DataTransfer();transfer.items.add(new File(['fixture'],name,{type}));$(selector).files=transfer.files;};
     try{
         check('slot numbering avoids existing names regardless of case',nextSlotName('expression',['Expression','expression-1','expression-3'])==='expression-2');
         await open();
+        check('the character menu has no Backgrounds tab',![...host.querySelectorAll('.gi-wardrobe-tabs button')].some(b=>/background/i.test(b.textContent)||b.dataset.w==='tab-backgrounds')&&!host.querySelector('[data-panel="backgrounds"]'));
+        {const dialog=host.querySelector('#gi-wardrobe'),vv=globalThis.visualViewport;
+         if(vv){vv.dispatchEvent(new Event('resize'));check('pinching the page puts the sprite stage in its simple state',dialog.classList.contains('gi-pinching'));
+           await new Promise(r=>setTimeout(r,520));check('and brings the full stage back once the viewport settles',!dialog.classList.contains('gi-pinching'));}}
         const faces=()=>[...host.querySelectorAll('.gi-roster button')].map(b=>b.dataset.avatar);
         check('characters without the Genshin tag are hidden by default, except the selected one',$('#gi-hide-non-genshin').checked&&faces().join()==='Klee.png');
         $('#gi-hide-non-genshin').click();await pause(15);check('turning off Hide non-Genshin lists every character',faces().join()==='Klee.png,Nahida.png'&&prefs.hideNonGenshin===false);
@@ -37,7 +47,6 @@ export async function runWardrobeAndCanvasTests(){
         delete prefs.hideNonGenshin;delete prefs.characterProperties;delete prefs.rosterView;
         // Sprite sets: new, copy, rename and delete.
         const sets=()=>[...host.querySelectorAll('#gi-outfit option')].map(o=>o.textContent+'='+o.value),registered=()=>(prefs.outfits?.['Klee.png'] || []).map(x=>x.label+'='+x.folder);
-        $('[data-w="set-rename"]').click();check('the Original set cannot be renamed',$('.gi-set-editor').hidden);
         $('[data-w="set-new"]').click();check('New set opens an inline editor',!$('.gi-set-editor').hidden&&!$('.gi-set-copy-row').hidden);
         $('#gi-set-editor-name').value='Summer';await click('set-confirm');
         check('a new set gets Character/Name as its folder and becomes the selected set',registered().join()==='Summer=Klee/Summer'&&$('#gi-outfit').value==='Klee/Summer'&&sets().includes('Summer=Klee/Summer'));
@@ -45,12 +54,32 @@ export async function runWardrobeAndCanvasTests(){
         $('[data-w="set-rename"]').click();$('#gi-set-editor-name').value='Beach';await click('set-confirm');
         check('rename changes the label but keeps the folder',registered().join()==='Beach=Klee/Summer'&&sets().includes('Beach=Klee/Summer'));
         const uploadsBefore=uploads.length;$('[data-w="set-new"]').click();$('#gi-set-copy').checked=true;$('#gi-set-editor-name').value='Winter';await click('set-confirm');
+        for(let i=0;i<200&&!registered().includes('Winter=Klee/Winter');i++)await pause(10);
         check('a set can start as a copy of the selected one',uploads.length>uploadsBefore&&uploads.at(-1).folder==='Klee/Winter'&&registered().includes('Winter=Klee/Winter'));
         $('[data-w="set-delete"]').click();await click('set-forget');check('Remove from list keeps files and drops the set',!registered().some(x=>x.startsWith('Winter'))&&removals===0&&$('#gi-outfit').value==='Klee');
-        $('#gi-outfit').value='Klee/Summer';$('#gi-outfit').dispatchEvent(new Event('change'));await pause(30);
+        $('#gi-outfit').value='Klee/Summer';$('#gi-outfit').dispatchEvent(new Event('change'));await settled();
         $('[data-w="set-delete"]').click();await click('set-delete-files');check('Delete set and sprites erases its files and the set',removals>0&&registered().length===0);
-        $('[data-w="set-delete"]').click();check('the Original set cannot be deleted',$('.gi-set-editor').hidden);
-        files.splice(1);uploads.length=0;removals=0;nativeRefreshes=0;delete prefs.outfits;$('#gi-outfit').dispatchEvent(new Event('change'));await pause(30);
+        // The character's own folder: renamed, removed from the list once another set is equipped, and linked back.
+        const pick=async value=>{$('#gi-outfit').value=value;$('#gi-outfit').dispatchEvent(new Event('change'));await settled();};
+        $('[data-w="set-delete"]').click();
+        check('the equipped Original set cannot be deleted',!$('.gi-set-editor').hidden&&$('[data-w="set-forget"]').disabled&&$('[data-w="set-delete-files"]').disabled);
+        $('[data-w="set-rename"]').click();check('renaming Original starts from its name',$('#gi-set-editor-name').value==='Original');
+        $('#gi-set-editor-name').value='Classic';await click('set-confirm');
+        check('Original can be renamed and keeps its folder',registered().join()==='Classic=Klee'&&sets()[0]==='Classic=Klee');
+        $('[data-w="set-new"]').click();$('#gi-set-copy').checked=false;$('#gi-set-editor-name').value='Original';await click('set-confirm');
+        check('another set can take the name Original once it is free',registered().includes('Original=Klee/Original')&&$('#gi-outfit').value==='Klee/Original');
+        await click('equip');await pick('Klee');
+        $('[data-w="set-delete"]').click();check('once another set is equipped, the old Original can be deleted',!$('[data-w="set-forget"]').disabled);
+        const removedBefore=removals;await click('set-forget');
+        check('Remove from list hides the character folder and keeps its files',!sets().some(x=>x.endsWith('=Klee'))&&removals===removedBefore&&prefs.outfits['Klee.png'].find(x=>x.folder==='Klee').hidden===true);
+        $('#gi-outfit-name').value='Classic';$('#gi-outfit-folder').value='Klee';await click('add-set');
+        check('linking the character folder again brings it back under its name',sets().includes('Classic=Klee')&&!prefs.outfits['Klee.png'].find(x=>x.folder==='Klee').hidden&&prefs.outfits['Klee.png'].filter(x=>x.folder==='Klee').length===1);
+        await pick('Klee');await click('equip');await pick('Klee/Original');
+        $('[data-w="set-delete"]').click();await click('set-delete-files');
+        await pick('Klee');$('[data-w="set-delete"]').click();
+        check('the equipped character folder is protected again',$('[data-w="set-delete-files"]').disabled);
+        await pick('Klee');
+        files.splice(1);uploads.length=0;removals=0;nativeRefreshes=0;delete prefs.outfits;$('#gi-outfit').dispatchEvent(new Event('change'));await settled();
         let grid=$('.gi-expression-grid');check('sprite plus tile is the final tile',grid.lastElementChild.dataset.w==='add-blank-sprite');
         let art=grid.firstElementChild.getBoundingClientRect(),add=grid.lastElementChild.getBoundingClientRect();
         check('sprite plus matches the artwork tile dimensions',Math.abs(art.width-add.width)<2&&Math.abs(art.height-add.height)<2);
@@ -76,10 +105,16 @@ export async function runWardrobeAndCanvasTests(){
         media=mountSceneMedia({host,getContext:()=>ctx,adapter:mediaAdapter,sound:{stop(){},dispose(){},unlock:async()=>{},play:async()=>{}}});
         media.sync({on:true,id:0,page:0,generating:false});await pause(20);check('empty CG slots never enter classification or replace the scene',cgCalls===0&&$('#gi-cg-stage').hidden);
         const slot=prefs.characterCGs['Klee.png'][1],slotId=slot.id;
+        check('every new CG defaults to zero required Trust',$('#gi-cg-required-trust').value==='0');
+        const requiredTrust=$('#gi-cg-required-trust');requiredTrust.value='2.5';requiredTrust.dispatchEvent(new Event('change'));
+        check('Scenes saves a fractional required Trust on only the selected CG',slot.requiredTrust===2.5&&prefs.characterCGs['Klee.png'][0].requiredTrust===undefined);
+        $('.gi-cg-grid').firstElementChild.click();check('switching CGs restores their own Trust requirement',requiredTrust.value==='0');
+        $('.gi-cg-grid').children[1].click();check('returning to a CG restores its saved Trust requirement',requiredTrust.value==='2.5');
         attach('#gi-cg-audio-files','scene.wav','audio/wav');await click('upload-cg-audio');
         attach('#gi-cg-files','artwork.jpg','image/jpeg');await click('upload-cg');
         check('artwork fills the selected CG slot instead of adding a duplicate',prefs.characterCGs['Klee.png'].length===2&&slot.id===slotId&&!slot.blank&&Boolean(slot.path));
         check('a CG retains audio assigned before its artwork upload',slot.audio.length===1&&slot.audio[0].name==='scene.wav');
+        check('a CG retains its Trust requirement when artwork is added',slot.requiredTrust===2.5);
         media.sync({on:true,id:0,page:0,generating:false});await pause(20);check('a filled CG enters classification without its empty neighbor',cgCalls===1&&ctx.chat[0].extra.silly_teyvat.cgs[0].cg.id===slotId);
         check('wardrobe controls still scroll within the fixed scene canvas',(()=>{const c=$('.gi-wardrobe-controls');c.scrollTop=c.scrollHeight;return c.scrollTop>0;})());
         wardrobe.dispose();media.dispose();wardrobe=media=undefined;
@@ -91,7 +126,53 @@ export async function runWardrobeAndCanvasTests(){
         check('group regeneration cannot consume an unsent draft',draft==='Unsent draft');
         const priorGenerate=ctx.generate,beforeFailure=JSON.stringify(ctx.chat[1]);ctx.generate=async()=>{throw new Error('Disconnected');};try{await regenerateReply(ctx,regenerationState(ctx,{id:1}));}catch{}
         check('a failed group request restores the complete previous reply',JSON.stringify(ctx.chat[1])===beforeFailure);
-        ctx.generate=async()=>{};await regenerateReply(ctx,regenerationState(ctx,{id:1}));check('a canceled or empty group reply restores the previous variant',JSON.stringify(ctx.chat[1])===beforeFailure);ctx.generate=priorGenerate;
+        ctx.generate=async()=>{};let emptyError='';try{await regenerateReply(ctx,regenerationState(ctx,{id:1}));}catch(error){emptyError=error.message;}check('a canceled or empty group reply restores the previous variant',JSON.stringify(ctx.chat[1])===beforeFailure);check('an empty group reply says the previous reply was kept',/previous one was kept/.test(emptyError));ctx.generate=priorGenerate;
+        const opener='Klee: Klee bounced on her toes.\n\n"Boom!"\n\nNahida: Nahida smiled.\n\n"Let us walk together."\n\nNarrator: A breeze stirred the leaves.';
+        ctx.name1='Traveler';const cast=sceneSpeakers(ctx,'Nahida'),nahida=cast.find(s=>s.name==='Nahida'),parts=replySections(opener,nahida,cast);
+        check('the scene cast is the group, the Narrator and the player',cast.map(s=>`${s.name}:${s.kind}`).join()==='Klee:character,Nahida:character,Narrator:narrator,Traveler:player');
+        check('a reply is read as one part per speaker, in order',parts.map(p=>p.who.name).join()==='Klee,Nahida,Narrator'&&parts[1].text==='Nahida smiled.\n\n"Let us walk together."'&&parts[2].text==='A breeze stirred the leaves.');
+        check('a reply labeled only for its own speaker is not split',replySections('Nahida: Hello.',nahida,cast)===null&&replySections('Just prose.',nahida,cast)===null);
+        check('unlabeled text before a name belongs to the speaker',replySections('She waved.\nKlee: Hi!',nahida,cast).map(p=>`${p.who.name}=${p.text}`).join('|')==='Nahida=She waved.|Klee=Hi!');
+        check('the player\'s parts are dropped and the speaker\'s parts around them join',replySections('Nahida: One.\nTraveler: I say this.\nNahida: Two.\nKlee: Three.',nahida,cast).map(p=>`${p.who.name}=${p.text}`).join('|')==='Nahida=One.\n\nTwo.|Klee=Three.');
+        check('a name inside prose is not a label, and bold labels are',replySections('Nahida: She said Klee: was a word.',nahida,cast)===null&&replySections('**Klee:** Hi!\n**Narrator:** Wind.',nahida,cast).map(p=>p.who.name).join()==='Klee,Narrator');
+        check('a unique first name is a label, a shared one is not',(()=>{const two=[{name:'Kamisato Ayaka',kind:'character'},{name:'Kamisato Ayato',kind:'character'},{name:'Narrator',kind:'narrator'}];return replySections('Ayato: Tea.\nAyaka: Yes.',two[0],two).map(p=>p.who.name).join()==='Kamisato Ayato,Kamisato Ayaka'&&replySections('Kamisato: Tea.',two[0],two)===null;})());
+        const power={disable_group_trimming:false};ctx.powerUserSettings=power;ctx.groups[0].silly_teyvat_journey={version:1,managed:true};ctx.groups[0].generation_mode=0;
+        check('quiet and dry-run generations change nothing',(()=>{const q=splitReceivedReply({chat:[{name:'Nahida',mes:'Klee: Hi'}],characters:ctx.characters,groupId:'group',groups:ctx.groups},0,'normal');return !q;})()&&!holdGroupReply(ctx,'quiet')&&!holdGroupReply(ctx,'normal',true)&&!power.disable_group_trimming&&ctx.groups[0].generation_mode===0);
+        check('a journey reply holds off the native cut and shows every present card',holdGroupReply(ctx,'swipe')&&power.disable_group_trimming&&ctx.groups[0].generation_mode===1&&/Klee|\{\{char\}\}/.test(ctx.groups[0].generation_mode_join_prefix));
+        releaseGroupReply();check('the native cut and card mode are restored when the generation ends, even before the reply is handled',power.disable_group_trimming===false&&ctx.groups[0].generation_mode===0);
+        const added=[],emitted=[];ctx.addOneMessage=m=>added.push(m);ctx.eventTypes={MESSAGE_RECEIVED:'mr',CHARACTER_MESSAGE_RENDERED:'cr'};ctx.eventSource={emit:async(t,id)=>emitted.push(`${t}:${id}`)};
+        ctx.chat.push({name:'Nahida',original_avatar:'Nahida.png',mes:opener,swipes:['',opener],swipe_id:1,swipe_info:[{},{extra:{}}],extra:{api:'x'}});
+        check('the received reply keeps its first part and takes that speaker',splitReceivedReply(ctx,2,'swipe')&&ctx.chat[2].name==='Klee'&&ctx.chat[2].original_avatar==='Klee.png'&&ctx.chat[2].mes==='Klee bounced on her toes.\n\n"Boom!"'&&ctx.chat[2].swipes[1]===ctx.chat[2].mes&&ctx.chat[2].silly_teyvat_owner.name==='Nahida');
+        await finishSplitReply(ctx,2);
+        check('every other part becomes its own message, the Narrator\'s as narration',ctx.chat.length===5&&ctx.chat[3].name==='Nahida'&&ctx.chat[3].original_avatar==='Nahida.png'&&ctx.chat[4].name==='Narrator'&&ctx.chat[4].extra.type==='narrator'&&ctx.chat[4].mes==='A breeze stirred the leaves.');
+        check('the new parts are rendered and announced like any reply',added.length===3&&emitted.join()==='mr:3,cr:3,mr:4,cr:4');
+        check('a later part regenerates the whole reply from its first part, for its own character',(()=>{const st=regenerationState(ctx,{id:4});return st.allowed&&st.targetId===2&&st.partsAfter===2&&st.characterId===1;})());
+        ctx.chat[2].extra.silly_teyvat_speaker=undefined;check('swiping back to an earlier variant restores the speaker it was written for',restoreSwipedSpeaker(ctx,2)&&ctx.chat[2].name==='Nahida');
+        let deleted=0;ctx.deleteLastMessage=async()=>{deleted++;ctx.chat.pop();};const priorGen=ctx.generate;ctx.generate=async()=>{};let kept='';
+        try{await regenerateReply(ctx,regenerationState(ctx,{id:4}));}catch(error){kept=error.message;}
+        check('an empty regeneration puts the reply\'s other parts back',deleted===2&&ctx.chat.length===5&&ctx.chat[4].name==='Narrator'&&/kept/.test(kept));
+        ctx.generate=priorGen;ctx.chat.length=2;delete ctx.deleteLastMessage;delete ctx.addOneMessage;delete ctx.eventSource;delete ctx.eventTypes;delete ctx.name1;
+        const nudge=[{role:'system',content:'[Write the next reply only as Nahida.]'}];
+        check('the group nudge lets everyone present join in under their own name',rewriteGroupNudge(nudge,'Traveler')&&/Nahida is next/.test(nudge[0].content)&&/Never write a part for Traveler/.test(nudge[0].content));
+        startGroupRound(ctx,undefined);ctx.chat.push({name:'Klee',original_avatar:'Klee.png',mes:'Hi!'},{name:'Nahida',original_avatar:'Nahida.png',mes:'Hello.'});
+        let aborted=0;const abort=()=>aborted++;draftGroupMember(ctx,0);
+        check('a character who already spoke this round is skipped',skipSpokenMember(ctx,'normal',abort)&&aborted===1);
+        ctx.chat.pop();ctx.chat.pop();ctx.chat.push({name:'Klee',original_avatar:'Klee.png',mes:'Hi!'});draftGroupMember(ctx,1);
+        check('a character who has not spoken this round still replies',!skipSpokenMember(ctx,'normal',abort)&&aborted===1);
+        check('a swipe or regeneration is never skipped',!skipSpokenMember(ctx,'swipe',abort));
+        endGroupRound();draftGroupMember(ctx,0);check('outside a group round nothing is skipped',!skipSpokenMember(ctx,'normal',abort));
+        startGroupRound(ctx,'swipe');draftGroupMember(ctx,0);check('a swipe round skips no one',!skipSpokenMember(ctx,'normal',abort));endGroupRound();ctx.chat.length=2;
+        ctx.extensionSettings.genshin_dialogue_ui.groupTrimmingHeld=undefined;power.disable_group_trimming=false;holdGroupReply(ctx,'normal');
+        check('a hold is recorded with the extension settings',ctx.extensionSettings.genshin_dialogue_ui.groupTrimmingHeld===true);
+        check('a repair never undoes a hold still in progress',!repairGroupTrimming(ctx)&&power.disable_group_trimming===true);
+        let saves=0;const priorSave=ctx.saveSettingsDebounced;ctx.saveSettingsDebounced=()=>saves++;holdGroupReply(ctx,'normal');
+        forgetGroupReply();ctx.saveSettingsDebounced=priorSave;check('releasing saves the settings again, so a save made during the hold is overwritten',saves===1&&power.disable_group_trimming===false);holdGroupReply(ctx,'normal');
+        forgetGroupReply();check('releasing clears the record',!('groupTrimmingHeld' in ctx.extensionSettings.genshin_dialogue_ui)&&power.disable_group_trimming===false);
+        ctx.extensionSettings.genshin_dialogue_ui.groupTrimmingHeld=true;power.disable_group_trimming=true;
+        check('a hold left over from a reload is repaired',repairGroupTrimming(ctx)&&power.disable_group_trimming===false&&!ctx.extensionSettings.genshin_dialogue_ui.groupTrimmingHeld);
+        check('without a record the player\'s own setting is untouched',(()=>{power.disable_group_trimming=true;const r=repairGroupTrimming(ctx);const ok=!r&&power.disable_group_trimming===true;power.disable_group_trimming=false;return ok;})());
+        power.disable_group_trimming=true;holdGroupReply(ctx,'normal');check('a player who turned off group trimming keeps that choice',power.disable_group_trimming===true);releaseGroupReply();check('releasing leaves a player\'s own choice alone',power.disable_group_trimming===true);
+        ctx.groups[0].generation_mode=2;holdGroupReply(ctx,'normal');check('a group card mode the player chose is kept',ctx.groups[0].generation_mode===2);releaseGroupReply();delete ctx.groups[0].silly_teyvat_journey;delete ctx.powerUserSettings;
         check('historical replies cannot silently truncate later messages',!regenerationState(ctx,{id:0}).allowed&&regenerationState(ctx,{id:0}).visible);
         check('regeneration is blocked during streaming or another regeneration',!regenerationState(ctx,{id:1,generating:true}).allowed&&!regenerationState(ctx,{id:1,busy:true}).allowed);
         check('regeneration respects message editing',!regenerationState(ctx,{id:1,editing:true}).allowed);

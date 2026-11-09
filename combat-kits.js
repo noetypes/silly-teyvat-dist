@@ -4,6 +4,10 @@
 // any kit in Character Customization → Moveset; edits are saved per card.
 import {mediaSettings} from './media-store.js';
 import {BOSS_ROWS} from './boss-kits.js';
+import {ELEMENTS} from './battle-engine.js';
+import {TCG_KITS} from './tcg-kits.js';
+import {SPECIAL_KITS} from './tcg-special-kits.js';
+import {npcKit} from './npc-kits.js';
 
 export const WEAPONS=['sword','claymore','polearm','bow','catalyst','none'];
 export const ROLES=['DPS','Sub-DPS','Support','Healer','Shielder','Tank'];
@@ -11,8 +15,8 @@ export const EFFECT_TYPES=['damage','heal','shield','buff','debuff','summon','en
 export const BUFF_STATS=['atk','guard','crit','dodge','regen','infuse'];
 export const DEBUFF_STATS=['vuln','weaken','stun'];
 // Targets are relative to whoever uses the move.
-export const TARGETS={one:'one foe',all:'all foes',random:'random foes',weakest:'the weakest foe',self:'self',ally:'one ally',party:'the whole party',others:'other allies',lowest:'the most injured ally'};
-const WEAPON_NA={sword:{power:3,miss:20},claymore:{power:4,miss:30},polearm:{power:3,miss:20},bow:{power:3,miss:25},catalyst:{power:2,miss:15},none:{power:1,miss:40}};
+export const TARGETS={one:'the active foe',all:'all foes',random:'random foes',weakest:'the weakest foe',standby:'foes on standby (Piercing)',highest:'the foe with the most HP',self:'self',ally:'one ally',activeAlly:'your active character',party:'the whole party',others:'other allies',lowest:'the most injured ally'};
+const WEAPON_NA={sword:{power:3},claymore:{power:4},polearm:{power:3},bow:{power:3},catalyst:{power:2},none:{power:1}};
 
 // Compact effect builders for the tables below.
 const D=(power,target='one',o={})=>({type:'damage',power,target,...o});
@@ -26,6 +30,7 @@ const HP=(amount,target='self')=>({type:'hpcost',amount,target});
 const INF=(rounds,target='self')=>BF('infuse',0,rounds,target);
 
 // [name, weapon, hp, burst energy, role, normal attack, [skill, dice, effects], [burst, dice, effects]]
+// Skill dice here are one fewer than the game charges: kitFromRow adds one (most Skills cost 3 of the element).
 const S='sword',C='claymore',P='polearm',B='bow',K='catalyst';
 const TABLE=[
     // Mondstadt
@@ -158,7 +163,7 @@ const TABLE=[
     ['Aloy',B,32,2,'DPS','Rapid Fire',['Frozen Wilds',2,[D(4),BF('atk',20,2)]],['Prophecies of Dawn',3,[D(9)]]],
     // Paimon has no Vision or in-game kit, so her moves are Silly Teyvat's own: a feeble punch,
     // cheering and a pep talk. She is hard to hit and helps by buffing everyone else.
-    ['Paimon','none',22,2,'Support','Paimon Punch!',['Go, Go, Traveler!',1,[BF('atk',20,2,'others'),BF('crit',15,2,'others')]],['Paimon\'s Pep Talk',2,[H(3,'others'),EN(1,'others'),BF('atk',25,1,'others')]],{evasion:50,na:{power:1,miss:45}}],
+    ['Paimon','none',22,2,'Support','Paimon Punch!',['Go, Go, Traveler!',1,[BF('atk',20,2,'others'),BF('crit',15,2,'others')]],['Paimon\'s Pep Talk',2,[H(3,'others'),EN(1,'others'),BF('atk',25,1,'others')]],{evasion:50,na:{power:1}}],
 ];
 // Companions who fight alongside the party even though their card is not a playable character.
 export const COMBAT_COMPANIONS=new Set(['paimon']);
@@ -177,22 +182,22 @@ const ENEMIES=[
     ['Hilichurl Shooter','Physical',22,['Crossbow Bolt',[D(4)]],['Volley',[D(2,'all')]],3],
     ['Hydro Samachurl','Hydro',24,['Water Spout',[D(3)]],['Rain Dance',[D(2,'all'),H(5,'party')]],3],
     ['Wooden Shieldwall Mitachurl','Physical',46,['Shield Bash',[D(5)]],['Charging Slam',[D(7)]],3,{armor:40,armorBreak:'Pyro'}],
-    ['Cryo Whopperflower','Cryo',28,['Petal Lash',[D(3)]],['Ambush Bite',[D(6)]],2,{weakTo:'Pyro'}],
+    ['Cryo Whopperflower','Cryo',56,['Frosted Headbutt',[D(4)],'Physical'],['Frigid Nectar Barrage',[D(3,'one',{hits:2}),D(2,'all')]],3,{weakTo:'Pyro'},['Icy Charge',[SH(4),D(4)]]],
     ['Eremite Sunfrost','Cryo',42,['Frost Glaive',[D(5)]],['Sunfrost Waltz',[D(3,'all')]],3],
     ['Fatui Cryo Cicin Mage','Cryo',36,['Ice Shards',[D(4)]],['Cicin Swarm',[SM('Cryo Cicins',2,2,'random')]],3,{evasion:15}],
     ['Fatui Pyro Agent','Pyro',40,['Blink Stab',[D(6)]],['Flame Dash',[D(3,'all')]],3,{evasion:25}],
     ['Fatui Skirmisher - Anemoboxer Vanguard','Anemo',40,['Gale Jab',[D(4)]],['Whirlwind Uppercut',[D(3,'all')]],3,{shield:8}],
     ['Fatui Skirmisher - Pyroslinger Bracer','Pyro',38,['Slingshot',[D(4)]],['Incendiary Grenade',[D(3,'all')]],3,{shield:10,weakTo:'Hydro'}],
-    ['Geo Slime','Geo',18,['Rock Bounce',[D(3)]],['Geo Shell',[SH(6)]],3],
+    ['Geo Slime','Geo',22,['Rocky Ram',[D(3)],'Physical'],['Rolling Impact',[D(5),BF('guard',15,1)],'Physical'],3,{infusion:false},['Hardened Bounce',[D(3),SH(2)],'Physical']],
     ['Hydro Slime','Hydro',18,['Splash',[D(3)]],['Tidal Hop',[D(4)]],3],
-    ['Large Electro Slime','Electro',32,['Electro Slam',[D(5)]],['Discharge',[D(3,'all')]],3],
-    ['Large Pyro Slime','Pyro',32,['Flame Leap',[D(5)]],['Combust',[D(3,'all')]],3],
+    ['Large Electro Slime','Electro',56,['Charged Bounce',[D(3)]],['Chain Discharge',[D(4),D(2,'all')]],3,{},['Electro Pulse',[D(4),SM('Residual Charge',2,1,'one',{element:'Electro'})]]],
+    ['Large Pyro Slime','Pyro',56,['Ignited Ram',[D(3)]],['Fireball Barrage',[D(2,'one',{hits:3}),SM('Lingering Embers',2,1,'one',{element:'Pyro'})]],3,{},['Blazing Leap',[D(5)]]],
     ['Pyro Abyss Mage','Pyro',34,['Fireball',[D(4)]],['Flame Pillars',[D(3,'all')]],3,{shield:14,weakTo:'Hydro'}],
     ['Ruin Guard','Physical',60,['Stomp',[D(5)]],['Rocket Barrage',[D(2,'random',{hits:4})]],2,{armor:20}],
-    ['Treasure Hoarders - Marksman','Physical',24,['Aimed Shot',[D(5,'weakest')]],['Rain of Arrows',[D(2,'all')]],3],
-    ['Treasure Hoarders - Scout','Physical',22,['Dagger Flurry',[D(2,'one',{hits:2})]],['Smoke Bomb',[BF('dodge',40,2),DB('weaken',20,1,'all')]],3,{evasion:20}],
-    ['Treasure Hoarders: Gravedigger','Physical',30,['Shovel Smash',[D(5)]],['Ground Burst',[D(3,'all')]],3],
-    ['Treasure Hoarders: Pyro Potioneer','Pyro',28,['Potion Toss',[D(3)]],['Firebomb Barrage',[D(3,'all')]],3],
+    ['Treasure Hoarders - Marksman','Physical',24,['Crossbow Shot',[D(4,'weakest')]],['Careful Aim',[D(6,'weakest')]],3,{},['Draw a Bead',[D(3,'weakest'),DB('vuln',10,1,'weakest')]]],
+    ['Treasure Hoarders - Scout','Physical',22,['Throwing Knife',[D(3)]],['Smoke and Knives',[D(4),BF('dodge',25,1)]],3,{evasion:15},['Quick Toss',[D(2,'one',{hits:2})]]],
+    ['Treasure Hoarders: Gravedigger','Physical',30,['Shovel Swing',[D(4)]],['Dust in the Eyes',[D(4),DB('weaken',25,1)]],3,{},['Earth Toss',[D(3),DB('weaken',15,1)]]],
+    ['Treasure Hoarders: Pyro Potioneer','Pyro',28,['Flask Toss',[D(3)]],['Incendiary Mixture',[D(3),SM('Burning Reagent',2,2,'one',{element:'Pyro'})]],3,{},['Scattered Reagent',[D(2,'all')]]],
     // Genius Invokation TCG enemy cards (tools/fetch-tcg-enemies.py): Normal Attack and Elemental Skill
     // alternate as Attacks (the Skill is the optional last entry), the Elemental Burst is the Special.
     // A move's third entry overrides its element, e.g. a Physical Normal Attack from an elemental enemy.
@@ -243,33 +248,77 @@ const ENEMIES=[
     ['Thundercraven Rifthound','Electro',56,['Cankering Claws',[D(3),SM('Corrosion',1,1,'all')]],['Devouring Bite',[D(8),SM('Corrosion',1,1,'all')]],3,{evasion:15},['Corrosive Electro Crystal',[D(4),SM('Corrosion',1,1,'all')]]],
     ['Winged Cryoshroom','Cryo',36,['Spore Bullet',[D(3)]],['Divebomb',[D(7)]],3,{evasion:15,weakTo:'Pyro'},['Rolling Spray',[D(5)]]],
     ['Winged Dendroshroom','Dendro',36,['Spore Bullet',[D(3)]],['Divebomb',[D(7)]],3,{evasion:15,weakTo:'Pyro'},['Rolling Spray',[D(5)]]],
+    // 1.63: obtainable Genius Invokation cards of monsters, Fatui and Eremites (fetch-tcg-enemies.py --new).
+    // The Abyss's Rebirth passives and the Lawachurl's Stonehide become extra HP, shields and armor.
+    ['Abyss Herald: Wicked Torrents','Hydro',46,['Rippling Slash',[D(4)],'Physical'],['Torrential Shock',[D(7),DB('weaken',15,2,'all')]],3,{weakTo:'Cryo'},['Vortex Edge',[D(3,'one',{hits:2})]]],
+    ['Abyss Lector: Fathomless Flames','Pyro',46,['Flame of Salvation',[D(3)]],['Ominous Star',[D(6),SM('Darkfire Furnace',2,2,'all')]],3,{shield:10,weakTo:'Hydro'},['Searing Precept',[D(6)]]],
+    ['Abyss Lector: Violet Lightning','Electro',46,['Den of Thunder',[D(3)]],['Wild Thunderburst',[D(8)]],3,{shield:10,weakTo:'Cryo'},['Shock of the Enigmatic Abyss',[D(6)]]],
+    ['Black Serpent Knight: Rockbreaker Ax','Geo',66,['Supreme Strike',[D(4)],'Physical'],['Stone Stance',[SH(6),D(5,'one',{hits:2})]],3,{armor:20},['Axe and Aegis',[D(6)]]],
+    ['Black Serpent Knight: Windcutter','Anemo',56,['Half-Sword Technique',[D(4)],'Physical'],['Guard Stance',[D(5,'one',{hits:2})]],3,{armor:10,evasion:10},['Rising Slash',[D(6)]]],
+    ['Consecrated Fanged Beast','Dendro',56,['Claw Slash',[D(4)],'Physical'],['Sprawling Blighted Vines',[D(7),D(2,'all')]],3,{},['Siphon Wave',[D(4),H(3,'self')]]],
+    ['Consecrated Flying Serpent','Anemo',56,['Whirling Tail',[D(4)],'Physical'],['Scattershot Vortex',[D(3,'all',{hits:2})]],3,{evasion:15},['Swirling Squall',[D(6)]]],
+    ['Consecrated Horned Crocodile','Hydro',61,['Fang Bite',[D(4)],'Physical'],['Reptilian Rage',[D(7),H(6,'self')]],3,{},['Saw-Toothed Surge',[D(6)]]],
+    ['Consecrated Scorpion','Electro',56,['Scorpion Strike',[D(4)],'Physical'],['Thunderbore Blast',[D(6),SM('Thunderbore Trap',2,2)]],3,{},['Stinging Spine',[D(6)]]],
+    ['Eremite Floral Ring-Dancer','Dendro',56,['Floral-Ring Caress',[D(4)],'Physical'],['Spirit of Omen\'s Awakening: Dendro Spirit-Serpent',[D(7),SM('Spirit of Omen: Dendro Spirit-Serpent',2,2)]],3,{},['Spiraling Whirl',[D(6)]]],
+    ['Eremite Scorching Loremaster','Pyro',56,['Searing Glare',[D(3)]],['Spirit of Omen\'s Awakening: Pyro Scorpion',[D(6),SM('Spirit of Omen: Pyro Scorpion',2,2)]],3,{},['Blazing Strike',[D(6)]]],
+    ['Fatui Electro Cicin Mage','Electro',56,['Hurtling Bolts',[D(3)]],['Thundering Shield',[D(3),SH(6),D(4)]],3,{evasion:15},['Misty Call',[SM('Electro Cicin',2,3,'random')]]],
+    ['Frost Operative','Cryo',61,['Swift Point',[D(4)],'Physical'],['Thorny Onslaught',[D(9)]],3,{evasion:15},['Frosty Interjection',[D(6)]]],
+    ['Hydro Hilichurl Rogue','Hydro',61,['Whirling Scythe',[D(4)],'Physical'],['Bubblefloat Blitz',[D(8)]],3,{},['Slash of Surging Tides',[D(6)]]],
+    ['Mirror Maiden','Hydro',56,['Water Ball',[D(3)]],['Rippled Reflection',[D(9)]],3,{evasion:10},['Influx Blast',[D(6),DB('weaken',15,1)]]],
+    ['Stonehide Lawachurl','Geo',56,['Plama Lawa',[D(4)],'Physical'],['Upa Shato',[D(9)],'Physical'],3,{armor:40,armorBreak:'Geo'},['Movo Lawa',[D(6)],'Physical']],
+    ['Wayward Hermetic Spiritspeaker','Cryo',56,['Spiritspeaking: Frost Star',[D(3)]],['Chilling Illustration',[D(8)]],3,{},['Radiance in Flux',[D(3),SH(4)]]],
 ];
 
 const keyOf=name=>String(name || '').toLowerCase().replace(/[^a-z0-9]+/g,'');
 const characterTable=new Map(TABLE.map(row=>[keyOf(row[0]),row]));
 const enemyTable=new Map([...ENEMIES,...BOSS_ROWS].map(row=>[keyOf(row[0]),row]));
 export const enemyElement=name=>enemyTable.get(keyOf(name))?.[1];
-export const hasBundledKit=name=>characterTable.has(keyOf(name))||enemyTable.has(keyOf(name))||/^(aether|lumine)$/i.test(String(name).trim());
+export const hasBundledKit=name=>Boolean(npcKit(name))||characterTable.has(keyOf(name))||enemyTable.has(keyOf(name))||/^(aether|lumine)$/i.test(String(name).trim());
 const clone=value=>structuredClone(value);
 
 function normal(weapon,name,element,override={}){
     const base={...(WEAPON_NA[weapon] || WEAPON_NA.sword),...override};
-    return {kind:'normal',name,cost:0,miss:base.miss,element:weapon==='catalyst'?element:'Physical',effects:[D(base.power)]};
+    // As in Genius Invokation, a Normal Attack costs 3 dice: one of the character's element and two of any.
+    return {kind:'normal',name,cost:3,element:weapon==='catalyst'?element:'Physical',effects:[D(base.power)]};
 }
 function kitFromRow([name,weapon,hp,energy,role,na,[skill,skillCost,skillFx],[burst,burstCost,burstFx],extra={}],element){
-    const kit={name,weapon,hp,energy,role,moves:[normal(weapon,na,element,extra.na),{kind:'skill',name:skill,cost:skillCost,effects:clone(skillFx)},{kind:'burst',name:burst,cost:burstCost,effects:clone(burstFx)}]};
+    const kit={name,weapon,hp,energy,role,moves:[normal(weapon,na,element,extra.na),{kind:'skill',name:skill,cost:skillCost+1,effects:clone(skillFx)},{kind:'burst',name:burst,cost:burstCost,effects:clone(burstFx)}]};
+    // A character with a Genius Invokation card plays its card's kit (tcg-kits.js): its skill names, dice
+    // costs, Burst Energy, damage, summons, healing, shields and infusions. A move whose card text has
+    // nothing this engine can play keeps the effects above. Health stays Silly Teyvat's.
+    const tcg=TCG_KITS[name];
+    if(tcg){
+        kit.energy=Math.max(1,Math.min(5,tcg.energy || energy));
+        const [n,sk,bu]=kit.moves;
+        Object.assign(n,{name:tcg.normal.name,element:tcg.normal.element==='Physical'?'Physical':element,effects:[D(tcg.normal.power,'one',tcg.normal.plus?{plus:clone(tcg.normal.plus)}:{})]});
+        Object.assign(sk,{name:tcg.skill.name,cost:tcg.skill.cost,effects:tcg.skill.effects.length?clone(tcg.skill.effects):sk.effects});
+        Object.assign(bu,{name:tcg.burst.name,cost:tcg.burst.cost,effects:tcg.burst.effects.length?clone(tcg.burst.effects):bu.effects});
+        kit.tcg=true;
+    }
+    // Kits built on the newer mechanics are written by hand (tcg-special-kits.js).
+    const special=SPECIAL_KITS[name];
+    if(special){
+        const [n,sk,bu]=kit.moves,take=(move,def)=>def?Object.assign(move,{...clone(def),kind:move.kind,cost:def.cost ?? move.cost,element:move.kind==='normal'?(weapon==='catalyst'?element:'Physical'):move.element}):move;
+        take(n,special.normal);take(sk,special.skill);take(bu,special.burst);
+        for(const key of ['resource','moonsign','passives','bondInfuse','noHeal'])if(special[key]!==undefined)kit[key]=clone(special[key]);
+        if(special.energy)kit.energy=special.energy;
+        kit.tcg=true;kit.special=true;
+    }
     if(extra.evasion)kit.evasion=extra.evasion;
     return kit;
 }
 export function travelerKit(element){
     const name='Traveler',[skill,skillFx,burst,burstFx]=TRAVELER[element] || [];
-    if(!skill)return {name,weapon:'sword',hp:34,energy:2,role:'DPS',moves:[normal('sword','Foreign Ironwind','Physical'),{kind:'skill',name:'Elemental Strike',cost:2,effects:[D(5)]},{kind:'burst',name:'Elemental Release',cost:3,effects:[D(6,'all')]}]};
-    return {name,weapon:'sword',hp:34,energy:2,role:'DPS',moves:[normal('sword','Foreign Ironwind','Physical'),{kind:'skill',name:skill,cost:2,effects:clone(skillFx)},{kind:'burst',name:burst,cost:3,effects:clone(burstFx)}]};
+    if(!skill)return {name,weapon:'sword',hp:34,energy:2,role:'DPS',moves:[normal('sword','Foreign Ironwind','Physical'),{kind:'skill',name:'Elemental Strike',cost:3,effects:[D(5)]},{kind:'burst',name:'Elemental Release',cost:3,effects:[D(6,'all')]}]};
+    return {name,weapon:'sword',hp:34,energy:2,role:'DPS',moves:[normal('sword','Foreign Ironwind','Physical'),{kind:'skill',name:skill,cost:3,effects:clone(skillFx)},{kind:'burst',name:burst,cost:3,effects:clone(burstFx)}]};
 }
 function enemyKit([name,element,hp,basic,special,cooldown,extra={},skill,additional=[]]){
     const move=(kind,[moveName,effects,moveElement])=>({kind,name:moveName,cost:0,...(moveElement?{element:moveElement}:{}),effects:clone(effects)});
     const moves=[move('basic',basic),...(skill?[move('basic',skill)]:[]),...additional.map(m=>move('basic',m)),{...move('special',special),cooldown}];
-    return {name,enemy:true,element,hp,energy:0,role:'Enemy',miss:10,...clone(extra),moves};
+    const kit={name,enemy:true,element,hp,energy:0,role:'Enemy',miss:10,...clone(extra),moves};
+    // A second form (La Signora's Crimson Witch of Embers) brings its own moves, in the same order as the first.
+    if(extra.transform){const {basic:b,skill:s,special:sp,...form}=clone(extra.transform);kit.transform={...form,moves:[move('basic',b),...(s?[move('basic',s)]:[]),{...move('special',sp),cooldown}]};}
+    return kit;
 }
 function genericEnemy(name,element){return {name,enemy:true,element:element||'Physical',hp:30,energy:0,role:'Enemy',miss:10,moves:[{kind:'basic',name:'Strike',cost:0,effects:[D(4)]},{kind:'special',name:'Fury',cost:0,cooldown:3,effects:[D(3,'all')]}]};}
 // A party member's moveset as an opponent: both attacks become Attacks (one is picked each round) and the Burst a Special on a cooldown.
@@ -277,9 +326,27 @@ export function foeKit(kit){
     const moves=kit.moves.map(move=>move.kind==='burst'?{...clone(move),kind:'special',cost:0,cooldown:3}:{...clone(move),kind:'basic',cost:0});
     return {...kit,enemy:true,energy:0,miss:kit.miss ?? 10,moves};
 }
+// The reverse, for a player who plays an enemy card: its moves become a character's, so it fights like
+// any party member (dice costs, Energy, a Burst). Its first Attack is the Normal Attack; a second Attack, or
+// else its Special, is the Elemental Skill; the Special, stronger, is the Elemental Burst.
+export function playableKit(kit){
+    if(!kit?.enemy)return kit;
+    const basics=kit.moves.filter(m=>m.kind==='basic'),special=kit.moves.find(m=>m.kind==='special') || basics.at(-1);
+    const strip=({cooldown,...move})=>clone(move);
+    const stronger=effects=>(effects || []).map(e=>e.type==='damage'||e.type==='heal'||e.type==='shield'?{...e,...(e.power!==undefined?{power:Math.ceil(e.power*1.5)}:{}),...(e.amount!==undefined&&e.type!=='damage'?{amount:Math.ceil(e.amount*1.5)}:{})}:{...e});
+    const normal={...strip(basics[0] || special),kind:'normal',cost:3};
+    const skill={...strip(basics[1] || special),kind:'skill',cost:3};
+    const burst={...strip(special),kind:'burst',cost:3,name:basics[1]||special===basics[0]?special.name:`${special.name}: Unleashed`,effects:stronger(special.effects)};
+    const {enemy,miss,transform,...rest}=clone(kit);
+    return {...rest,role:kit.role==='Enemy'?'DPS':kit.role,weapon:WEAPONS.includes(kit.weapon)?kit.weapon:'none',energy:2,playedEnemy:true,moves:[normal,skill,burst]};
+}
 // The built-in kit for a card name, before user edits.
+// Beings made of their element fight with it built in, like an infused Normal Attack in Genius Invokation.
+const ELEMENTAL_BEING=/slime|abyss (mage|herald|lector)|hypostasis|whopperflower|shroom|specter|phantasm|manifestation|tulpa|rhodeia|primal fire|cicin|rifthound|wolflord|oceanid|lawachurl/i;
+export const defaultInfusion=(name,element)=>ELEMENTS.includes(element)&&ELEMENTAL_BEING.test(String(name || ''));
 export function defaultKit(name,{element='None',enemy=false}={}){
-    if(enemy){const row=enemyTable.get(keyOf(name));return row?enemyKit(row):genericEnemy(name,element==='None'?'Physical':element);}
+    if(enemy){const row=enemyTable.get(keyOf(name)),kit=row?enemyKit(row):genericEnemy(name,element==='None'?'Physical':element);kit.infusion ??= defaultInfusion(name,kit.element);return kit;}
+    const npc=npcKit(name);if(npc)return structuredClone(npc);
     if(/^(aether|lumine|traveler)$/i.test(String(name).trim()))return {...travelerKit(element),name};
     const row=characterTable.get(keyOf(name));
     if(row)return kitFromRow(row,element);
@@ -287,12 +354,53 @@ export function defaultKit(name,{element='None',enemy=false}={}){
     if(element!=='None'){kit.moves[0].element='Physical';}
     return kit;
 }
-export const defaultKitHp=(name,enemy)=>{const row=enemy?enemyTable.get(keyOf(name)):characterTable.get(keyOf(name));return row?row[2]:undefined;};
+export const defaultKitHp=(name,enemy)=>{const row=enemy?enemyTable.get(keyOf(name)):characterTable.get(keyOf(name));return row?row[2]:!enemy?npcKit(name)?.hp:undefined;};
+// Saved edits live in the player's settings, which a shared package can fill too, and their values
+// reach the battle screen's markup. Each is cut down to what the moveset editor itself writes; a
+// value that is not that is dropped, so the default shows instead.
+const ELEMENT_NAMES=['','None','Physical',...ELEMENTS];
+const whole=(value,min,max)=>{const n=Math.round(Number(value));return value===null||value===''||!Number.isFinite(n)?undefined:Math.max(min,Math.min(max,n));};
+const pick=(value,list)=>list.includes(value)?value:undefined;
+const text=value=>typeof value==='string'?value.slice(0,80):undefined;
+const KIT_FIELDS={
+    weapon:v=>pick(v,WEAPONS),role:v=>pick(v,[...ROLES,'Enemy']),element:v=>pick(v,ELEMENT_NAMES),weakTo:v=>pick(v,['',...ELEMENTS]),armorBreak:v=>pick(v,['',...ELEMENTS]),
+    energy:v=>whole(v,0,9),miss:v=>whole(v,0,100),armor:v=>whole(v,0,90),shield:v=>whole(v,0,100),evasion:v=>whole(v,0,90),
+    infusion:v=>typeof v==='boolean'?v:undefined,
+};
+function cleanEffect(effect){
+    if(!effect||typeof effect!=='object'||!EFFECT_TYPES.includes(effect.type))return null;
+    const out={type:effect.type},keep=(key,value)=>{if(value!==undefined)out[key]=value;};
+    keep('target',pick(effect.target,Object.keys(TARGETS)));keep('stat',pick(effect.stat,[...BUFF_STATS,...DEBUFF_STATS]));keep('element',pick(effect.element,ELEMENT_NAMES));keep('name',text(effect.name));
+    for(const key of ['power','amount','hits','rounds','heal','each','cap','min','consumeBond'])keep(key,whole(effect[key],0,100));
+    if(effect.decoy)out.decoy=true;if(effect.piercing)out.piercing=true;
+    // Genius Invokation conditions on an ordinary effect (a Charged Attack bonus, damage per point spent…).
+    keep('when',pick(effect.when,WHEN));keep('unless',pick(effect.unless,WHEN));keep('per',pick(effect.per,['spent','bond','cardsInHand']));
+    keep('whenReaction',pick(effect.whenReaction,['Lunar-Charged','Lunar-Bloom','Lunar-Crystallize']));keep('summon',text(effect.summon));
+    if(effect.plus&&typeof effect.plus==='object'){const plus={};for(const key of ['charged','plunge']){const n=whole(effect.plus[key],0,100);if(n!==undefined)plus[key]=n;}if(Object.keys(plus).length)out.plus=plus;}
+    return out;
+}
+const WHEN=['charged','notCharged','plunge','nightsoul','noNightsoul','cheaperInHand','summonPresent','spentAtLeast','spentBelow','nightsoulFull','nightsoulNotFull','firstUse','repeatUse','energyAtLeast'];
+// Effects the Moveset editor cannot edit (Nightsoul, Techniques, created cards, listeners…) are never read
+// from saved settings: a saved one stands for the bundled kit's own effect of that kind, which is used instead.
+function cleanMove(move,base){
+    const out={},keep=(key,value)=>{if(value!==undefined)out[key]=value;};
+    keep('name',text(move?.name));keep('element',pick(move?.element,ELEMENT_NAMES));
+    for(const key of ['cost','miss','cooldown'])keep(key,whole(move?.[key],0,100));
+    if(Array.isArray(move?.effects)){
+        const spare=[...(base?.effects || [])];
+        out.effects=move.effects.map(e=>{
+            if(EFFECT_TYPES.includes(e?.type))return cleanEffect(e);
+            const i=spare.findIndex(b=>b&&b.type===e?.type&&(b.name || b.label || b.status?.label || '')===(e?.name || e?.label || e?.status?.label || ''));
+            if(i<0)return null;const found=spare[i];spare[i]=null;return clone(found);
+        }).filter(Boolean);
+    }
+    return out;
+}
 // Saved edits replace whole moves; anything missing falls back to the default.
 export function mergeKit(base,saved){
     if(!saved)return base;
-    const kit={...base,...Object.fromEntries(['weapon','energy','role','miss','armor','armorBreak','shield','weakTo','evasion','element'].filter(k=>saved[k]!==undefined).map(k=>[k,saved[k]]))};
-    kit.moves=base.moves.map((move,i)=>saved.moves?.[i]?{...move,...clone(saved.moves[i]),kind:move.kind}:move);
+    const kit={...base,...Object.fromEntries(Object.entries(KIT_FIELDS).map(([key,clean])=>[key,clean(saved[key])]).filter(([,value])=>value!==undefined))};
+    kit.moves=base.moves.map((move,i)=>saved.moves?.[i]?{...move,...cleanMove(saved.moves[i],move),kind:move.kind}:move);
     kit.custom=true;return kit;
 }
 export const kitOverrides=ctx=>mediaSettings(ctx).combatKits ??= {};
@@ -300,14 +408,43 @@ export function saveKitOverride(ctx,avatar,kit){kitOverrides(ctx)[avatar]=clone(
 export function resetKitOverride(ctx,avatar){delete kitOverrides(ctx)[avatar];ctx.saveSettingsDebounced?.();}
 
 // ---- Descriptions -------------------------------------------------------------------
-export const KIND_LABEL={normal:'Normal Attack',skill:'Elemental Skill',burst:'Elemental Burst',basic:'Attack',special:'Special'};
+export const KIND_LABEL={normal:'Normal Attack',skill:'Elemental Skill',burst:'Elemental Burst',basic:'Attack',special:'Special',technique:'Technique',status:'Status'};
 const STAT_LABEL={atk:'damage dealt',guard:'damage taken',crit:'critical hit chance',dodge:'dodge chance',regen:'healing each round',infuse:'elemental infusion',vuln:'damage taken',weaken:'damage dealt',stun:'stun'};
 const plural=(n,word)=>`${n} ${word}${n===1?'':'s'}`;
 export function describeEffect(effect,element){
     const t=TARGETS[effect.target] || effect.target,el=effect.element || element;
     const elText=el&&el!=='None'?`${el} `:'';
+    const when={charged:'As a Charged Attack: ',plunge:'As a Plunging Attack: ',nightsoul:'In Nightsoul\'s Blessing: ',firstUse:'First use this round: ',repeatUse:'Used again this round: ',cheaperInHand:'With a cheaper card in hand: ',summonPresent:`With ${effect.summon} out: `,spentAtLeast:`Having spent ${effect.min} or more: `,spentBelow:`Having spent less than ${effect.min}: `,nightsoulFull:'At full Nightsoul: ',nightsoulNotFull:''}[effect.when] || (effect.whenReaction?`After ${effect.whenReaction}: `:'');
+    const text=describeOne(effect,{t,el,elText,element});
+    return text&&when?when+text[0].toLowerCase()+text.slice(1):text;
+}
+function describeOne(effect,{t,el,elText,element}){
     switch(effect.type){
-        case 'damage':return `Deals ${effect.power} ${el==='Physical'?'Physical ':elText}damage to ${t}${effect.hits>1?` ${effect.hits} times`:''}.`;
+        case 'damage':
+            if(effect.target==='standby'||effect.piercing)return `Deals ${effect.power} Piercing damage to ${effect.target==='standby'?'every enemy on standby':t}.`;
+            if(effect.per==='spent')return `Deals ${el==='Physical'?'Physical ':elText}damage to ${t}: ${effect.each || 2} for each point spent.`;
+            if(effect.per==='cardsInHand')return `Deals ${effect.power} ${elText}damage to ${t}, +${effect.each || 2} for each card in hand that it names (up to ${effect.cap}).`;
+            return `Deals ${effect.power} ${el==='Physical'?'Physical ':elText}damage to ${t}${effect.hits>1?` ${effect.hits} times`:''}${effect.plus?.charged?` (+${effect.plus.charged} as a Charged Attack)`:''}${effect.plus?.plunge?` (+${effect.plus.plunge} as a Plunging Attack)`:''}${effect.consumeBond?`, +2 for each of up to ${effect.consumeBond} Bond of Life it removes from the target`:''}.`;
+        case 'nightsoul':return effect.spend?`Spends ${effect.spend} Nightsoul point${effect.spend>1?'s':''}.`:effect.enter===false?`Gains ${effect.amount} Nightsoul point${effect.amount===1?'':'s'}.`:`Enters Nightsoul's Blessing${effect.amount?` with ${effect.amount} Nightsoul point${effect.amount===1?'':'s'}`:''}.`;
+        case 'technique':return `Gives the Technique ${effect.name} (costs ${effect.cost} ${effect.cost===1?'die':'dice'}${effect.spend?.nightsoul?` and ${effect.spend.nightsoul} Nightsoul point`:''}): ${describeMove({effects:effect.effects},element)}`;
+        case 'status':return effect.status?.label?`${effect.side==='foe'?'Puts':'Creates'} ${effect.status.label}${effect.side==='foe'?' on the enemy side':''}.`:'';
+        case 'addCard':return `${effect.choose?'Choose one of':'Adds'} ${[...new Set(effect.cards)].map(id=>id.split('-').map(w=>w[0].toUpperCase()+w.slice(1)).join(' ')).join(', ')} ${effect.to==='deck'?'to your deck':'to your hand'}.`;
+        case 'cheaper':return `Cost Reduction on ${effect.amount || 1} card${(effect.amount || 1)>1?'s':''} in your hand.`;
+        case 'cheaperCard':return `Cost Reduction on up to ${effect.amount} copies of a card in your hand.`;
+        case 'bond':return `Adds ${effect.amount} Bond of Life to ${effect.target==='subject'?'the character hit':t}.`;
+        case 'clearBond':return `Removes ${effect.target==='self'||!effect.target?'own':'its'} Bond of Life${effect.heal?' and heals 2 HP for each stack':''}${effect.damage?', dealing 2 damage per stack':''}${effect.cap?` (up to ${effect.cap})`:''}.`;
+        case 'prepare':return `Then prepares ${effect.name}: ${describeMove({effects:effect.effects},element)}`;
+        case 'agileSwitch':return 'Creates Agile Switch: the next switch is a Fast Action.';
+        case 'efficientSwitch':return 'Creates Efficient Switch: the next switch costs no dice.';
+        case 'plan':return `Battle Plan: the next Skill costs ${effect.amount || 1} fewer ${effect.amount>1?'dice':'die'}.`;
+        case 'resource':return `Gains ${effect.amount} ${effect.label || 'of its resource'}.`;
+        case 'draw':return `Draws ${effect.amount} card${effect.amount===1?'':'s'}.`;
+        case 'discard':return `Discards ${effect.amount} card${effect.amount===1?'':'s'} from your hand.`;
+        case 'switchNext':return 'Switches to your next character.';
+        case 'switchPrev':return 'Switches to your previous character.';
+        case 'bite':return `Puts ${effect.amount} Bite Target on the opposing active character.`;
+        case 'convertDice':return `Turns ${effect.amount} dice into ${effect.face==='self'?'its element':effect.face || 'Omni'}.`;
+        case 'heal':return `Heals ${t} for ${effect.amount} HP.`;
         case 'heal':return `Heals ${t} for ${effect.amount} HP.`;
         case 'shield':return `Shields ${t} for ${effect.amount}.`;
         case 'buff':
@@ -316,7 +453,7 @@ export function describeEffect(effect,element){
             if(effect.stat==='guard')return `${t[0].toUpperCase()+t.slice(1)} take${t==='self'?'s':''} ${effect.amount}% less damage for ${plural(effect.rounds,'round')}.`;
             return `Raises ${STAT_LABEL[effect.stat] || effect.stat} of ${t} by ${effect.amount}% for ${plural(effect.rounds,'round')}.`;
         case 'debuff':
-            if(effect.stat==='stun')return `Petrifies ${t}: it loses its next action.`;
+            if(effect.stat==='stun')return `Petrifies ${t}: no skills until the end of the round.`;
             if(effect.stat==='vuln')return `${t[0].toUpperCase()+t.slice(1)} take${/^all|^random/.test(effect.target)?'':'s'} ${effect.amount}% more damage for ${plural(effect.rounds,'round')}.`;
             return `Lowers ${STAT_LABEL[effect.stat] || effect.stat} of ${t} by ${effect.amount}% for ${plural(effect.rounds,'round')}.`;
         case 'summon':return `Summons ${effect.name || 'a companion'}${effect.power?`, dealing ${effect.power} ${elText}damage to ${t} at the end of each round`:''}${effect.heal?`${effect.power?' and':','} healing the most injured ally for ${effect.heal}${effect.power?'':' each round'}`:''} for ${plural(effect.rounds,'round')}.${effect.decoy?' It draws one enemy attack each round.':''}`;
@@ -328,8 +465,7 @@ export function describeEffect(effect,element){
 }
 export const escapeHtml=text=>String(text ?? '').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 export function describeMove(move,element){
-    const el=move.element || element,lines=(move.effects || []).map(e=>describeEffect(e,el)).filter(Boolean);
-    if(move.kind==='normal')lines.push(`Costs no dice. ${move.miss ?? 20}% chance to miss.`);
+    const el=move.element || element,lines=[...new Set((move.effects || []).map(e=>describeEffect(e,el)).filter(Boolean))];
     if(move.cooldown)lines.push(`Used every ${move.cooldown} rounds.`);
     return lines.join(' ');
 }

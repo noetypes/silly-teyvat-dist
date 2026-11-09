@@ -1,3 +1,515 @@
+# Silly Teyvat
+
+A Genshin-inspired visual novel and card-battle game inside SillyTavern.
+
+## Install and play
+
+Requires **SillyTavern 1.19.0 or later**, Git, and about **7 GB of free disk space** for the extension, game data and download. Run the asset download on the server computer at `http://localhost:8000` (or use HTTPS). Once installed, other browsers and phones use the same server's assets.
+
+1. In SillyTavern, open **Extensions → Install extension** and paste:
+   ```text
+   https://github.com/noetypes/silly-teyvat-dist
+   ```
+2. Reload SillyTavern. Accept **Download** when Silly Teyvat offers its game data (**2.09 GB**). Keep the page open while it downloads and installs, then choose **Reload** when finished.
+3. Connect your own **Chat Completion API** in SillyTavern. No model subscription or API credentials are included.
+4. Choose a persona (Aether and Lumine are included), open a Genshin character card, and start chatting. The Paimon menu opens **Characters**, **Map**, **Inventory** and the other game screens. If dialogue view is off, switch **Silly Teyvat** on in that menu or press **Alt+G**.
+
+The download includes **273 character cards, 2,424 sprites, 928 uploaded files, 15 personas, two lorebooks, the Teyvat Slate theme and Teyvat Choices**. Map backgrounds, portraits, TCG artwork, dice, fonts and interface assets are included with the extension. Character assignments, sprite sets, scenes, music playlists and combat settings arrive with the game data. Your existing content is kept on first install.
+
+If you chose **Not now**, open **Extensions → Silly Teyvat → Share → Check for game data**. Interrupted imports can be retried; files already installed are skipped. Downloads need localhost or HTTPS for checksum verification. After the initial install, update the extension through SillyTavern's extension manager; a newer game-data release is offered automatically when available.
+
+For changing expressions, use SillyTavern's **Character Expressions** classifier settings; the extension uses that classifier and the included sprite folders. Chatting, choices and scene classification use your own configured model connection.
+
+## Version 1.77.0: Complete game download
+
+- A fresh install offers the full game-data pack automatically, with progress, checksums and retry support.
+- Versioned download parts work directly from the public GitHub assets repository; updates can fetch only changed files.
+- Bundled backgrounds and scene paths follow the installed extension folder, including `silly-teyvat-dist`.
+
+# Silly Teyvat 1.76.12: Centred NPC faces
+
+- Reframed all 46 NPC circular portraits around their faces, including Katheryne's left-offset head. Individual face positions now determine the crop centre, with extra space for larger headwear where needed. Transparency is preserved across every shared portrait view.
+
+# Silly Teyvat 1.76.11: Enemy and NPC head icons
+
+- All 104 enemies and 46 NPCs now have transparent circular head portraits cropped from their installed neutral sprites, with individual framing for creatures and machines. Character Customization, combat, inventory, Trust, linked personas and map enemy badges use the shared portraits.
+
+# Silly Teyvat 1.76.10: Menus cover the welcome panel
+
+- SillyTavern's menus (AI Config, User Settings and the rest) are now at least as wide as the chat column and start just under the top icons, so they fully cover the "SillyTavern release" welcome panel when it is on screen. On phones they are 6px from each edge instead of 12px.
+
+# Silly Teyvat 1.76.9: Nine portraits at most
+
+- The portrait strip at the top of Character Customization shows at most nine whole portraits on any screen, centred with the selected one in the middle. Its width never depends on the selected character's name; the browser check now verifies this at desktop sizes too (1920, 1440 and 1280 wide).
+
+# Silly Teyvat 1.76.8: Combat section and art
+
+- **Moveset is now Combat**, with Stats, Attacks and Art headings and the Starter deck (moved from Profile). Art shows the TCG card, Elemental Burst art and each attack's icon that battles use; tap one to upload a replacement, or Default to restore the game's art. Replacements apply to the card's battles (and to a persona playing that card), and a custom card replaces its animated Dynamic Skin.
+- Profile has a Properties heading and Staging a Stage placement heading, with less empty space above the first item. The enemy field reads "Shield weakness".
+- Play as follows All Characters on the left of the bottom bar. Status messages no longer pop up there; screen readers still announce them.
+- Phones in portrait: a slightly shorter top band that fades into the backdrop, with no edge above the section tabs.
+
+# Silly Teyvat 1.76.7: Character menu controls
+
+- **Play as** sits in the bottom bar on every section, level with and as tall as All Characters, right aligned under the slate (beside the slate in landscape). Its explanation moved to a tooltip. On phones in portrait, status messages float above the bar as a fading toast.
+- **Zoom** is on every section except Scenes: two steps closer, then back to the whole figure.
+- Character & enemy properties and the Staging settings are always shown, without dropdown headings.
+- The number of portraits in the top strip no longer depends on the selected character's name; it always keeps room for a name as long as "Aether", and longer names use the space the portraits leave.
+- Landscape section bubbles fit their names. Expression tiles are wider, so names such as "embarrassment" fit.
+
+# Silly Teyvat 1.76.6: Character menu on phones
+
+- **Landscape phones.** The portrait strip is centred on the screen with its arrows evenly spaced, and shows a whole, odd number of portraits so the selected one sits in the middle; the title takes only the room its name needs. Section names in the left rail clear the notch. The slate runs down level with the All Characters button.
+- **Portrait phones.** The slate is a little shorter, so the sprite is larger, and the strip fits five whole portraits. The selected section's shadow is no longer clipped by its row.
+- **Everywhere.** The heading is the element crest and the character's name. Close buttons draw a centred cross. The floor shadow follows the sprite's feet in every layout, including the Moveset camera, and hides while zoomed in. The Moveset rules text is gone; Reset to default is available only after a moveset has been edited.
+- Checks: `node tools/test-wardrobe-ui-browser.mjs` (centring, whole portraits, uncropped rail, slate edge, shadow placement).
+
+# Silly Teyvat 1.76.5: Character configuration review
+
+- **Mobile wardrobe space.** Portrait sections and All Characters filters use single horizontally scrolling rows. Mobile character navigation shows arrows; selected portraits and artwork tiles have room for their glow. The slate no longer repeats the character name and preview caption. Landscape restores the vertical section rail, widens the slate, uses a compact All Characters icon, and gives the element/name heading its own header column. The character browser close button has a separate row from search. [Mobile checks](../../docs/ui-reviews/2026-11-09-mobile-wardrobe.md).
+
+- **Centered stage and clickable Trust hearts.** Desktop sprites sit at the screen center beside a narrower editor; the bottom shade fades upward. Q/E remain, W/S indicators and lingering header streaks are removed. Moveset fields align, and sprite/scene Required Trust uses the Trust menu’s five-heart artwork with click and keyboard editing. [Validation](../../docs/ui-reviews/2026-11-09-wardrobe-centering-and-trust.md).
+
+- **Reference-menu corrections.** Element/name headings and Q/E/W/S controls are restored. The portrait selector stays centered and cannot scroll vertically; enlarged portraits retain their full rim. Audio/import headings are compact, imports use consistent spacing, and empty-scene status text no longer points below the footer. [Follow-up checks](../../docs/ui-reviews/2026-11-09-character-menu-corrections.md).
+
+- A consistent slate editor improves contrast over elemental backgrounds, with more room for forms and visible section names on phones and tablets.
+- Starting Trust, Starter Deck and linking sprite folders have accessible disclosure headings again. Audio and imports are folded into named sections; Burst audio lives in Moveset.
+- Outfits distinguish previewing from equipping. The labelled character browser has responsive filters, empty-result guidance and contained keyboard focus.
+- [Review findings and validation](../../docs/ui-reviews/2026-11-08-character-menu.md). Run `node tools/test-wardrobe-ui-browser.mjs` for the responsive and keyboard checks.
+- **Layout pass across desktop, tablet and phone.** "Play as" sits below the Profile editor behind a divider instead of reading as part of the form, and fills the width on phones. Profile fields stack their labels when the editor is narrow, and Moveset effects use two columns, so selects are no longer cut off. Moveset rules fold into "How moves cost dice". The portrait strip, phone section tabs, list filters and the editor fade at an edge with more to scroll. Landscape phones keep the last section name above the floor shade and show two rows in the character list. A position field switched off by its checkbox looks disabled.
+- Fixed the media check: Paimon's card image had been re-saved with the example-dialogue update (same pixels, new embedded card data), and its manifest checksum now matches.
+
+# Silly Teyvat 1.76.4: Map compositing
+
+- The open map prepares its shared camera and tile levels for browser GPU compositing, releasing those hints on close. Individual waypoints and tiles do not request extra graphics layers.
+- Map pins skip redundant position writes while retaining Leaflet's zoom, stacking, keyboard interaction and positioning fallback. Decoded tile caches remain bounded for lower-memory devices.
+- The map browser check now reports graphics capability and measures a populated pan/zoom flight as well as steady-zoom panning. Hardware acceleration remains a browser setting; the extension cannot force it on.
+
+# Silly Teyvat 1.76.3: Combat triggers and reversed travel
+
+- Any character's combat trigger starts a fight after their reply is read, regardless of either card's role or the player's persona. Bracketed markers are hidden on all AI dialogue, and the same reply cannot start another round on replay.
+- An enemy persona's Attack starts against every present non-enemy without a target confirmation; hostile bosses remain in the battle too. Defeated hostile characters leave without a revive question.
+- Departing as an enemy offers each non-boss enemy companion. Accepted companions remain in the next scene and travel history; declined companions can be found where they stayed. Non-enemies and bosses do not follow.
+- Checks: `node tools/test-enemy-persona.mjs`; the duel, combat, send-attack, travel, cast and encounter preview suites.
+
+# Silly Teyvat 1.76.2: Persona sprite identity and height
+
+- Enemy expression handling keeps the player separate from NPCs sharing the same sprite folder. Narration no longer creates a second copy, and saved empty solo openings hide the phantom copy from older page caches.
+- Sprite layout uses the decoded image's proportions when no crop is needed, so square and wide artwork fills its model-based height. Personas use the same body model and size settings as their linked card.
+- Regression checks use the production expression adapter: `node tools/test-solo-opening-browser.mjs --enemy`; `node tools/test-sprite-height-browser.mjs` checks square and wide art on desktop and mobile, with trimming on and off.
+
+# Silly Teyvat 1.76.1: Enemy personas start alone
+
+- Starting a solo journey as an enemy keeps the random Wilderness habitat but opens with only the player's sprite and the Narrator. No residents or enemies spawn on that first visit, including another enemy that looks like the player. Encounters resume normally after travel.
+- Regression checks: `node tools/test-enemy-persona.mjs` and `node tools/test-solo-opening-browser.mjs --enemy`.
+
+# Silly Teyvat 1.76.0: Battle music everywhere, and playing as an enemy
+
+- **Every waypoint has battle music.** Towns and other non-Wilderness places can now be given a battle track in *Choose music* (the old Wilderness-only limit is gone, because you can start a fight anywhere). Existing installs fill every waypoint that had none with its region's open-world combat theme (Rite of Battle, Rapid as Wildfires, Duel in the Mist, Swirls of the Stream, Rondeau des fleurs et des rapieres, Anthem of the Savannah, To Light the Aeon Dark, Triumph on the Ice) on first load; a track you chose and every exploration playlist stay as they are. All 20 boss arenas already had the boss's own theme where the game gives one (the wiki's Soundtrack Usage lists none for the other open-world bosses, which use their region's combat music), so nothing new was downloaded.
+- **Battle music follows the fight.** Choosing to battle a friendly character (Attack on, then picking who) starts the battle music at once, and it keeps playing between rounds until you win, flee, or send a message with Attack off.
+- **Playing an enemy persona.** A solo journey now begins at a random Wilderness waypoint where that enemy appears (any Wilderness waypoint if it appears nowhere), with another of its kind already there to greet you, instead of at the Adventurers' Guild. The sides are reversed: you and the enemies stand on the left of the stage, characters on the right. Enemies are friendly, bosses stay hostile, and every character is hostile to you; a new *Enemy persona* prompt (Settings → Prompts, and in the prompt order) tells the model so each turn, hostile characters can start a duel by writing the combat trigger phrase, meeting them starts battle music while meeting a friendly enemy does not, and running out of HP sends you to a refuge in the wilds instead of a Guild. Other enemies of your kind can now appear in the wilds.
+- **Opponent charge diamonds.** On the battle board every opponent card shows diamonds for how charged its special move is (they fill as its cooldown counts down and glow when it is ready), like a character's Energy.
+- Tests: `node tools/test-enemy-persona.mjs`; the music, duel, battle, enemy-sprite and identity preview suites cover the rest.
+
+# Silly Teyvat 1.75.1: Enemy TCG cards
+
+- **Eight new enemy cards.** Cryo Whopperflower, Geo Slime, Large Electro Slime, Large Pyro Slime and the four Treasure Hoarders now use original one-pass TCG-style illustrations for battle and Character Management. Each used the installed enemy sprite and a genuine enemy card as visual references. The [review gallery](../../art/tcg/enemy-cards/review.html) and prompt records are in the source workspace; all eight await review.
+- **Distinct enemy kits.** Treasure Hoarders use their crossbow, knives, shovel or burning reagents; Geo Slime has physical bounces, Large Electro Slime uses chain discharge, Large Pyro Slime scatters fire and Cryo Whopperflower charges behind a brief shield. Small slimes and Treasure Hoarders remain common enemies, while the large slimes and Whopperflower have HP in line with their existing TCG counterparts. Saved HP and Moveset overrides remain intact, and existing encounters keep their current HP.
+
+# Silly Teyvat 1.75.0: NPC cards and battles
+
+- **NPC TCG cards and movesets.** Forty-six non-playable residents have original, individually generated card art and three named moves. Their portraits in Character Management and battle use the same art. Most have modest health and weak-tier card drops; a few experienced fighters and unusual beings are tougher. Existing Moveset and HP overrides continue to win.
+- **Katheryne's secret.** Katheryne has a boss-level 110 HP and a powerful kit. If defeated at a Guild, she leaves the scene for that visit. After the player departs, a fresh Katheryne is waiting at the Guild with full health and behaves as though the fight never happened.
+- **Card Search everywhere.** Open Card Search from the Paimon menu or any waypoint's map details. Starting a new chat with an enemy chooses a matching wilderness waypoint and places that enemy in the opening encounter, ready for battle after its greeting. Saved chat locations are preserved.
+- **Artwork review.** Each NPC image was generated once using its sprite and an existing TCG card as references. The review gallery and prompt records live at `art/tcg/npc-cards/`; the user accepted Adel's card and the rest await review.
+
+# Silly Teyvat 1.74.7: Combat deck, sprite Trust and stage fixes
+
+- **Combat deck.** The Inventory has − / + under *Combat deck* on every card. Battles deal from a deck of at most 30 cards; new cards join it automatically while it has room, and cards you remove stay in the bag.
+- **Sprite Trust minimums.** Character Customization → Expressions sets a minimum Trust per sprite. `love` and `desire` default to 3 hearts, numbered variants such as `love-1` to 4. Turning Trust off disables them.
+- **Sprites by height.** The stage sizes sprites by height only; a crowded row overlaps instead of shrinking.
+- **Hostile enemies.** Enemy prompts now make enemies openly hostile to {{user}} and every playable character.
+- **Dice and HP.** Cards pay with dice that do not match the active character's element first. Common enemies have 65% of their previous HP.
+- **Fixes.** Animated Dynamic Skins (Sayu's among them) no longer hide themselves in battle. On the Victory screen, card details draw over the crest and the two lines clear the letters. Fewer layout measurements and idle animations on a crowded stage.
+
+# Silly Teyvat 1.74.6: Longer flights to distant waypoints
+
+- Selecting a waypoint in another region, or at least a screen-length away at the destination zoom, uses the same 1.8-second flight as the region selector. Nearby pans remain 0.8 seconds, shorter pan/zoom flights remain 1.1 seconds, and exponential easing is preserved.
+
+# Silly Teyvat 1.74.5: Longer camera travel
+
+- Restored 0.8 seconds for nearby waypoints, 1.1 seconds for longer flights, and 1.8 seconds for region changes, retaining the tuned exponential slowdown.
+
+# Silly Teyvat 1.74.4: Exponential camera slowdown
+
+- Camera velocity now decays exponentially as it approaches the destination, keeping the brief acceleration and 0.5 / 0.8 / 1.1-second timings. The curve lands exactly on the destination without a final position jump.
+
+# Silly Teyvat 1.74.3: Quicker camera starts
+
+- Map travel takes 0.5 seconds nearby, 0.8 seconds for longer flights, and 1.1 seconds between regions. Acceleration uses only the first 10% of the animation, keeping the gentle slowdown toward the destination.
+
+# Silly Teyvat 1.74.2: Gentler map travel
+
+- Camera movement now eases in and out, taking 0.8 seconds for nearby waypoints, 1.1 seconds for longer flights, and 1.8 seconds for region changes. Click feedback stays immediate, and reduced motion still jumps directly to the destination.
+
+# Silly Teyvat 1.74.1: A faster map
+
+- Selecting a waypoint reuses pins and list rows, with shared roster and badge calculations. Nearby destinations pan directly; longer trips retain the camera flight.
+- Tile images are cached in a bounded pool sized to the viewport and device memory. Sharp tiles load after movement settles, while the bundled overview stays available. Failed tiles can retry, and closing the map stops its camera animation.
+- Map movement avoids repeated marker scans and expensive decorative effects. Reduced motion remains supported.
+
+# Silly Teyvat 1.74.0: A quicker character menu
+
+- **The neutral sprite appears almost at once when you move between characters.** It used to wait until every expression in the folder had been decoded and scanned to work out one shared crop (seconds for a character with many sprites), and it threw that work away each time. Now the figure appears from its own outline immediately, the shared crop is worked out in the background and swapped in quietly if it differs, and crop boxes are remembered between visits, so a character you have seen costs one image decode. In Chrome and Edge the crop is applied in CSS (`object-view-box`), with no copy made at all. On a test character with 23 sprites at 4× CPU slowdown: 772 ms before, 322–371 ms now (about 90 ms at full speed).
+- **Pinching the page while the character menu is open no longer leaves the sprite at the wrong size or over other panels.** While the viewport is being pinched or panned the stage drops its reflection, shadow and drifting nebula layers, and brings them back a moment after it settles. I could not reproduce the glitch on a test browser (the layout is identical after a fast pinch), so this removes the effects that make that stage slow to re-draw; please tell me if it still happens.
+- **The Backgrounds section is gone from the character menu.** Backgrounds are changed on the World map (waypoint card: region, picture, link an existing background). The tab's panel, its styles and `background-wardrobe.js` are removed. The one thing only that panel did was assigning SillyTavern's own background library to a region.
+- **A solo journey played as a persona shows the persona's image whole**, like Persona Management, in Recent Chats and other group menus, instead of a cropped thumbnail in a frame. (Journeys played as a character card already showed the card.)
+
+# Silly Teyvat 1.73.1: Sprites converted
+
+- **The installed sprites are WebP now**: 2,243 sprites went from 2.8 GB to 0.5 GB (82% smaller; the characters folder from 3.0 GB to 0.8 GB). The worst picture is 36.2 dB from its PNG, the median 42.4 dB, and every transparent edge is identical. The PNGs are archived in `silly-teyvat-data/backups/sprites-png-2026-11-08/` with a `conversion-report.json`; `art/sprites/` and the Official Art folders are unchanged.
+- `tools/convert-sprites.py` skips symlinked folders, such as `Name: Variant` aliases of `Name Variant`, so each sprite is converted once.
+- Reload SillyTavern in each open browser so it reads the new files.
+
+# Silly Teyvat 1.73.0: Sprites by name
+
+- **A sprite is its folder and its name, not its file type.** Voice lines and sizes assigned to a sprite are remembered as `Klee/neutral`, whether the file is `neutral.png` or `neutral.webp`. Existing settings, and settings from a tester package, are renamed the first time this version starts. Saved scenes that name `joy.png` draw the converted `joy.webp`: the stage looks the folder's listing up (once per folder) and draws again with the right file.
+- **`tools/convert-sprites.py` turns sprite PNGs into WebP** (quality 90, transparency kept exact): 2.7 GB of sprites become about 0.4 GB, so a scene change on a phone loads about 100 KB per character instead of 1.2 MB. On a test of 136 sprites the worst picture was 39.8 dB from the original (the median 43.5 dB) with identical transparency, and no difference shows when laid over magenta or white. It archives every PNG first and leaves the character cards, the Official Art folders and anything that cannot meet the bar alone.
+- Install this version before converting: older versions look sprites up by their `.png` name. After converting, reload SillyTavern so open pages read the new files.
+- Sprites uploaded in the wardrobe keep whatever type the file has; SillyTavern already replaces a sprite of the same name whatever its type.
+
+# Silly Teyvat 1.72.1: Smaller backgrounds
+
+- **Location backgrounds are 82% smaller**: 221 WebP and JPEG pictures went from 469 MB to 86 MB, so a scene change on a phone loads about 400 KB instead of 2 MB (and the pack, the tester ZIP and the distribution repository shrink with it). Names, formats and the 1920×1080 size are unchanged, so saved scenes and the catalog need nothing. Quality went from near-lossless to WebP/JPEG 90, raised for the 40 pictures with the most fine detail; the median picture differs from the original by 38 dB PSNR, and the worst case is not distinguishable at 3× zoom.
+- The 38 PNG backgrounds (124 MB) are left as they are: changing their format would change the file names saved scenes point to.
+- `python3 tools/recompress-backgrounds.py --archive DIR` repeats this for new pictures. It archives each original first, then replaces it and updates `game-data.json`. The 221 originals are kept in `silly-teyvat-data/backups/world-location-backgrounds-lossless-2026-11-08/`.
+
+# Silly Teyvat 1.72.0: Lighter on a phone
+
+Measured in headless Chrome with the CPU slowed four times (`node tools/bench-perf.mjs`), then fixed:
+
+- **The first tap on the menu no longer stalls.** Opening the Paimon menu the first time created the sound engine inside the tap, a 200 ms freeze at 4× slowdown. It is created while the page is idle, and interface, battle and dice sounds now share one `AudioContext` instead of making three.
+- **The map opens with a tenth of the elements.** Waypoint markers outside the view are not drawn, the waypoint list is built only once its panel is open (phones start with it closed), rows below the fold are skipped until they scroll near, and choosing a waypoint redraws the two markers that changed instead of all of them. Opening the map: 2,831 new elements before, 270 now; the cost of opening it fell by 40%, reopening it by 54%.
+- **Reading while a reply streams costs less per frame.** The settings panel is painted only while it is on screen, and its Reset buttons are worked out in one pass over the settings instead of a pass per button (11.9 ms to 6.9 ms of script per frame, in a 100-message chat).
+- **Starter-location music is checked six files at a time**, not all two hundred at once, when a game update adds locations.
+- **Flows that were flags are now state machines** (`machine.js`, checked by `node tools/test-machine.mjs`): reading / review / hidden and the Paimon menu with its namecard picker (`index.js`), the map card's list / details / place / editor views and its one-job-at-a-time busy state (`world-map.js`), the battle board's phases, and a fight being idle, forced or on the board (`battle-ui.js`, `combat.js`). Each state lists what may follow it, and what must happen on the way in or out is written once. An illegal move is refused instead of leaving half-set flags behind.
+- **Fixed:** if the Characters screen could not list a character's sprites, its controls stayed locked until another character was chosen. A failed load now unlocks them so another outfit or character can be tried.
+
+# Silly Teyvat 1.71.0: Everyone in the scene speaks
+
+- **One reply can voice the whole scene.** A reply is written in speaker parts, each starting with a name and a colon (`Kamisato Ayato:`, `Narrator:`), and every part is saved as its own chat message. The name plate, sprites, expressions, CGs and Trust follow whoever is talking, and the history shows the model who said what (`group-reply.js`).
+- **`Narrator:` parts are narration**, always. Inside a character's part, pages without quotes are narration too: the keyword and the no-quotes rule now apply together, and the Detect by choice is gone.
+- **Every present character's card is in the prompt** while a journey group replies, so whoever the model voices has their card. SillyTavern's group nudge now names the next speaker and lets anyone present join in, but never the player.
+- **No more empty replies.** SillyTavern cut a group reply at the first line that opened with another member's name, which left a reply empty when someone else spoke first (Ayaka's regenerate did nothing). That cut is held off while a reply is written and switched back right after; a hold left over from a reload repairs itself.
+- **Fewer, faster group turns.** A character who already spoke in this round is not asked for a reply of their own. In two five-character test scenes on the main API, a turn took one to three calls instead of three to five, and no one spoke twice in a row.
+- **Regenerate redoes the whole reply** from any of its parts, for the character it was written for, and puts the parts back if nothing comes. Swiping back to an older variant restores the speaker it was written for. An empty regeneration now says the previous reply was kept.
+- The Writing style prompt asks for speaker parts instead of forbidding name tags, and keeps quotes and narration on separate lines. A Writing style prompt you edited yourself keeps your version.
+
+# Silly Teyvat 1.70.0: People of Teyvat
+
+- **42 new characters live at the places they belong to**, each with a card and a neutral sprite sized for them. Liyue: Granny Ruoxin and Master Lu at Qingce Village. Inazuma: Neko at Asase Shrine, Kujou Masahito and Xavier at Kujou Encampment, and Elder Komaki and Nishikino Reirei at Bourou Village. Sumeru: Arama, Araja and Aranakula at Vanarana, Maryam and the Eremite Aybak at Caravan Ribat, Babel and Jeht at Tanit Camps, Aurelius at Vimara Village, and Shajar and Adel at Bayda Harbor. Fontaine: Tiepolo and Mécantre at Petrichor, Sedile and Virda at Merusea Village, Lasselin and Pitot at The Rusty Rudder, Areta and Tetreaux at Fleuve Cendre, and Lyris, Jakob and Rene at Annapausis. Natlan: Mazatl and Tzompantli at Easybreeze Market, Aloha at Colorfall Cliffs, Tlapalli at Tete Isle and Tisoc at the Mother Flamegranate Tree. Nod-Krai: Anselm at Favonius Keep, Valdis and Egle at Cliffwatch Camp, and Eveliina and Kukkia at the Light-Bathed Platform. Snezhnaya: Mayskaya and Knyazev at Rankova Zorya, and the dogs Plate and Whistle at the Huntsman's Cabin. The cards are in `character-cards/location-npcs/`.
+- **Sizes to match.** Adults stand at their usual heights, elders a little shorter, Rene (as a boy), the Melusines, the dogs, the Aranara and Neko the cat smaller still.
+- **Nicole moves to the Witch's Garden**, where her greeting opens. Saved games move her once, unless you had placed her yourself.
+- **The deck animation plays once per draw.** It no longer replays when the battle screen opens for the next round.
+- The Realm of Beginnings has a new background, not yet approved.
+
+# Silly Teyvat 1.69.1: Burst cards line up
+
+- **Animated Burst cards fill the whole card.** While an Elemental Burst plays, the card's animated art
+  now replaces its usual art exactly, at the same size and in the same place, instead of covering
+  only half of it. HP, Energy and statuses stay on top where they always are.
+
+# Silly Teyvat 1.69.0: Card Search
+
+- **Card Search.** The Paimon menu shows a **Card Search** tile at any location, and waypoint details on the map offer **Open Card Search**. It lists every Action card with a search box, card-type filters (and a **Selected** filter), sorting by Quality, Name, Cost, Places found or In bag, and a reverse-order button. The detail panel shows each card's effect, how many you carry and every Wilderness or Boss waypoint that drops it. Cards that no wild place drops can't be chosen.
+- **Quest markers.** Once a search starts, every Wilderness and Boss waypoint whose card drops include a searched card gets the game's blue world-quest marker. It shows at every zoom level, its name lists the cards, the waypoint list highlights those places, and the waypoint details say which searched cards drop there.
+- **Finding a card ends its part of the search.** When a battle's loot includes a searched card, its markers go and a message says what was found and what is left. The last card ends the search. Return to any Guild to add or remove cards, or stop the search. The search is saved per chat, like the party's bag (`card-search.js`).
+
+# Silly Teyvat 1.68.0: Katheryne at every Guild, a spread-out Teyvat, and cards you can drag
+
+- **Katheryne is at every Adventurers' Guild branch at once.** She is always at the counter when you arrive at one, is never asked to come along, and stays behind when the party leaves, even in a chat that began with her (`guild.js`).
+- **Crowded places were thinned out.** No bundled location is home to more than two characters now (Katheryne aside). 23 characters moved to places that suit them: Rosaria to The Cat's Tail, Chongyun to Wangshu Inn, the Wanderer to the Sanctuary of Surasthana, Kaveh to the Palace of Alcazarzaray, Cyno to the Temple of Silence, Shenhe to Mt. Aocang, Thoma to Ritou, Furina and Clorinde to the Fountain of Lucine, Tartaglia to the Zapolyarny Palace, and more. Saved games move them once, unless you had already placed them yourself. Greetings that named the old place were rewritten for the new one; the originals are kept in `character-cards/relocated-greetings-2026-11-07.json`.
+- **Six more places are wilderness**: Old Sanatorium Site, Chiwang Terrace, Yaodie Valley, Moshiri Ceremonial Site, Tower of Ipsissimus and Malinalco Grotto.
+- **Every non-boss enemy is met in several places.** The wilderness pools were rebalanced by terrain: common enemies appear in about 5 to 15 places, uncommon ones in 4 to 9 and elites in 3 to 5, with six enemies in each pool and at most one elite. Black Serpent Knights keep to the Chasm and to Mouun Shrine above Enkanomiya. The new pools replace saved ones once.
+- **Boss arenas drop more cards**, and more rare ones: 27 cards instead of 18.
+- **Persona expressions can follow your own words** (Stage → Active persona sprite → Classify persona expressions).
+- **A generated greeting when you meet someone alone** (World → Travel), written for who you are playing and any relationship you have with them.
+- **A closed CG rests** for a set number of messages before it can be shown again (CG & Audio → Messages before a closed CG returns, 10 by default).
+- **Playing cards**: drag a card onto one of your characters to play it on them, or anywhere on the field for a card that needs no target. Tapping a card and then a character plays it there at once.
+- **A hand of up to 10 cards.** On phones the hand scrolls sideways instead of squeezing the cards. Cards drawn into a full hand stay in your deck rather than being lost.
+- **Elemental Bursts** no longer play the splash art inside the card. The 143 cards with a Dynamic Skin on the Genshin Impact Wiki (`assets/tcg/dynamic.json`) switch to it the moment their Burst is cast, and back to their static card once the Burst has finished; the full-screen splash is unchanged. The wiki's GIFs are stored as 260-pixel animated WebP (288 MB for all 143, from 736 MB).
+
+# Silly Teyvat 1.67.3: Show the solo scene while the intro is generated
+
+- Starting a solo journey prepares its background and player sprite before the first narration returns. The loading screen waits for those images, then reveals the scene while the intro continues generating. Dialogue controls appear when the real message arrives; no temporary message is saved.
+
+# Silly Teyvat 1.67.2: Reveal sprites at their final size
+
+- The neutral still loads first in Character Customization, but stays hidden until its final crop is decoded. Its arrival animation starts with that finished image, avoiding a small preview followed by a size jump. Tab changes keep an already prepared crop in place.
+
+# Silly Teyvat 1.67.1: Neutral sprites appear first in Character Customization
+
+- Selecting a character displays their neutral sprite before loading the detail panels or other expression images. Folder-wide trimming runs afterward, with two image scans at a time; changing character or closing the screen stops further scans for the old selection.
+- Expression thumbnails load lazily, and scene artwork loads when opening Scenes. Personas still restore their chosen expression after the neutral appears.
+
+# Silly Teyvat 1.67.0: Nightsoul, Techniques, Lunar reactions, Bond of Life and a balance pass
+
+- **The newer Genius Invokation mechanics are in the battle rules**, from the Genshin Impact Wiki's card text:
+  - **Nightsoul's Blessing** with its points, and **Techniques**: extra Combat Actions that appear beside
+    a character's skills (Mualani's Sharky Surfboard, Kachina's Twirly Twirly Bam Bam, Mavuika's
+    Flamestrider cards and more).
+  - **Fighting Spirit** (Mavuika) and **Serpent's Subtlety** (Skirk) fill the Energy pips; their Bursts
+    spend all of it and hit harder for each point.
+  - **Bond of Life** absorbs healing (Arlecchino, Clorinde, Sigewinne).
+  - **Lunar-Charged, Lunar-Bloom and Lunar-Crystallize** replace their reactions when a Moonsign character
+    (Lauma, Nefer, Flins, Ineffa, Columbina) is in the party: Thunderclouds and Electric Shock, card
+    Cost Reduction, Moondrift.
+  - **Cards made by skills**: Flamestrider (pick one of three), Void Rift, Mutual Weapons Mentorship,
+    Shadowhunt Shells, Seeds of Deceit, Bolstering Bubblebalms that act when drawn, Moondrift Harmony.
+  - **Card Cost Reduction**, **Agile and Efficient Switch**, **Battle Plan**, **Charged and Plunging
+    Attacks**, **prepared skills** that play as the character's next action, and true **Piercing**
+    damage to enemies on standby that ignores shields.
+- **Lauma, Mavuika, Mualani and Skirk** now play their cards in full, along with Kinich, Kachina,
+  Xilonen, Citlali, Chasca, Ororon, Iansan, Varesa, Ifa, Columbina, Flins, Ineffa, Nefer, Aino,
+  Arlecchino, Clorinde and Sigewinne (`tcg-special-kits.js`). Where a card works on the opponent's hand or
+  deck, which enemies here do not have, it is adapted (Electric Shock deals its damage at the next End Phase).
+- **Auto uses Elemental Tuning**: it turns a die into the element it needs with the card worth least.
+- **Balance**, from `tools/simulate-battles.mjs` (whole fights with the real kits and rules). Ordinary
+  enemies have 70% of their health: a fight with one or two weak enemies takes about 3 rounds, two or
+  three mixed ones about 5, a tough pair about 6. Bosses have more health and hit harder: about 8 rounds,
+  costing a four-character party around 40% of its health, with someone falling in about a third of the
+  fights. An enemy's own element now takes a quarter off, not half, so no fight stalls.
+- The Moveset editor lists effects it cannot edit (Nightsoul, Techniques and the like) as text; saving keeps them.
+
+# Silly Teyvat 1.66.0: Kits from the Genius Invokation cards, a real Auto and 20-card starter decks
+
+- **Every character with a Genius Invokation card now plays that card's kit** (108 of them): its skill
+  names, dice costs, Burst Energy, damage, summons, healing, shields, infusions and fields, from the
+  Genshin Impact Wiki (`tools/build-tcg-kits.py`, one TCG point is 2 here). A prepared skill such as
+  Beidou's Wavestrider lands in the same move. Characters without a card keep their own kit, and a
+  moveset you edited stays as you saved it.
+- **Built-in elemental infusion.** Slimes, Abyss Mages, Hypostases, Whopperflowers, Rifthounds and other
+  beings made of their element turn their Physical attacks into their element from the start of every
+  fight, shown as an element chip on their card. **Elemental infusion** in the Moveset editor switches it
+  on or off for any enemy, boss or character.
+- **Auto is a switch.** Its icon is a plain play button; while it is on, every one of your turns is played
+  for you. It tries each skill, card and switch on a copy of the board, plays the best, and ends your
+  round when nothing is worth the dice.
+- **No more Declare Round End box:** the hourglass ends your round at once.
+- **The dice a card or skill will spend have a gold border.** Toss-Up only pre-selects dice that match
+  nobody in your party.
+- **Starter decks have 20 cards of every kind:** Food, Events, dice cards, a Weapon for the character's
+  weapon, their element's Artifact and Resonance, Supports and their own summon where the TCG has one.
+  A 10-card deck you saved is filled up to 20.
+- **Attack with friends works like Attack with enemies.** It arms for your next message; when you send it
+  (or click a choice), you choose who to battle, or no one, before anyone replies.
+- **Playing an enemy card** fights with that enemy's own moves as Normal Attack, Skill and Burst, with a
+  character's health range, and characters you beat drop cards as enemies do.
+- **Summons show their TCG card**, under the card game's own name where it differs (Grin-Malkin Hat,
+  Sacred Cryo Pearl, Oceanic Mimics); a summon that is a status in the card game shows the TCG icon of
+  the skill that made it.
+- **Map badges** show a common enemy of each wilderness waypoint's region instead of a hilichurl.
+- **Name tags.** The prompts tell the model more firmly not to start lines with a name, and Settings →
+  Dialogue → Name tags removes "Navia:", "**Navia:**" and the like from replies as they arrive (anyone in
+  the scene or only the speaker, plus your own labels).
+- **CGs are chosen from the whole reply:** a reply still streaming in is classified once it has finished.
+- Starting a solo journey shows the loading screen; the Burst in the card is centred on the character;
+  the deck stays clear of your nameplate; damage numbers have a dark outline.
+
+# Silly Teyvat 1.65.0: La Signora's arena, boss icons on the map and her two-phase music
+
+- **La Signora is a boss**, balanced like the other world and weekly bosses, with the guaranteed rare
+  drop. She waits in her own arena at Narukami Island: Tenshukaku, where she is the only enemy and
+  always appears.
+- **Her music has two phases.** Chrysalis Suspirii plays while you fight her; the moment she becomes
+  the Crimson Witch of Embers it switches to Saltatio Favillae, and stays there for the rest of the
+  encounter. Exploring the arena plays Tenshukaku's own music.
+- **Boss arenas show their boss on the map.** The badge beside a boss arena's waypoint is now that
+  boss's icon, and its label names the boss.
+- **New waypoint backgrounds.** 259 bundled places use the backgrounds approved in the 2026-11-06 review
+  (`art/location-backgrounds/2026-11-06`); a custom image you set is kept, and a description written for
+  the old picture follows the new text unless you edited it.
+
+# Silly Teyvat 1.64.0: Sprites for the new enemies and La Signora's Crimson Witch form
+
+- **Sprites for the 18 TCG enemies.** Each now has a neutral sprite on the stage instead of its card.
+- **La Signora becomes the Crimson Witch of Embers**, as on her Genius Invokation card: when she uses
+  Carmine Chrysalis, when a round starts with her at 40% HP or less, or when a blow would defeat her
+  (she survives at 1 HP instead, once). She turns Pyro and weak to Hydro, fights with Crimson Lotus
+  Moth, Decimating Lash and Whirling Blaze, and shows her Crimson Witch card on the board. For the rest
+  of the encounter, the fight included, the stage shows her Crimson Witch sprite; nothing else uses it.
+- **CG display** in Settings → CG & Audio: follow each CG's own choice, or show every CG as the
+  background or in a framed window.
+- **Starter scenes open in a frame** unless the artwork is 16:9. Scenes you already have follow suit
+  unless you chose their display yourself.
+- With **Choices & HUD** off, the SillyTavern icons and their panels sit in the middle of the top of
+  the screen again, so no panel runs off the edge.
+- The remove-effect button in the Moveset editor is a round button that no longer covers the Target box.
+
+# Silly Teyvat 1.63.0: Weapons, Artifacts, Supports, Summons and 18 new enemies
+
+- **128 new cards** from the Genshin Impact Wiki's Genius Invokation lists, with their card art:
+  28 Weapons, 25 Artifacts, 31 Supports, 25 Summon cards and 19 Events. They drop in battle like
+  the others, each region its own, and can go in Starter decks.
+- **Equip a Weapon or Artifact** on a party member for the rest of the fight. Weapons fit their
+  weapon type; the element Artifacts make a Skill cheaper once a round. Equipment shows as a small
+  card on the character.
+- **Supports** (Companions and Locations) stay on the table beside your summons and act each round:
+  Paimon's Omni dice, Liyue Harbor Wharf's draws, Favonius Cathedral's healing, Dawn Winery's free
+  switches, Xudong's cheaper Food and more. Four at most.
+- **Summon cards** put Oz, Guoba, Lightning Rose and 22 others on the board; Abyssal Summons calls
+  a random hilichurl.
+- **New Events:** Strategize, Aedon, Leave It to Me!, Quick Knit, Guardian's Oath, the remaining
+  Elemental Resonances and more.
+- **18 new enemies** from the Genius Invokation cards: Abyss Heralds and Lectors, Black Serpent
+  Knights, the Consecrated Beasts, Eremites, Fatui elites, the Hydro Hilichurl Rogue, the Stonehide
+  Lawachurl, the Wayward Hermetic Spiritspeaker and La Signora. Each has a character card with its
+  TCG card as the portrait, a description and greetings, a moveset from its TCG skills and a place in
+  regional encounter pools (La Signora appears at her Tenshukaku arena).
+- The Inventory has tabs for Weapons, Artifacts, Support Cards and Summon Cards.
+
+# Silly Teyvat 1.62.0: Starter decks and weapon-style attacks
+
+- **Starter decks.** A new journey now starts with ten cards in the bag: the Starter deck of the
+  character it was started with. Set any ten cards (at most four of one) in Character
+  Customization → Profile → Starter deck, or turn on **Randomize** to deal ten random cards to each
+  new journey (60% common, 30% uncommon, 10% rare). A rest in town or a rescue tops the bag back up
+  to the deck the journey started with. Journeys that already have cards keep them.
+- **Attacks shaped by the weapon.** Normal Attacks, Skills and Bursts move the way the character's
+  weapon fights: sword dashes and crossing cuts, claymore cleaves and shockwaves, polearm jabs and
+  plunges, bow draws and charged shots, catalyst sigils and rune circles, and punches when unarmed.
+- **The Burst in the card** now opens with the Burst's own icon slamming in on rings of its element,
+  then bursts into the splash art through a widening iris and a flash.
+- **A new Victory screen:** a gold crest with beams turning around its centre, a band of light, a
+  shine across the title and twinkling stars, with damage, reactions, cards and Exit arriving in
+  turn. Hover a card you found to enlarge it and read what it does. Exit sits in front of the beams
+  and matches the other buttons.
+- **The table:** the coin shows 1 on one side and 2 on the other, the Battle Select sword glows
+  with a turning ring instead of a square, Flee has a new running figure, and the three-star button
+  is now a labelled **Auto** (it plays your best move for you). The hand's card count is gone, and
+  played cards keep clear of the deck, Auto/Flee and your name plate.
+- **Phones:** held upright, the whole hand shows along the bottom; choosing a skill or card turns
+  the dice drawer into a strip across the table so it never covers a target, and the board no longer
+  opens with a tooltip over it.
+- **The map:** monster and chat badges sit left of each waypoint and only show once you zoom in to a
+  region. The heading always names the region you are in, with your place below it, whatever region
+  the waypoint list is filtered to.
+- **Settings:** the long note under the Silly Teyvat switch is now a tooltip on the switch.
+
+# Silly Teyvat 1.61.0: Battles played like Genius Invokation
+
+- **Turns, as in the TCG.** Each armed message now plays a round live on the board. Your active
+  character steps forward and is the only one who uses skills; enemy hits land on it. You and the
+  enemies take turns: on yours, play cards and tune dice as often as you like, then use a skill,
+  switch characters (1 die), flee or end your round. Enemies get two actions a round. Whoever ends
+  first acts first next round, and the End Phase draws you two cards.
+- **The game's costs and dice.** Eight dice a round with one reroll. A Normal Attack costs one die
+  of the character's element and two of any; Skills and Bursts cost dice of the element. Elemental
+  Tuning turns a die for a card from your hand (the card goes back into your deck). No more misses
+  or random damage: what the preview shows is what lands.
+- **A new fight opens like the game:** VS, the coin toss, a Starting Hand of five cards from your bag
+  that you can switch once, and the choice of your active character.
+- **See before you commit.** Choosing a skill, card or switch shows its details, the dice it will
+  spend, a gold check on the target and each card's coming HP change. Tap again or Confirm.
+- **New animations and sounds:** recorded sounds timed to the table (the coin spinning and
+  landing, one flip per card dealt or drawn, playing cards, a taiko beat on each phase banner and
+  the full roll at the End Phase, heals, shields, buffs, the Burst's charge and its impact landing
+  on the flash) alongside synthesised ones, turn banners, the skill toast, cards that leap at their
+  target, big damage discs, cards flying from hand, switching, fallen cards under a red mark, the
+  game's lavender table, and a Victory screen. Elemental Bursts keep the splash art and add a
+  cinematic in the character's own card and a sweep shaped by their weapon.
+- **Balance.** Only the whole party falling loses a fight now. Enemy HP and damage were rescaled for
+  the new turns, and bosses have half their HP and three fifths of their damage (they act twice a
+  round). Existing encounters keep the enemy HP they started with.
+
+# Silly Teyvat 1.60.0: Eighty new places and map badges
+
+- **Ten new places in every region.** The world map gains 80 destinations chosen for their story and
+  for filling empty stretches of the map: Dragonspine's Entombed City and Skyfrost Nail, Millhaven,
+  Sal Terrae, Chenyu Vale's Jademouth, Musoujin Gorge, Khaj-Nisut, Fleuve Cendre, the Faded Castle,
+  Villa Guiztli, Starsand Shoal, Old Kitezhgrad, Zapolyarny Palace and more. Each has its own
+  background, the music the game plays there, and, for the 49 wild ones, enemies that fit the place.
+  They arrive on their own the next time the extension loads; places you deleted or edited stay as
+  they are.
+- **Badges beside each waypoint.** A speech bubble means characters are there, a hilichurl means
+  Wilderness, and a gold emblem means a boss. They follow your changes: place or move a character,
+  switch Wilderness on or off, or put a boss in a waypoint's enemy list, and the map updates. The
+  waypoint list shows the same badges.
+- **Up-to-date map art.** The map now uses HoYoLAB's current artwork, which draws eastern Snezhnaya
+  (Novokitezhgrad and Wingspan Peak). Existing waypoints keep their positions.
+
+# Silly Teyvat 1.59.2: Original is a set like any other
+
+- **Rename or delete Original.** In Character Customization → Outfits, the character's own sprite
+  folder can now be renamed and deleted like any other set, so you can swap it with a new set or
+  replace it. **Remove from list** hides it and keeps its sprites; **Delete set and sprites** erases
+  the sprites in that folder and keeps the other sets. As with any set, equip another first. Linking
+  the character's folder again under **Link an existing sprite folder** brings it back.
+- **Focus outlines aren't cut off.** The outline around the sprite set picker, and around anything
+  else on the left edge of the controls, now shows in full.
+
+# Silly Teyvat 1.59.1: Prefer reasoning off
+
+- **Prefer reasoning off, as a switch.** CG & Audio → Scene CGs has **Prefer reasoning off** (it was
+  **Skip reasoning**, folded under Advanced), and Dialogue has **Prefer reasoning off for Choices**,
+  shown while Choices use the main API. With it on, the request asks for no reasoning, which is
+  faster and cheaper. With it off, the model reasons as your connection is set up to.
+- **Models that require reasoning work for Choices too.** Choices on the main API always turned
+  reasoning off, so a model that refuses that could never suggest replies. Choices and the CG
+  classifier now share one fallback: a request that fails with reasoning off is asked again with it
+  on, and that model is asked with reasoning on until the page reloads.
+
+# Silly Teyvat 1.59.0: Scene Gallery, a tidier Settings and lighter game data updates
+
+- **One check for the whole scene.** A reply is now checked once against the scenes of everyone
+  in it: the speaker, the rest of the party on stage and the character you play. Before, only the
+  speaker's scenes (and yours) were offered. With more than one character, each scene is offered
+  under its character's name and the classifier is told to pick by whose moment it is, so Klee's
+  and Albedo's birthday scenes stay apart even when they share a name.
+- **Scenes that need company or a place.** In Character Customization → Scenes, a scene can name
+  characters who must all be present and locations of which the party must be at one. Use either
+  or both. A scene whose conditions aren't met is left out of the check entirely.
+- **Scene Gallery.** A new **Gallery** tile in the Paimon menu shows every scene this chat has
+  shown, in the order they first appeared, filtered by character with a count of how many of theirs
+  you have found. Choose one to see it again as it appeared, with its sound.
+- **Settings you can find.** Settings has a search box that looks through every tab, including
+  option names. Each tab shows its everyday settings and folds the fine-tuning under one
+  **Advanced** drawer, which counts how many of its settings you've changed. Every section has a
+  **Reset** that lights up when something in it differs from the default. Explanations moved into
+  tooltips.
+- **Game data you already have stays put.** Before downloading, Silly Teyvat checks what is already
+  on your server. A first install skips files you already have, and reads only the small manifest
+  when you have them all. An update skips a changed file when your copy already matches the new
+  one, and when nothing is left to fetch it says **Already have it** instead of downloading.
+- **A clearer download popup.** It counts files as it goes and keeps a running tally of files added,
+  files you already had and any that failed.
+- **CG classification works with models that require reasoning.** Some models refuse a request
+  with reasoning turned off, which made every CG check fail with **Skip reasoning** on. The
+  classifier now asks again with reasoning on and remembers that model for the session.
+
+# Silly Teyvat 1.58.0: Scene CGs for every character and installs from GitHub
+
+- **Scene CGs for every character.** Every official birthday artwork from 2020 to 2026, 481 in all,
+  is now a starter scene on its character's card, ready for the CG classifier with a label, a
+  classification and a description of when it fits. Columbina, Teucer, Tartaglia and the Travelers
+  also get illustrations and wallpapers, and Paimon's 2023 party artwork is a scene for both twins.
+  That makes 494 scenes across 114 cards. They are added once, like the first eight, so scenes you
+  removed or edited stay as you left them.
+- **Install from GitHub.** Paste the repository address into **Extensions → Install extension**.
+  Silly Teyvat then offers its game data and shows the size first; after an update it offers only
+  the files that changed. **Settings → Share → Check for game data** asks again at any time.
+- **Safer shared packages.** Movesets and battle numbers that arrive in an imported package or chat
+  are trimmed to what the editor itself writes before they reach the screen. Your connection
+  profiles, signature and installed game data version are never exported.
+- **One Narrator.** Opening a chat no longer creates a second Narrator card when two parts of
+  SillyTavern ask for it at once.
+- **Choices are more forgiving.** A model that introduces its three choices with a sentence is
+  understood instead of failing.
+- **Errors you can see.** When the map, the character screen, regeneration or audio fails, a
+  message now appears instead of being read only to screen readers.
+- **Small fixes.** The minimap's location name no longer runs off the screen edge, and tags and
+  imports work on pages that aren't served over HTTPS.
+
 # Silly Teyvat 1.57.0: Bursts for every element and room for a big party
 
 - **Bursts hit like Bursts.** A Burst now charges up first: light rays turn behind the card while energy
@@ -616,7 +1128,7 @@ Opening a character card or starting a solo chat puts only that character at the
 
 Each tied character has an independent encounter roll on arrival. The default chance is 40%. Set **Encounter chance per character (%)** in Silly Teyvat settings, or turn off **Roll separately for each location character on arrival** to meet everyone. Rolls happen before the companion questions, are saved per visit, and are discarded if Teleport is cancelled. Redraws, reopening a saved journey, and changing the rate do not reroll an existing scene.
 
-A visit produces at most one arrival reply. The card’s written greeting is used only when the player travels without character companions and meets exactly one resident at that resident’s default location. Otherwise one present resident generates a reply using the existing conversation, arriving companions and everyone in the scene. An empty encounter produces no resident reply. The last available character follows automatically if nobody would otherwise be available to speak.
+A visit produces at most one arrival reply. The card’s written greeting is used only when the player travels without character companions and meets exactly one resident at that resident’s default location. With **Greeting when meeting someone alone** (Settings → World → Travel) set to **Generated**, that meeting, and any other where you travel alone and meet one character, writes a new greeting instead. Its prompt asks the character to pay close attention to who you are playing: an established character linked to your persona is greeted through their relationship with them in the card, canon and chat, while the Traveler or your own character is met as their persona description and the chat allow. Enemies keep their own encounter prompt. The prompts are under Settings → Prompts → Arrivals. Otherwise one present resident generates a reply using the existing conversation, arriving companions and everyone in the scene. An empty encounter produces no resident reply. The last available character follows automatically if nobody would otherwise be available to speak.
 
 **Assigned characters per location** defaults to 5. The picker displays used slots and rejects over-capacity moves without removing anyone from their previous place. Travelling companions do not use resident slots. Lowering the cap requires moving excess residents first. Seven bundled assignments were redistributed to appropriate meeting points; customized assignments are preserved, and Prune remains at Mondstadt Fountain Plaza.
 
@@ -636,30 +1148,9 @@ Travel is saved as a native narrator message, for example: `Traveler and Xilonen
 
 A Genshin Impact inspired dialogue interface and matching SillyTavern theme for your fan VN. Gold speaker names, ivory dialogue, white HUD symbols, centered menus, suggested replies, text reveal and remembered sprite scenes.
 
-## Install or update
+## Source and development
 
-In SillyTavern, open **Extensions → Install extension**, paste the address of this GitHub
-repository and choose **Install for me**. After it loads, Silly Teyvat offers to download its game
-data (characters, sprites, scenes, music and lorebooks) and shows the size first. **Not now** waits
-until the next release; **Settings → Share → Check for game data** asks again.
-
-To hear about updates, turn on **Notify on extension updates** in **Manage extensions**, or update
-Silly Teyvat there. After an update that comes with new game data, Silly Teyvat offers just the
-files that changed. If you installed an earlier copy by unzipping it into a `genshin-dialogue-ui`
-folder, delete that folder first so that two copies don't run at once. Your settings are kept.
-
-### From the source repository
-
-Install the separate data pack and run `python3 tools/game-data.py link`, then
-`bash tools/sync-live.sh` from the repository. The installer copies source and
-links external media into `SillyTavern/data/<your-user>/extensions/genshin-dialogue-ui/`.
-See `GAME-DATA.md` in the repository. Set `SILLY_TEYVAT_LIVE` for another server
-directory and `SILLY_TEYVAT_DATA` for another data pack location. Keep the
-extension folder name for compatibility with existing settings.
-
-Refresh SillyTavern. Open **Extensions → Silly Teyvat** and enable dialogue view, or open the top-left Paimon menu and select the compass icon (**Silly Teyvat: On** for screen readers). **Alt+G** also toggles dialogue view. Opening or closing the menu does not change whether the extension is enabled. Select a character or group chat.
-
-For matching native menus, import `theme/Teyvat Slate.json` using **User Settings → UI Theme → Import**, then select **Teyvat Slate**. The extension also works with other themes. An optional copy of the theme CSS is supplied for reference.
+The [main repository](https://github.com/noetypes/silly-teyvat) contains the source, tools and development documentation. This repository is the installable distribution, generated from that source with real media files. It needs no Python, symlinks, manual sprite copying or developer data pack on the player's machine.
 
 ## Reading dialogue
 
@@ -698,6 +1189,7 @@ Open **Extensions → Silly Teyvat → Native sprite staging**. Prome VN's visua
 - **Use character portraits when sprites are missing** provides an avatar fallback. Missing expression packs otherwise leave that member unstaged.
 - **Limit visible group members** keeps the most recent speakers visible, with a configurable limit. Historical pages use the speakers known at that point in the conversation.
 - **Show a persona sprite** loads a chosen native sprite folder and expression on a separate player layer. It never adds a fake character to the group or changes its membership.
+- **Classify persona expressions** (Settings → Stage → Active persona sprite) chooses your persona's expression on your own messages from what you wrote, with the same expression classifier and Classify expressions switch as the characters. A label your persona has no sprite for keeps the expression you set. It is off by default.
 - **Letterbox** adds horizontal or vertical bars with configurable thickness and color. Hide UI removes the bars as well.
 
 In **Character Customization → Character scale, placement & classification**, each character has a percentage scale, an optional horizontal position and a vertical offset. Select any sprite tile to set **Selected sprite scale (%)** for that exact file, including numbered variants. The total size is global scale × character scale × selected sprite scale. For example, global 100%, character 80% and sprite 125% give the original size. Speaker focus applies on top of that.
@@ -706,10 +1198,12 @@ Character scale applies across outfits. Individual sprite scale is stored per fo
 
 ## Narration
 
-In **Extensions → Silly Teyvat**, enable **Narration handling**, then choose its trigger. It is optional and starts turned off.
+A reply is written in speaker parts, each starting with a name and a colon (`Kamisato Ayato:`, `Narrator:`). Every part is saved as its own chat message, so the name plate, sprites, expressions and Trust follow whoever is talking, and a `Narrator:` part always becomes narration. Anyone present in the scene may speak; parts for the player are dropped. In a journey group the model is shown every present character's card, and SillyTavern's group trimming (which would cut the reply at the first other name) is held off while a reply is written. Regenerating any part redoes the whole reply.
+
+In **Extensions → Silly Teyvat**, enable **Narration pages** for narration inside a character's part. It is optional and starts turned off. Both rules apply together:
 
 - **No quotation marks:** each dialogue page without speech marks becomes narration. One response can alternate between spoken dialogue, narration and spoken dialogue again. Straight, curly, single and Japanese speech quotes count; apostrophes in contractions do not.
-- **Keyword:** set an exact, case-sensitive marker such as `Narrator:`. The marker disappears from dialogue view and the rest of that line becomes narration. The next newline returns to normal dialogue. A spoken prefix before a mid-line marker becomes a separate dialogue page.
+- **Keyword:** an exact, case-sensitive marker, `Narrator:` by default. The marker disappears from dialogue view and the rest of that line becomes narration. The next newline returns to normal dialogue. A spoken prefix before a mid-line marker becomes a separate dialogue page.
 
 Narration has no speaker name and uses muted text. It holds the character's most recent spoken expression and retains the other sprites in group scenes. It never classifies the narrative text. If that older speech has no recorded scene, its last spoken page can seed the expression. Original messages and reasoning remain available in History. Player messages keep their normal styling.
 

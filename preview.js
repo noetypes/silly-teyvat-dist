@@ -248,6 +248,7 @@ document.addEventListener('click', async event => {
                 message('Hilichurl Fighter',demo==='enemy-action-demo'?'[enemy_attack] The hilichurl lunges toward the Traveler and swings its club.\n“Ya! Mosi?”':'The hilichurl plants its club in the path and growls.\n“Ya! Mosi?”');emit(eventTypes.CHAT_CHANGED);emit(eventTypes.CHARACTER_MESSAGE_RENDERED);result('Wilderness encounter ready. Toggle Attack, then send a message or select a suggested reply. The message stays in chat, then the Roll Phase, Action Phase and the round play before the model reply. No native chat/model writes.');break;
             }
             case 'battle-layout': {const {showBattleLayout}=await import('./preview-battle-layout.js');await showBattleLayout();break;}
+            case 'battle-intro': {const {showBattleLayout}=await import('./preview-battle-layout.js');await showBattleLayout({intro:true});break;}
             case 'encounter-fix-tests': {ctx.extensionSettings.genshin_dialogue_ui.choices=false;emit(eventTypes.SETTINGS_UPDATED);const {runEncounterFixTests}=await import('./preview-encounter-fix-tests.js');result(await runEncounterFixTests().catch(error=>error.message));break;}
             case 'dice-model-demo': {
                 const {mountElementalDice}=await import('./elemental-dice.js');const ui=mountElementalDice({host:document.body});
@@ -271,9 +272,12 @@ document.addEventListener('click', async event => {
             case 'trust-tests': {const {runTrustTests}=await import('./preview-trust-tests.js');result(await runTrustTests());break;}
             case 'scene-history-tests': {const {runSceneHistoryTests}=await import('./preview-scene-history-tests.js');result(await runSceneHistoryTests());break;}
             case 'ui-sound-tests': {const {runUiSoundTests}=await import('./preview-ui-sound-tests.js');result(await runUiSoundTests());break;}
-            case 'feature-tests': {const {runFeatureSwitchTests}=await import('./preview-feature-tests.js');result(await runFeatureSwitchTests());break;}
+            case 'feature-switch-tests': {const {runFeatureSwitchTests}=await import('./preview-feature-tests.js');result(await runFeatureSwitchTests());break;}
+            case 'settings-layout-tests': {const {runSettingsLayoutTests}=await import('./preview-settings-tests.js');result(await runSettingsLayoutTests());break;}
             case 'narrator-tests': {const {runNarratorTests}=await import('./preview-narrator-tests.js');result(await runNarratorTests());break;}
             case 'card-pool-tests': {const {runCardPoolTests}=await import('./preview-card-pool-tests.js');result(await runCardPoolTests());break;}
+            case 'card-search-tests': {const {runCardSearchTests}=await import('./preview-card-search-tests.js');result(await runCardSearchTests());break;}
+            case 'action-card-tests': {const {runActionCardTests}=await import('./preview-action-card-tests.js');result(await runActionCardTests());break;}
             case 'battle-tests': {const {runBattleTests}=await import('./preview-battle-tests.js');result(await runBattleTests());break;}
             case 'enemy-attack-tests': {const {runEnemyAttackTests}=await import('./preview-enemy-attack-tests.js');result(await runEnemyAttackTests());break;}
             case 'enemy-sprite-tests': {const {runEnemySpriteTests}=await import('./preview-enemy-sprite-tests.js');result(await runEnemySpriteTests());break;}

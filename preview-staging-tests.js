@@ -99,7 +99,7 @@ export async function runStagingTests(){
         check('on a phone on its side the row stands close together instead of spreading to the edges',Math.max(...gaps(landscape))<landscape[0].width*.45&&landscape[0].left>40&&Math.abs((landscape[0].left+landscape[2].left+landscape[2].width)/2-426)<2);
         check('on a desktop neighbours stand close, with a wider gap before the enemy',Math.max(...gaps(desk))<desk[0].width*.7&&gaps(desk)[1]>gaps(desk)[0]);
         const upright=layoutStage([1,1,1].map(()=>({h:.88,aspect:.53,scale:1,lift:0})),{width:393,height:660,dialogueTop:400}),crowd=layoutStage([1,1,1,1].map(()=>({h:.88,aspect:.53,scale:1,lift:0})),{width:393,height:660,dialogueTop:400}),pair=layoutStage([1,1].map(()=>({h:.88,aspect:.53,scale:1,lift:0})),{width:393,height:660,dialogueTop:400});
-        check('three or more on an upright phone are smaller and overlap less than a pair',upright[0].width<pair[0].width*.8&&crowd[0].width<upright[0].width&&upright.every((b,i)=>i===0||b.left<upright[i-1].left+upright[i-1].width*.75));}}
+        check('figures are sized by height alone: a crowd is as tall as a pair, on screen, and overlaps instead of shrinking',Math.abs(upright[0].height-pair[0].height)<.01&&Math.abs(crowd[0].height-pair[0].height)<.01&&Math.abs(crowd[0].width-pair[0].width)<.01&&crowd.every(b=>b.left>=-1&&b.left+b.width<=393+1));}}
         prefs.spriteDim=false;prefs.spriteGlobalScale=100;prefs.characterSprites={};prefs.spriteScales={};
         check('classification defaults to per page',expressionMode(ctx,ctx.chat[0])==='page');
         prefs.characterSprites['Klee.png']={expressionMode:'message'};check('a character can override classification to whole messages',expressionMode(ctx,ctx.chat[0])==='message');
@@ -147,6 +147,14 @@ export async function runStagingTests(){
         check('the controlled persona lights up on player messages and companions dim',host.querySelector('img[data-avatar="__user__"]')?.dataset.focus==='true'&&host.querySelector('img[data-avatar="Klee.png"]')?.dataset.focus==='false');
         sprites.sync({on:true,id:0,page:0,text:'A quiet morning.',narration:true,complete:true,generating:false});await pause(35);
         check('history restores author focus independently of the last player turn',host.querySelector('img[data-avatar="Klee.png"]')?.dataset.focus==='true');
+        {const sent=calls.length;sprites.sync({on:true,id:1,page:0,text:'My turn.',complete:true,generating:false});await pause(35);
+        check('by default the persona keeps its set expression on player messages',calls.length===sent&&!/joy/.test(host.querySelector('img[data-avatar="__user__"]')?.getAttribute('src') || ''));
+        adapter.resolvePersona=async(_ctx,emotion,input)=>{const scene=structuredClone(input),s=scene.find(x=>x.avatar==='__user__');if(s){s.src=`/characters/Traveler/${emotion}.png`;s.expression=emotion;}return scene;};
+        prefs.personaSpriteClassify=true;sprites.sync({on:true,id:1,page:0,text:'Sad, but my turn.',complete:true,generating:false});await pause(35);
+        check('with persona classification the player\'s own words choose the persona expression',calls.at(-1)==='Sad, but my turn.'&&/sadness\.png$/.test(host.querySelector('img[data-avatar="__user__"]')?.getAttribute('src') || '')&&host.querySelector('img[data-avatar="__user__"]')?.dataset.focus==='true');
+        const after=calls.length;sprites.sync({on:true,id:1,page:0,text:'Sad, but my turn.',complete:true,generating:false});await pause(35);
+        check('and the classified page is saved, not classified again',calls.length===after);
+        prefs.personaSpriteClassify=false;delete adapter.resolvePersona;}
         effects=mountStageEffects({host,getContext:()=>ctx});prefs.letterbox='horizontal';prefs.letterboxSize=12;effects.sync(true,true);
         check('native letterboxing supports horizontal bars and speaking animation state',!host.querySelector('#gi-letterbox').hidden&&host.querySelector('#gi-letterbox').style.getPropertyValue('--gi-letterbox-size')==='12vh'&&document.body.classList.contains('gi-sprite-speaking'));
         prefs.letterbox='vertical';effects.sync(true,false);check('vertical bars follow viewport width',host.querySelector('#gi-letterbox').style.getPropertyValue('--gi-letterbox-size')==='12vw');
@@ -154,7 +162,7 @@ export async function runStagingTests(){
 
         prefs.cgEnabled=true;prefs.characterCGs={'Klee.png':[{id:'picnic',label:'Picnic',path:new URL('preview-landscape.svg',location.href).pathname}]};
         ctx.chat=[{name:'Klee',original_avatar:'Klee.png',mes:'A picnic\nWith friends'}];
-        media=mountSceneMedia({host,getContext:()=>ctx,adapter:{classifyCG:async()=>{await pause(10);return 'picnic';}},sound:{stop(){},dispose(){},unlock:async()=>{},play:async()=>{}}});
+        media=mountSceneMedia({host,getContext:()=>ctx,adapter:{classifyCG:async(_ctx,message)=>{await pause(10);return /picnic/i.test(message.mes)?'picnic':null;}},sound:{stop(){},dispose(){},unlock:async()=>{},play:async()=>{}}});
         media.sync({on:true,id:0,page:0,generating:false});await pause(35);
         check('a group scene CG hides the entire replay stage',document.body.classList.contains('gi-cg-replace')&&getComputedStyle(host.querySelector('#gi-sprite-stage')).display==='none');
         const native=document.createElement('div');native.className='expression-holder';native.innerHTML='<img style="visibility:visible!important" src="preview-klee.png">';host.append(native);

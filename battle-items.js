@@ -1,14 +1,16 @@
 // Battle items, drawn from Genius Invokation TCG event cards. Food heals or protects one
 // member (one dish per member per round); other cards bend the dice or the battlefield.
 // The party carries a shared bag saved per chat; victories drop cards from the location's pool (card-pools.js).
+import {GENERATED_CARDS} from './tcg-special-kits.js';
 import {isTcgBoss} from './boss-kits.js';
 import {defaultKitHp} from './combat-kits.js';
+import {TCG_CARDS} from './battle-cards.js';
 export const ITEMS={
     'sweet-madame':{name:'Sweet Madame',kind:'food',cost:0,target:'ally',rarity:1,text:'Heals 4 HP.',effects:[{type:'heal',amount:4}]},
     'hash-brown':{name:'Mondstadt Hash Brown',kind:'food',cost:1,target:'ally',rarity:1,text:'Heals 8 HP.',effects:[{type:'heal',amount:8}]},
     'mushroom-pizza':{name:'Mushroom Pizza',kind:'food',cost:1,target:'ally',rarity:2,text:'Heals 3 HP, then 3 more at the end of the next two rounds.',effects:[{type:'heal',amount:3},{type:'buff',stat:'regen',amount:3,rounds:2}]},
     'lotus-crisp':{name:'Lotus Flower Crisp',kind:'food',cost:1,target:'ally',rarity:1,text:'Shields 6 damage.',effects:[{type:'shield',amount:6}]},
-    'minty-rolls':{name:'Minty Meat Rolls',kind:'food',cost:1,target:'ally',rarity:2,text:'Normal Attacks never miss for 2 rounds.',effects:[{type:'buff',stat:'focus',amount:100,rounds:2}]},
+    'minty-rolls':{name:'Minty Meat Rolls',kind:'food',cost:1,target:'ally',rarity:2,text:'Attacks can\'t be dodged for 2 rounds.',effects:[{type:'buff',stat:'focus',amount:100,rounds:2}]},
     'adeptus-temptation':{name:'Adeptus\' Temptation',kind:'food',cost:2,target:'ally',rarity:3,text:'Deals 60% more damage this round.',effects:[{type:'buff',stat:'atk',amount:60,rounds:1}]},
     'fried-egg':{name:'Teyvat Fried Egg',kind:'food',cost:2,target:'downed',rarity:3,text:'Revives a downed member with 8 HP.',effects:[{type:'revive',amount:8}]},
     'tandoori-chicken':{name:'Tandoori Roast Chicken',kind:'event',cost:2,target:'party',rarity:3,text:'The whole party deals 25% more damage this round.',effects:[{type:'buff',stat:'atk',amount:25,rounds:1}]},
@@ -26,7 +28,7 @@ export const ITEMS={
     'woven-stone':{name:'Woven Stone',kind:'dice',cost:0,target:'none',rarity:2,text:'Adds 1 Geo die.',dice:'add',element:'Geo'},
     // Added in 1.53. Silly Teyvat has no dice discounts, draws or Max HP, so cards that rely on those
     // get the nearest effect that the battle engine has.
-    'northern-chicken':{name:'Northern Smoked Chicken',kind:'food',cost:0,target:'ally',rarity:1,text:'Normal Attacks never miss this round.',effects:[{type:'buff',stat:'focus',amount:100,rounds:1}]},
+    'northern-chicken':{name:'Northern Smoked Chicken',kind:'food',cost:0,target:'ally',rarity:1,text:'Attacks can\'t be dodged this round.',effects:[{type:'buff',stat:'focus',amount:100,rounds:1}]},
     'jueyun-guoba':{name:'Jueyun Guoba',kind:'food',cost:0,target:'ally',rarity:1,text:'Deals 20% more damage this round.',effects:[{type:'buff',stat:'atk',amount:20,rounds:1}]},
     'saurus-crackers':{name:'Saurus Crackers',kind:'food',cost:0,target:'ally',rarity:1,text:'Adds 25% critical hit chance this round.',effects:[{type:'buff',stat:'crit',amount:25,rounds:1}]},
     'chenyu-brew':{name:'Chenyu Brew',kind:'food',cost:0,target:'ally',rarity:1,text:'Heals 2 HP at the end of the next two rounds.',effects:[{type:'buff',stat:'regen',amount:2,rounds:2}]},
@@ -55,9 +57,25 @@ export const ITEMS={
     'lumenstone-adjuvant':{name:'Lumenstone Adjuvant',kind:'event',cost:2,target:'party',rarity:3,text:'Shields the whole party from 3 damage.',effects:[{type:'shield',amount:3}]},
     'treasure-seelie':{name:'Treasure-Seeking Seelie',kind:'dice',cost:0,target:'none',rarity:2,text:'Adds 1 Omni die.',dice:'add',element:'Omni'},
     'parametric-transformer':{name:'Parametric Transformer',kind:'dice',cost:0,target:'none',rarity:3,text:'Adds 2 Omni dice.',dice:'add',element:'Omni',count:2},
+    // 1.63: Weapons, Artifacts, Supports, Summons and more Events (battle-cards.js).
+    ...TCG_CARDS,
 };
-export const STARTER_BAG={'sweet-madame':3,'hash-brown':2,'lotus-crisp':1,'toss-up':1,'fried-egg':1};
+// What kind of card each is, as the hand, the Inventory and the loot name it.
+export const KIND_LABELS={food:'Food',event:'Event',dice:'Dice',weapon:'Weapon',artifact:'Artifact',support:'Support',summon:'Summon',technique:'Technique'};
+export const kindLabel=item=>item?.kind==='support'&&item.group?`${item.group[0].toUpperCase()}${item.group.slice(1)}`:KIND_LABELS[item?.kind] || 'Event';
+// The default starter deck: twenty cards of every kind (starter-decks.js tailors it to each character).
+export const STARTER_BAG={
+    'sweet-madame':2,'hash-brown':1,'lotus-crisp':1,'fried-egg':1,
+    'starsigns':1,'strategize':1,'leave-it-to-me':1,'heavy-strike':1,'nre':1,
+    'toss-up':2,'treasure-seelie':1,
+    'adventurers-bandana':1,'capricious-visage':1,'thundering-poise':1,
+    'chef-mao':1,'liyue-harbor-wharf':1,
+    'origami-hamster':1,'toy-guard':1,
+};
 export const itemArt=id=>new URL(`./assets/tcg/items/${id}.webp`,import.meta.url).href;
+// Every card a battle can hold: the bag's cards and the ones skills create (tcg-special-kits.js). Created cards
+// are not in ITEMS, so they never drop, sit in no Starter deck and never reach the bag.
+export const CARD_DEFS={...ITEMS,...GENERATED_CARDS};
 const WOVEN={Pyro:'woven-flames',Hydro:'woven-waters',Anemo:'woven-winds',Electro:'woven-thunder',Dendro:'woven-weeds',Cryo:'woven-ice',Geo:'woven-stone'};
 export const bagCount=bag=>Object.values(bag || {}).reduce((n,c)=>n+c,0);
 // How strong an enemy is, from its base health: live health also scales with the party and the difficulty.
@@ -70,7 +88,7 @@ export const ENEMY_TIERS=[
 export const WEAK_TIER=0,STANDARD_TIER=1,TOUGH_TIER=2,BOSS_TIER=3;
 export function enemyTier(enemy){
     const name=enemy.card || enemy.name;
-    if(isTcgBoss(name))return BOSS_TIER;
+    if(isTcgBoss(name)||/^kath[ae]r[iy]ne$/i.test(String(name || '').trim()))return BOSS_TIER;
     const hp=defaultKitHp(name,true) ?? enemy.maxHp;
     return hp<=30?WEAK_TIER:hp<45?STANDARD_TIER:TOUGH_TIER;
 }
@@ -115,8 +133,8 @@ export function rollLoot(defeated,{random=Math.random,pool=everyCard,size=defeat
     return loot.filter(Boolean);
 }
 export function addToBag(bag,ids){for(const id of ids)if(ITEMS[id])bag[id]=(bag[id] || 0)+1;return bag;}
-// After a rescue at the Guild the bag is topped up to the starter amounts.
-export function restockBag(bag){for(const [id,n] of Object.entries(STARTER_BAG))bag[id]=Math.max(bag[id] || 0,n);return bag;}
+// After a rescue at the Guild the bag is topped up to the journey's starter deck.
+export function restockBag(bag,starter=STARTER_BAG){for(const [id,n] of Object.entries(starter || STARTER_BAG))if(ITEMS[id])bag[id]=Math.max(bag[id] || 0,n);return bag;}
 // Dice cards change the pool during the Action Phase.
 export function applyDiceItem(item,dice,elements,random=Math.random){
     const faces=['Pyro','Hydro','Anemo','Electro','Dendro','Cryo','Geo','Omni'];

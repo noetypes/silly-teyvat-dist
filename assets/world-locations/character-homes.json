@@ -1,6 +1,6 @@
 {
-  "version": 5,
-  "date": "2026-10-31",
+  "version": 7,
+  "date": "2026-11-07",
   "notes": "Default resident cap: 5. Bundled overfull locations redistributed to suitable meeting points. Existing user moves are respected by the one-time relocation migration. Prune remains at Mondstadt Fountain Plaza. Travelling companions do not consume resident slots.",
   "characters": [
     {
@@ -29,8 +29,8 @@
     },
     {
       "name": "Clorinde",
-      "locationId": "starter-opera-epiclese",
-      "rationale": "Clorinde is Fontaine's Champion Duelist; the Opera Epiclese is the game's established public venue for her duels. This is a clear work/encounter location even though no canonical residence is given.",
+      "locationId": "map14-fontaine-fountain-of-lucine",
+      "rationale": "Clorinde duels at the Opera Epiclese and guarded Furina for years; the fountain outside the Opera keeps the two together. Her greeting now opens there.",
       "loreSource": "https://genshin-impact.fandom.com/wiki/Clorinde/Profile"
     },
     {
@@ -47,8 +47,8 @@
     },
     {
       "name": "Fischl",
-      "locationId": "home-mondstadt-adventurers-guild",
-      "rationale": "Fischl serves the Mondstadt branch of the Adventurers' Guild as an investigator. Use the proposed Mondstadt Guild waypoint; this is her known workplace and a plausible meeting point, not a canonical home.",
+      "locationId": "map14-mondstadt-cider-lake",
+      "rationale": "Fischl investigates for the Guild; her greeting already asked about the city gate, which stands on the Cider Lake bridge. Katheryne stays at the Guild counter.",
       "loreSource": "https://genshin-impact.fandom.com/wiki/Fischl/Profile"
     },
     {
@@ -71,8 +71,8 @@
     },
     {
       "name": "Layla",
-      "locationId": "starter-house-of-daena",
-      "rationale": "Layla is an Rtawahist student at the Akademiya and spends much of her story in the House of Daena. The existing library waypoint is the best map-supported place to meet her; it should be understood as an academic haunt, not a confirmed bedroom.",
+      "locationId": "map14-sumeru-pardis-dhyai",
+      "rationale": "An Akademiya astronomy student at the Akademiya’s rainforest research site, where the sky is clearer. A roleplay meeting point, not a home. Her greeting now opens there.",
       "loreSource": "https://genshin-impact.fandom.com/wiki/Layla/Profile"
     },
     {
@@ -83,20 +83,20 @@
     },
     {
       "name": "Mika",
-      "locationId": "starter-knights-of-favonius-headquarters",
-      "rationale": "Mika is a Knight of Favonius reconnaissance specialist and reports to the Knights. Their headquarters is the closest existing waypoint tied to his official duties.",
+      "locationId": "map14-mondstadt-millhaven",
+      "rationale": "A Reconnaissance Company surveyor fits the newly mapped village of Millhaven on Windrest Peak. A roleplay meeting point on his survey route, not a home. His greeting now opens there.",
       "loreSource": "https://genshin-impact.fandom.com/wiki/Mika/Profile"
     },
     {
       "name": "Noelle",
-      "locationId": "starter-knights-of-favonius-headquarters",
-      "rationale": "Noelle works as a maid at the Knights' headquarters and is training to become a Knight. This is an exact work location and needs no new waypoint.",
+      "locationId": "expansion-springvale",
+      "rationale": "Noelle runs errands for anyone in Mondstadt who needs help; Springvale gives her chores to do outside the city. A roleplay meeting point, not a home. Her greeting now opens there.",
       "loreSource": "https://genshin-impact.fandom.com/wiki/Noelle/Profile"
     },
     {
       "name": "Rosaria",
-      "locationId": "home-favonius-cathedral",
-      "rationale": "Rosaria is a sister of the Church of Favonius. The cathedral is her public work affiliation; the story does not establish a private residence, so frame this as a work-base default.",
+      "locationId": "starter-the-cat-s-tail",
+      "rationale": "Rosaria skips her Cathedral duties and spends evenings at The Cat’s Tail, which is where her card greeting already opens.",
       "loreSource": "https://genshin-impact.fandom.com/wiki/Rosaria/Profile"
     },
     {
@@ -119,8 +119,8 @@
     },
     {
       "name": "Vodyanitsa",
-      "locationId": "starter-morepesok",
-      "rationale": "Vodyanitsa's canonical house is on a street in Snezhnograd, but current published location lore describes the capital as not accessible on the world map. To obey the accessible-map constraint, use the existing Morepesok waypoint as a clearly non-canonical touring stop in Snezhnaya; do not describe Morepesok as her home.",
+      "locationId": "expansion-the-korolevskiy-theater",
+      "rationale": "Vodyanitsa performs with a Snezhnograd troupe, and her greeting already opens backstage in a theatre.",
       "loreSource": "https://genshin-impact.fandom.com/wiki/Vodyanitsa/Profile"
     },
     {
@@ -131,8 +131,8 @@
     },
     {
       "name": "Yaoyao",
-      "locationId": "home-yujing-terrace",
-      "rationale": "Yaoyao trains under Madame Ping in Liyue Harbor and the official profile says she regularly moves between the mountains and city and prefers bustling markets. Yujing Terrace is the best existing lore clue for a meeting place; this does not claim it is her home.",
+      "locationId": "home-xianyun-liyue-harbor-meeting-default",
+      "rationale": "Yaoyao runs errands among the adepti, and Xianyun’s waterfront meeting point matches her greeting by the Liyue Harbor docks.",
       "loreSource": "https://genshin-impact.fandom.com/wiki/Yaoyao/Profile"
     },
     {
@@ -161,14 +161,14 @@
     },
     {
       "name": "Chongyun",
-      "locationId": "starter-wanmin-restaurant",
-      "rationale": "Chongyun has no fixed home; he travels around Liyue as an exorcist. Wanmin is a familiar public Liyue Harbor meeting point, explicitly a roleplay default.",
+      "locationId": "starter-wangshu-inn",
+      "rationale": "Chongyun’s card greeting already opens at Wangshu Inn, where he investigates reports of spirits on the road.",
       "loreSource": "https://genshin-impact.fandom.com/wiki/Chongyun/Profile"
     },
     {
       "name": "Cyno",
-      "locationId": "starter-aaru-village",
-      "rationale": "Aaru Village already matches Cyno’s main greeting and his desert patrol scenario.",
+      "locationId": "home-temple-of-silence",
+      "rationale": "Cyno was raised by the priests of the Temple of Silence. His greeting now opens there.",
       "loreSource": "https://genshin-impact.fandom.com/wiki/Cyno/Profile"
     },
     {
@@ -209,15 +209,9 @@
     },
     {
       "name": "Linnea",
-      "locationId": "starter-nasha-town",
-      "rationale": "Linnea advises the Nasha Town Adventurers’ Guild and is based there. Tie her to the existing town point as her work base.",
+      "locationId": "guild-nasha-town",
+      "rationale": "Linnea advises the Nasha Town Adventurers’ Guild, and her greeting already opens beside it.",
       "loreSource": "https://genshin-impact.fandom.com/wiki/Linnea/Storyline"
-    },
-    {
-      "name": "Manekin",
-      "locationId": "home-mondstadt-adventurers-guild",
-      "rationale": "The Traveler has no canonical home. Mondstadt’s Adventurers’ Guild is a natural default start for an itinerant adventurer; explicitly a roleplay default, not a residence.",
-      "loreSource": "https://genshin-impact.fandom.com/wiki/Traveler/Storyline"
     },
     {
       "name": "Mona",
@@ -239,8 +233,8 @@
     },
     {
       "name": "Shenhe",
-      "locationId": "starter-wanmin-restaurant",
-      "rationale": "Shenhe takes a job at Wanmin Restaurant after Ganyu suggests it. This is her current work/meeting place, not necessarily her home.",
+      "locationId": "map14-liyue-mt-aocang",
+      "rationale": "Shenhe grew up as Cloud Retainer’s disciple on Mt. Aocang. Her greeting now opens there.",
       "loreSource": "https://genshin-impact.fandom.com/wiki/Shenhe/Profile"
     },
     {
@@ -257,14 +251,14 @@
     },
     {
       "name": "Wanderer",
-      "locationId": "starter-house-of-daena",
-      "rationale": "The Wanderer is studying with the Sumeru Akademiya; House of Daena is the most natural work/study meeting point, not a private home.",
+      "locationId": "starter-sanctuary-of-surasthana",
+      "rationale": "The Wanderer stays near Nahida, and his card greeting already opens on a terrace above Sumeru City.",
       "loreSource": "https://genshin-impact.fandom.com/wiki/Wanderer/Profile"
     },
     {
       "name": "Xinyan",
-      "locationId": "starter-wanmin-restaurant",
-      "rationale": "Xinyan has no confirmed fixed home and is a traveling Liyue performer. Wanmin is a public harbor meeting point with her Liyue friend circle; use as a roleplay default, not a residence.",
+      "locationId": "expansion-yilong-wharf",
+      "rationale": "Xinyan is a travelling performer with no fixed home; the busy Yilong Wharf gives her an audience. Her greeting now opens there.",
       "loreSource": "https://genshin-impact.fandom.com/wiki/Xinyan/Profile"
     },
     {
@@ -352,16 +346,10 @@
       "loreSource": "https://genshin-impact.fandom.com/wiki/Knights_of_Favonius_Base"
     },
     {
-      "name": "Manekina",
-      "locationId": "starter-angel-s-share",
-      "rationale": "The Traveler has no canonical home in Teyvat. Angel's Share in the opening nation is an accessible public roleplay meeting default, not a claim about Manekina's residence or an ongoing fixed location.",
-      "loreSource": "https://genshin-impact.fandom.com/wiki/Traveler/Profile"
-    },
-    {
       "name": "Nicole",
-      "locationId": "roleplay-nicole-voidsea-outlook-meeting-default",
-      "rationale": "Nicole is associated with the Witch's Garden, but the Garden itself is not a mapped waypoint in the available map data. Voidsea Outlook is used only as an explicit roleplay meeting default in the same broad area, not as a claim that the cave or waypoint is the Witch's Garden or her home.",
-      "loreSource": "https://genshin-impact.fandom.com/wiki/Nicole/Profile"
+      "locationId": "expansion-the-witch-s-garden",
+      "rationale": "Nicole's greeting opens in the Witch's Garden, where her lodge is located.",
+      "loreSource": "https://genshin-impact.fandom.com/wiki/The_Witch%27s_Garden"
     },
     {
       "name": "Razor",
@@ -371,8 +359,8 @@
     },
     {
       "name": "Sayu",
-      "locationId": "starter-kamisato-estate",
-      "rationale": "Sayu is a Shuumatsuban ninja working under the Yashiro Commission. Kamisato Estate is the closest established employer/commission meeting point among the available waypoints; this is not a claim that she lives at the estate.",
+      "locationId": "home-inazuma-city-courier-meet",
+      "rationale": "Sayu carries messages for the Shuumatsuban and naps wherever the shade is good; the Inazuma City courier meeting point suits a hand-over. Her greeting now opens there.",
       "loreSource": "https://genshin-impact.fandom.com/wiki/Shuumatsuban"
     },
     {
@@ -401,8 +389,8 @@
     },
     {
       "name": "Yanfei",
-      "locationId": "home-yujing-terrace",
-      "rationale": "Yanfei is a legal adviser who works throughout Liyue, and no fixed home or office address is established. Yujing Terrace is a public Liyue Harbor meeting default, not a home claim.",
+      "locationId": "starter-jade-chamber",
+      "rationale": "Yanfei advises Liyue’s merchants and the Qixing on contracts; the Jade Chamber is a meeting point on that work, not her office. Her greeting now opens there.",
       "loreSource": "https://genshin.hoyoverse.com/en/news/detail/12173"
     },
     {
@@ -413,8 +401,8 @@
     },
     {
       "name": "Zibai",
-      "locationId": "home-qiaoying-village",
-      "rationale": "Zibai's in-game anecdote has her encounter Qiqi west of Qiaoying Village. No fixed home is established, so Qiaoying is an explicit story-based meeting default rather than an invented residence.",
+      "locationId": "map14-liyue-jademouth",
+      "rationale": "Zibai’s anecdote places her near Qiaoying Village; Jademouth, upriver in the same vale, suits her painting and adeptal memory. Her greeting now opens there.",
       "loreSource": "https://genshin-impact.fandom.com/wiki/Zibai%3A_The_Adeptus_Arts%2C_Once_More"
     },
     {
@@ -491,8 +479,8 @@
     },
     {
       "name": "Diluc",
-      "locationId": "starter-angel-s-share",
-      "rationale": "Existing default location retained from the earlier character-library setup.",
+      "locationId": "expansion-dawn-winery",
+      "rationale": "Diluc owns the Dawn Winery and lives there; his greeting now opens in its study. Angel’s Share keeps Venti and Eula.",
       "loreSource": "Existing library assignment"
     },
     {
@@ -509,8 +497,8 @@
     },
     {
       "name": "Furina",
-      "locationId": "starter-opera-epiclese",
-      "rationale": "Existing default location retained from the earlier character-library setup.",
+      "locationId": "map14-fontaine-fountain-of-lucine",
+      "rationale": "Furina’s story is bound to the Fountain of Lucine, in front of the Opera Epiclese. Her greeting now opens there.",
       "loreSource": "Existing library assignment"
     },
     {
@@ -575,8 +563,8 @@
     },
     {
       "name": "Kaveh",
-      "locationId": "starter-house-of-daena",
-      "rationale": "Existing default location retained from the earlier character-library setup.",
+      "locationId": "home-palace-of-alcazarzaray",
+      "rationale": "Kaveh designed the Palace of Alcazarzaray. His greeting now opens there.",
       "loreSource": "Existing library assignment"
     },
     {
@@ -587,8 +575,8 @@
     },
     {
       "name": "Klee",
-      "locationId": "starter-knights-of-favonius-headquarters",
-      "rationale": "Existing default location retained from the earlier character-library setup.",
+      "locationId": "expansion-starfell-lake",
+      "rationale": "Klee is famous for fish-blasting at Mondstadt’s lakes; Starfell Lake, Paimon’s home, gives her an open-air place to draw her adventure maps and frees up Headquarters. Her greeting now opens on its shore.",
       "loreSource": "Existing library assignment"
     },
     {
@@ -701,8 +689,8 @@
     },
     {
       "name": "Tartaglia",
-      "locationId": "starter-morepesok",
-      "rationale": "Existing default location retained from the earlier character-library setup.",
+      "locationId": "map14-snezhnaya-zapolyarny-palace",
+      "rationale": "A Harbinger answers to the Tsaritsa and is seldom home; his family stays in Morepesok. His greeting now opens at the palace.",
       "loreSource": "Existing library assignment"
     },
     {
@@ -713,8 +701,8 @@
     },
     {
       "name": "Thoma",
-      "locationId": "starter-kamisato-estate",
-      "rationale": "Existing default location retained from the earlier character-library setup.",
+      "locationId": "expansion-ritou",
+      "rationale": "Thoma first meets the Traveler at Ritou, where he handles the Kamisato household’s dealings with foreign ships. His greeting now opens there.",
       "loreSource": "Existing library assignment"
     },
     {
@@ -776,6 +764,258 @@
       "locationId": "expansion-starfell-lake",
       "rationale": "Paimon is first met at Starfell Lake, caught in a whirlpool. Her card is set at that moment.",
       "loreSource": "https://genshin-impact.fandom.com/wiki/Paimon"
+    },
+    {
+      "name": "Granny Ruoxin",
+      "locationId": "wild-liyue-qingce-village",
+      "rationale": "Wiki lists Granny Ruoxin at Qingce Village.",
+      "loreSource": "https://genshin-impact.fandom.com/wiki/Granny_Ruoxin"
+    },
+    {
+      "name": "Master Lu",
+      "locationId": "wild-liyue-qingce-village",
+      "rationale": "Wiki lists Master Lu at Qingce Village.",
+      "loreSource": "https://genshin-impact.fandom.com/wiki/Master_Lu"
+    },
+    {
+      "name": "Neko",
+      "locationId": "expansion-asase-shrine",
+      "rationale": "Wiki lists Neko at Asase Shrine.",
+      "loreSource": "https://genshin-impact.fandom.com/wiki/Neko"
+    },
+    {
+      "name": "Kujou Masahito",
+      "locationId": "expansion-kujou-encampment",
+      "rationale": "Wiki lists Kujou Masahito at Kujou Encampment.",
+      "loreSource": "https://genshin-impact.fandom.com/wiki/Kujou_Masahito"
+    },
+    {
+      "name": "Xavier",
+      "locationId": "expansion-kujou-encampment",
+      "rationale": "Roleplay meeting point. After Tatara Tales and The Seventh Samurai, when Xavier relocates to the encampment.",
+      "loreSource": "https://genshin-impact.fandom.com/wiki/Xavier"
+    },
+    {
+      "name": "Komaki",
+      "locationId": "map14-inazuma-bourou-village",
+      "rationale": "Wiki lists Komaki at Bourou Village.",
+      "loreSource": "https://genshin-impact.fandom.com/wiki/Komaki"
+    },
+    {
+      "name": "Nishikino Reirei",
+      "locationId": "map14-inazuma-bourou-village",
+      "rationale": "Wiki lists Nishikino Reirei at Bourou Village.",
+      "loreSource": "https://genshin-impact.fandom.com/wiki/Nishikino_Reirei"
+    },
+    {
+      "name": "Arama",
+      "locationId": "expansion-vanarana",
+      "rationale": "Roleplay meeting point. During Aranyaka, before Arama becomes the new Ashvattha Tree. This is a story-era encounter.",
+      "loreSource": "https://genshin-impact.fandom.com/wiki/Arama"
+    },
+    {
+      "name": "Araja",
+      "locationId": "expansion-vanarana",
+      "rationale": "Roleplay meeting point. In dream Vanarana, where Araja can manifest.",
+      "loreSource": "https://genshin-impact.fandom.com/wiki/Araja"
+    },
+    {
+      "name": "Aranakula",
+      "locationId": "expansion-vanarana",
+      "rationale": "Roleplay meeting point. In dream Vanarana.",
+      "loreSource": "https://genshin-impact.fandom.com/wiki/Aranakula"
+    },
+    {
+      "name": "Maryam",
+      "locationId": "expansion-caravan-ribat",
+      "rationale": "Wiki lists Maryam at Caravan Ribat.",
+      "loreSource": "https://genshin-impact.fandom.com/wiki/Maryam"
+    },
+    {
+      "name": "Aybak",
+      "locationId": "expansion-caravan-ribat",
+      "rationale": "Wiki lists Aybak at Caravan Ribat.",
+      "loreSource": "https://genshin-impact.fandom.com/wiki/Aybak"
+    },
+    {
+      "name": "Babel",
+      "locationId": "expansion-tanit-camps",
+      "rationale": "Roleplay meeting point. During the Tanit quest storyline, before Her Foes Rage Like Great Waters ends in Babel’s death.",
+      "loreSource": "https://genshin-impact.fandom.com/wiki/Babel"
+    },
+    {
+      "name": "Jeht",
+      "locationId": "expansion-tanit-camps",
+      "rationale": "Roleplay meeting point. During Jeht’s time with the Tanit, before the later destruction of the tribe.",
+      "loreSource": "https://genshin-impact.fandom.com/wiki/Jeht"
+    },
+    {
+      "name": "Aurelius",
+      "locationId": "map14-sumeru-vimara-village",
+      "rationale": "Wiki lists Aurelius at Vimara Village.",
+      "loreSource": "https://genshin-impact.fandom.com/wiki/Aurelius"
+    },
+    {
+      "name": "Shajar",
+      "locationId": "map14-sumeru-bayda-harbor",
+      "rationale": "Wiki lists Shajar at Bayda Harbor.",
+      "loreSource": "https://genshin-impact.fandom.com/wiki/Shajar"
+    },
+    {
+      "name": "Adel",
+      "locationId": "map14-sumeru-bayda-harbor",
+      "rationale": "Wiki lists Adel at Bayda Harbor.",
+      "loreSource": "https://genshin-impact.fandom.com/wiki/Adel"
+    },
+    {
+      "name": "Tiepolo",
+      "locationId": "expansion-petrichor",
+      "rationale": "Wiki lists Tiepolo at Petrichor.",
+      "loreSource": "https://genshin-impact.fandom.com/wiki/Tiepolo"
+    },
+    {
+      "name": "Mécantre",
+      "locationId": "expansion-petrichor",
+      "rationale": "Wiki lists Mécantre at Petrichor.",
+      "loreSource": "https://genshin-impact.fandom.com/wiki/M%C3%A9cantre"
+    },
+    {
+      "name": "Sedile",
+      "locationId": "expansion-merusea-village",
+      "rationale": "Wiki lists Sedile at Merusea Village.",
+      "loreSource": "https://genshin-impact.fandom.com/wiki/Sedile"
+    },
+    {
+      "name": "Virda",
+      "locationId": "expansion-merusea-village",
+      "rationale": "Wiki lists Virda at Merusea Village.",
+      "loreSource": "https://genshin-impact.fandom.com/wiki/Virda"
+    },
+    {
+      "name": "Lasselin",
+      "locationId": "expansion-the-rusty-rudder",
+      "rationale": "Wiki lists Lasselin at The Rusty Rudder.",
+      "loreSource": "https://genshin-impact.fandom.com/wiki/Lasselin"
+    },
+    {
+      "name": "Pitot",
+      "locationId": "expansion-the-rusty-rudder",
+      "rationale": "Wiki lists Pitot at The Rusty Rudder.",
+      "loreSource": "https://genshin-impact.fandom.com/wiki/Pitot"
+    },
+    {
+      "name": "Areta",
+      "locationId": "map14-fontaine-fleuve-cendre",
+      "rationale": "Wiki lists Areta at Fleuve Cendre.",
+      "loreSource": "https://genshin-impact.fandom.com/wiki/Areta"
+    },
+    {
+      "name": "Tetreaux",
+      "locationId": "map14-fontaine-fleuve-cendre",
+      "rationale": "Wiki lists Tetreaux at Fleuve Cendre.",
+      "loreSource": "https://genshin-impact.fandom.com/wiki/Tetreaux"
+    },
+    {
+      "name": "Lyris",
+      "locationId": "map14-fontaine-annapausis",
+      "rationale": "Roleplay meeting point. A historical or dreamlike encounter inspired by Annapausis; Lyris is a historical figure, not an ordinary present-day resident.",
+      "loreSource": "https://genshin-impact.fandom.com/wiki/Lyris"
+    },
+    {
+      "name": "Jakob",
+      "locationId": "map14-fontaine-annapausis",
+      "rationale": "Roleplay meeting point. A Narzissenkreuz story-era encounter, before Jakob’s death in Search in the Algae Sea; the setting is a roleplay meeting point.",
+      "loreSource": "https://genshin-impact.fandom.com/wiki/Jakob"
+    },
+    {
+      "name": "Rene",
+      "locationId": "map14-fontaine-annapausis",
+      "rationale": "Roleplay meeting point. A historical or dreamlike roleplay encounter before his dissolution; Annapausis is a meeting point, not a claim of present-day residence.",
+      "loreSource": "https://genshin-impact.fandom.com/wiki/Rene"
+    },
+    {
+      "name": "Mazatl",
+      "locationId": "expansion-easybreeze-market",
+      "rationale": "Wiki lists Mazatl at Easybreeze Market.",
+      "loreSource": "https://genshin-impact.fandom.com/wiki/Mazatl"
+    },
+    {
+      "name": "Tzompantli",
+      "locationId": "expansion-easybreeze-market",
+      "rationale": "Wiki lists Tzompantli at Easybreeze Market.",
+      "loreSource": "https://genshin-impact.fandom.com/wiki/Tzompantli"
+    },
+    {
+      "name": "Aloha",
+      "locationId": "map14-natlan-colorfall-cliffs",
+      "rationale": "Wiki lists Aloha at Colorfall Cliffs.",
+      "loreSource": "https://genshin-impact.fandom.com/wiki/Aloha"
+    },
+    {
+      "name": "Tlapalli",
+      "locationId": "map14-natlan-tete-isle",
+      "rationale": "Wiki lists Tlapalli at Tete Isle.",
+      "loreSource": "https://genshin-impact.fandom.com/wiki/Tlapalli"
+    },
+    {
+      "name": "Tisoc",
+      "locationId": "map14-natlan-mother-flamegranate-tree",
+      "rationale": "Roleplay meeting point. After Ripe For Trouble; this is a nearby roleplay meeting point.",
+      "loreSource": "https://genshin-impact.fandom.com/wiki/Tisoc"
+    },
+    {
+      "name": "Anselm",
+      "locationId": "map14-nod-krai-favonius-keep",
+      "rationale": "Wiki lists Anselm at Favonius Keep.",
+      "loreSource": "https://genshin-impact.fandom.com/wiki/Anselm"
+    },
+    {
+      "name": "Valdis",
+      "locationId": "map14-nod-krai-cliffwatch-camp",
+      "rationale": "Roleplay meeting point. After Nightingale’s Song, when Valdis appears at Cliffwatch Camp.",
+      "loreSource": "https://genshin-impact.fandom.com/wiki/Valdis"
+    },
+    {
+      "name": "Egle",
+      "locationId": "map14-nod-krai-cliffwatch-camp",
+      "rationale": "Roleplay meeting point. After Nightingale’s Song, when Egle appears at Cliffwatch Camp.",
+      "loreSource": "https://genshin-impact.fandom.com/wiki/Egle"
+    },
+    {
+      "name": "Eveliina",
+      "locationId": "map14-nod-krai-light-bathed-platform",
+      "rationale": "Wiki lists Eveliina at Light-Bathed Platform.",
+      "loreSource": "https://genshin-impact.fandom.com/wiki/Eveliina"
+    },
+    {
+      "name": "Kukkia",
+      "locationId": "map14-nod-krai-light-bathed-platform",
+      "rationale": "Wiki lists Kukkia at Light-Bathed Platform.",
+      "loreSource": "https://genshin-impact.fandom.com/wiki/Kukkia"
+    },
+    {
+      "name": "Mayskaya",
+      "locationId": "expansion-rankova-zorya",
+      "rationale": "Quest-era roleplay placement; see the card’s source notes.",
+      "loreSource": "https://www.hoyodex.com/wiki/genshin-impact/quest-exclusive-npcs"
+    },
+    {
+      "name": "Knyazev",
+      "locationId": "expansion-rankova-zorya",
+      "rationale": "Quest-era roleplay placement; see the card’s source notes.",
+      "loreSource": "https://www.hoyodex.com/wiki/genshin-impact/quest-exclusive-npcs"
+    },
+    {
+      "name": "Plate",
+      "locationId": "map14-snezhnaya-huntsman-s-cabin",
+      "rationale": "Quest-era roleplay placement; see the card’s source notes.",
+      "loreSource": "https://www.hoyodex.com/wiki/genshin-impact/hunter-on-the-snowfields"
+    },
+    {
+      "name": "Whistle",
+      "locationId": "map14-snezhnaya-huntsman-s-cabin",
+      "rationale": "Quest-era roleplay placement; see the card’s source notes.",
+      "loreSource": "https://www.hoyodex.com/wiki/genshin-impact/hunter-on-the-snowfields"
     }
   ],
   "relocations": [
@@ -816,12 +1056,6 @@
       "rationale": "Wolvendom is a suitable forest trail for a roaming hunter. This is a roleplay encounter point, not a canonical home."
     },
     {
-      "name": "Cyno",
-      "from": "starter-house-of-daena",
-      "to": "starter-aaru-village",
-      "rationale": "Aaru Village already matches Cyno’s main greeting and his desert patrol scenario."
-    },
-    {
       "name": "Aether",
       "from": "home-mondstadt-adventurers-guild",
       "to": "home-mondstadt-travelers-cove",
@@ -834,6 +1068,150 @@
       "to": "home-mondstadt-travelers-cove",
       "unplaced": true,
       "rationale": "The Traveler's card now opens on this beach. Also applies to a twin with no location, who still has the old Guild default."
+    },
+    {
+      "name": "Klee",
+      "from": "starter-knights-of-favonius-headquarters",
+      "to": "expansion-starfell-lake",
+      "rationale": "Klee is famous for fish-blasting at Mondstadt’s lakes; Starfell Lake, Paimon’s home, gives her an open-air place to draw her adventure maps and frees up Headquarters. Her greeting now opens on its shore."
+    },
+    {
+      "name": "Mika",
+      "from": "starter-knights-of-favonius-headquarters",
+      "to": "map14-mondstadt-millhaven",
+      "rationale": "A Reconnaissance Company surveyor fits the newly mapped village of Millhaven on Windrest Peak. A roleplay meeting point on his survey route, not a home. His greeting now opens there."
+    },
+    {
+      "name": "Noelle",
+      "from": "starter-knights-of-favonius-headquarters",
+      "to": "expansion-springvale",
+      "rationale": "Noelle runs errands for anyone in Mondstadt who needs help; Springvale gives her chores to do outside the city. A roleplay meeting point, not a home. Her greeting now opens there."
+    },
+    {
+      "name": "Fischl",
+      "from": "home-mondstadt-adventurers-guild",
+      "to": "map14-mondstadt-cider-lake",
+      "rationale": "Fischl investigates for the Guild; her greeting already asked about the city gate, which stands on the Cider Lake bridge. Katheryne stays at the Guild counter."
+    },
+    {
+      "name": "Rosaria",
+      "from": "home-favonius-cathedral",
+      "to": "starter-the-cat-s-tail",
+      "rationale": "Rosaria skips her Cathedral duties and spends evenings at The Cat’s Tail, which is where her card greeting already opens."
+    },
+    {
+      "name": "Shenhe",
+      "from": "starter-wanmin-restaurant",
+      "to": "map14-liyue-mt-aocang",
+      "rationale": "Shenhe grew up as Cloud Retainer’s disciple on Mt. Aocang. Her greeting now opens there."
+    },
+    {
+      "name": "Chongyun",
+      "from": "starter-wanmin-restaurant",
+      "to": "starter-wangshu-inn",
+      "rationale": "Chongyun’s card greeting already opens at Wangshu Inn, where he investigates reports of spirits on the road."
+    },
+    {
+      "name": "Xinyan",
+      "from": "starter-wanmin-restaurant",
+      "to": "expansion-yilong-wharf",
+      "rationale": "Xinyan is a travelling performer with no fixed home; the busy Yilong Wharf gives her an audience. Her greeting now opens there."
+    },
+    {
+      "name": "Yaoyao",
+      "from": "home-yujing-terrace",
+      "to": "home-xianyun-liyue-harbor-meeting-default",
+      "rationale": "Yaoyao runs errands among the adepti, and Xianyun’s waterfront meeting point matches her greeting by the Liyue Harbor docks."
+    },
+    {
+      "name": "Yanfei",
+      "from": "home-yujing-terrace",
+      "to": "starter-jade-chamber",
+      "rationale": "Yanfei advises Liyue’s merchants and the Qixing on contracts; the Jade Chamber is a meeting point on that work, not her office. Her greeting now opens there."
+    },
+    {
+      "name": "Zibai",
+      "from": "home-qiaoying-village",
+      "to": "map14-liyue-jademouth",
+      "rationale": "Zibai’s anecdote places her near Qiaoying Village; Jademouth, upriver in the same vale, suits her painting and adeptal memory. Her greeting now opens there."
+    },
+    {
+      "name": "Thoma",
+      "from": "starter-kamisato-estate",
+      "to": "expansion-ritou",
+      "rationale": "Thoma first meets the Traveler at Ritou, where he handles the Kamisato household’s dealings with foreign ships. His greeting now opens there."
+    },
+    {
+      "name": "Sayu",
+      "from": "starter-kamisato-estate",
+      "to": "home-inazuma-city-courier-meet",
+      "rationale": "Sayu carries messages for the Shuumatsuban and naps wherever the shade is good; the Inazuma City courier meeting point suits a hand-over. Her greeting now opens there."
+    },
+    {
+      "name": "Wanderer",
+      "from": "starter-house-of-daena",
+      "to": "starter-sanctuary-of-surasthana",
+      "rationale": "The Wanderer stays near Nahida, and his card greeting already opens on a terrace above Sumeru City."
+    },
+    {
+      "name": "Kaveh",
+      "from": "starter-house-of-daena",
+      "to": "home-palace-of-alcazarzaray",
+      "rationale": "Kaveh designed the Palace of Alcazarzaray. His greeting now opens there."
+    },
+    {
+      "name": "Layla",
+      "from": "starter-house-of-daena",
+      "to": "map14-sumeru-pardis-dhyai",
+      "rationale": "An Akademiya astronomy student at the Akademiya’s rainforest research site, where the sky is clearer. A roleplay meeting point, not a home. Her greeting now opens there."
+    },
+    {
+      "name": "Cyno",
+      "from": "starter-aaru-village",
+      "to": "home-temple-of-silence",
+      "rationale": "Cyno was raised by the priests of the Temple of Silence. His greeting now opens there."
+    },
+    {
+      "name": "Furina",
+      "from": "starter-opera-epiclese",
+      "to": "map14-fontaine-fountain-of-lucine",
+      "rationale": "Furina’s story is bound to the Fountain of Lucine, in front of the Opera Epiclese. Her greeting now opens there."
+    },
+    {
+      "name": "Clorinde",
+      "from": "starter-opera-epiclese",
+      "to": "map14-fontaine-fountain-of-lucine",
+      "rationale": "Clorinde duels at the Opera Epiclese and guarded Furina for years; the fountain outside the Opera keeps the two together. Her greeting now opens there."
+    },
+    {
+      "name": "Linnea",
+      "from": "starter-nasha-town",
+      "to": "guild-nasha-town",
+      "rationale": "Linnea advises the Nasha Town Adventurers’ Guild, and her greeting already opens beside it."
+    },
+    {
+      "name": "Vodyanitsa",
+      "from": "starter-morepesok",
+      "to": "expansion-the-korolevskiy-theater",
+      "rationale": "Vodyanitsa performs with a Snezhnograd troupe, and her greeting already opens backstage in a theatre."
+    },
+    {
+      "name": "Tartaglia",
+      "from": "starter-morepesok",
+      "to": "map14-snezhnaya-zapolyarny-palace",
+      "rationale": "A Harbinger answers to the Tsaritsa and is seldom home; his family stays in Morepesok. His greeting now opens at the palace."
+    },
+    {
+      "name": "Diluc",
+      "from": "starter-angel-s-share",
+      "to": "expansion-dawn-winery",
+      "rationale": "Diluc owns the Dawn Winery and lives there; his greeting now opens in its study. Angel’s Share keeps Venti and Eula."
+    },
+    {
+      "name": "Nicole",
+      "from": "roleplay-nicole-voidsea-outlook-meeting-default",
+      "to": "expansion-the-witch-s-garden",
+      "rationale": "Her greeting opens in the Witch’s Garden. Preserve custom placements."
     }
   ]
 }

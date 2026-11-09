@@ -1,23 +1,28 @@
+import {requiredSpriteTrust,defaultSpriteTrust} from './sprite-trust.js';
 import {isNarrator} from './narrator.js';
 import {activeGroup,inPartyChat} from './party.js';
 import {mountCharacterProperties,characterProperties,hasGenshinTag,ELEMENTS} from './character-properties.js';
-import {mountStartingTrust} from './trust-ui.js';
-import {createSpriteTrimmer} from './sprite-trim.js';
+import {mountStartingTrust,mountHeartInput} from './trust-ui.js';
+import {createSpriteTrimmer,supportsViewBox} from './sprite-trim.js';
 import {linkedCard,linkedCardAvatar,linkedPersonaAvatars,playedAvatars} from './persona-link.js';
 import {newLocalId} from './local-id.js';
+import {requiredCGTrust,TRUST_MAX} from './scene-trust.js';
 // Outfit registry uses native Character Expressions folder overrides. Sprite files
 // are managed through SillyTavern's existing authenticated upload/delete APIs.
 import { createMediaAdapter, mediaSettings, spriteAudioKey, localMediaPath, isVideoCG, registerExpression, syncExpressionControls } from './media-store.js';
 import { characterPreferences, bounded, roster } from './staging.js';
 import { nextSlotName, spriteDrafts, draftSprite } from './wardrobe-slots.js';
-import { mountBackgroundWardrobe } from './background-wardrobe.js';
+import { backgroundRegions } from './backgrounds.js';
 import { mountMovesetEditor } from './moveset-editor.js';
+import { mountCombatArtEditor } from './combat-art-editor.js';
 import {personaCard,personaFolder,personaSpriteSettings,setPersonaSpriteSetting,mountPersonaProfile,createPersonaAdapter} from './persona-wardrobe.js';
 import {circularCharacterAvatar,characterAvatarsReady} from './character-avatars.js';
 import {mountBurstAudioEditor} from './burst-audio.js';
 import {mountCharacterBackdrop} from './character-backdrop.js';
 import {elementCrest} from './element-crest.js';
 import {elementIcon} from './battle-icons.js';
+import {mountStarterDeck} from './starter-decks.js';
+import {createMachine} from './machine.js';
 const KEY = 'genshin_dialogue_ui';
 export const expressionLabels = 'admiration amusement anger annoyance approval caring confusion curiosity desire disappointment disapproval disgust embarrassment excitement fear gratitude grief joy love nervousness optimism pride realization relief remorse sadness surprise neutral'.split(' ');
 export function validFolder(value) {
@@ -127,110 +132,176 @@ const ROSTER_ORDER={
     region:t=>t.region?regionRank(t.region):REGION_ORDER.length+1,
     type:t=>['playable','npc','enemy'].indexOf(t.type),
 };
-export function mountWardrobe({host, getContext, onChange = async () => {}, onMediaChange = () => {}, openMap = () => {}, previewAudio = async () => {}, previewCG = async () => {}, mediaAdapter = createMediaAdapter(getContext), adapter = createWardrobeAdapter(getContext), personaAdapter = createPersonaAdapter(getContext)}) {
+export function mountWardrobe({host, getContext, onChange = async () => {}, onMediaChange = () => {}, previewAudio = async () => {}, previewCG = async () => {}, mediaAdapter = createMediaAdapter(getContext), adapter = createWardrobeAdapter(getContext), personaAdapter = createPersonaAdapter(getContext)}) {
     const dialog = document.createElement('dialog'); dialog.id = 'gi-wardrobe'; dialog.dataset.tab = 'attributes';
     dialog.setAttribute('aria-labelledby', 'gi-wardrobe-title'); dialog.tabIndex = -1;
     dialog.innerHTML = `<header><div><h2 id="gi-wardrobe-title">Character Customization</h2></div><button type="button" data-w="close" aria-label="Close Character Customization">×</button></header>
         <div class="gi-roster-tools"><input type="search" id="gi-character-search" placeholder="Search characters" aria-label="Search characters" autocomplete="off" maxlength="80"><label class="gi-check gi-roster-filter"><input type="checkbox" id="gi-hide-non-genshin">Hide non-Genshin</label><div class="gi-roster-view" role="group" aria-label="Filter and sort characters"><label>Type<select data-roster="type"><option value="">All</option><option value="playable">Playable</option><option value="npc">NPC</option><option value="enemy">Enemy</option></select></label><label>Element<select data-roster="element"><option value="">All</option>${[...ELEMENTS,'None'].map(e=>`<option>${e}</option>`).join('')}</select></label><label>Body<select data-roster="body"><option value="">All</option><option value="small">Small</option><option value="medium">Medium</option><option value="tall">Tall</option><option value="unknown">Unspecified</option></select></label><label>Gender<select data-roster="gender"><option value="">All</option><option value="female">Female</option><option value="male">Male</option><option value="unknown">Unspecified</option></select></label><label>Region<select data-roster="region"><option value="">All</option></select></label><label>Sort<select data-roster="sort"><option value="">Party first</option><option value="name">Name</option><option value="element">Element</option><option value="body">Body type</option><option value="region">Region</option><option value="type">Type</option></select></label><button type="button" class="gi-roster-reset" hidden>Reset</button><output class="gi-roster-count" aria-live="polite"></output></div></div><nav class="gi-roster" aria-label="Choose a character"></nav>
         <div class="gi-wardrobe-body"><section class="gi-wardrobe-preview"><img alt="Selected sprite preview" hidden><h3></h3><p class="gi-outfit-caption"></p></section>
-        <section class="gi-wardrobe-controls"><details class="gi-character-staging" open><summary>Character scale, placement & classification</summary>
-        <label>Decide sprites<select id="gi-character-expression-mode"><option value="inherit">Use extension setting</option><option value="page">Once per dialogue page</option><option value="message">Once per complete message</option></select></label>
+        <section class="gi-wardrobe-controls"><details class="gi-character-staging" open><summary>Stage placement</summary>
+        <label title="When to choose this character’s expression automatically.">Expression timing<select id="gi-character-expression-mode"><option value="inherit">Use extension setting</option><option value="page">Once per dialogue page</option><option value="message">Once per complete message</option></select></label>
         <label>Character scale (%)<input id="gi-character-scale" type="number" min="10" max="300" step="1" value="100"></label>
         <label class="gi-check"><input id="gi-manual-position" type="checkbox">Set this character’s horizontal position</label><label>Horizontal position (% of screen)<input id="gi-character-x" type="number" min="0" max="100" step="1" value="50"></label>
         <label>Raise from bottom (% of screen)<input id="gi-character-y" type="number" min="-40" max="50" step="1" value="0"></label>
-        </details><nav class="gi-wardrobe-tabs" aria-label="Character Customization section"><button type="button" data-w="tab-attributes" aria-pressed="true"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="11" r="2.5"/><path d="M5.5 17c.8-2 2-3 3.5-3s2.7 1 3.5 3M15 10h4M15 14h3"/></svg><span>Profile</span></button><button type="button" data-w="tab-weapon" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="2.5"/><path d="M12 8v7M8 11h8M9.5 21l2.5-6 2.5 6M3 21h18"/></svg><span>Staging</span></button><button type="button" data-w="tab-sprites" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M8.5 14.5c1 1.3 2.1 2 3.5 2s2.5-.7 3.5-2"/><path d="M9 9.5h.01M15 9.5h.01"/></svg><span>Expressions</span></button><button type="button" data-w="tab-cgs" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8.5" cy="10" r="1.6"/><path d="m21 15-5-5-8 9"/></svg><span>Scenes</span></button><button type="button" data-w="tab-outfits" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3 4 6l2 4 2-1v12h8V9l2 1 2-4-4-3c-.6 1.6-2.2 2.6-4 2.6S8.6 4.6 8 3Z"/></svg><span>Outfits</span></button><button type="button" data-w="tab-backgrounds" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 19 9 9l4 6 3-4 5 8Z"/><circle cx="16" cy="6" r="2"/></svg><span>Backgrounds</span></button></nav><div data-panel="sprites"><label for="gi-outfit">Sprite set</label><div class="gi-wardrobe-row"><select id="gi-outfit"></select><button type="button" data-w="equip">Use set</button></div>
+        </details><nav class="gi-wardrobe-tabs" aria-label="Character Customization section"><button type="button" data-w="tab-attributes" aria-pressed="true"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="9" cy="11" r="2.5"/><path d="M5.5 17c.8-2 2-3 3.5-3s2.7 1 3.5 3M15 10h4M15 14h3"/></svg><span>Profile</span></button><button type="button" data-w="tab-weapon" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="5" r="2.5"/><path d="M12 8v7M8 11h8M9.5 21l2.5-6 2.5 6M3 21h18"/></svg><span>Staging</span></button><button type="button" data-w="tab-sprites" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M8.5 14.5c1 1.3 2.1 2 3.5 2s2.5-.7 3.5-2"/><path d="M9 9.5h.01M15 9.5h.01"/></svg><span>Expressions</span></button><button type="button" data-w="tab-cgs" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8.5" cy="10" r="1.6"/><path d="m21 15-5-5-8 9"/></svg><span>Scenes</span></button><button type="button" data-w="tab-outfits" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3 4 6l2 4 2-1v12h8V9l2 1 2-4-4-3c-.6 1.6-2.2 2.6-4 2.6S8.6 4.6 8 3Z"/></svg><span>Outfits</span></button></nav><div data-panel="sprites"><label for="gi-outfit">Sprite set</label><div class="gi-wardrobe-row"><select id="gi-outfit"></select><button type="button" data-w="equip">Use set</button></div>
         <p class="gi-current-outfit"></p>
         <div class="gi-wardrobe-row gi-set-tools" role="group" aria-label="Manage sprite sets"><button type="button" data-w="set-new">New set</button><button type="button" data-w="set-rename">Rename</button><button type="button" data-w="set-delete">Delete</button></div>
         <div class="gi-set-editor" hidden><label class="gi-set-name-row"><span class="gi-set-editor-title"></span><input id="gi-set-editor-name" maxlength="80" autocomplete="off"></label><label class="gi-check gi-set-copy-row"><input type="checkbox" id="gi-set-copy">Start from a copy of the selected set</label><p class="gi-set-editor-note"></p><div class="gi-wardrobe-row"><button type="button" data-w="set-confirm">Create set</button><button type="button" data-w="set-forget" hidden>Remove from list</button><button type="button" data-w="set-delete-files" hidden>Delete set and sprites</button><button type="button" data-w="set-cancel">Cancel</button></div></div>
         <details><summary>Link an existing sprite folder</summary><label>Set name<input id="gi-outfit-name" placeholder="Summer outfit" maxlength="80"></label><label>Sprite folder<input id="gi-outfit-folder" placeholder="Character/Summer" maxlength="257"></label><div class="gi-wardrobe-row"><button type="button" data-w="add-set">Add set</button></div></details>
         <h3>Expressions</h3><div class="gi-expression-grid" aria-label="Sprites in this set"></div>
         <div class="gi-sprite-detail" hidden><span></span><button type="button" data-w="remove">Remove sprite</button></div>
-        <div class="gi-selected-sprite-tools" hidden><label>Selected sprite scale (%)<input id="gi-sprite-scale" type="number" min="10" max="300" step="1" value="100"></label><label for="gi-rename-expression">Rename this expression in this set</label><div class="gi-wardrobe-row"><input id="gi-rename-expression" maxlength="60" placeholder="e.g. smug"><button type="button" data-w="rename-expression">Rename</button></div>
+        <div class="gi-selected-sprite-tools" hidden><label>Selected sprite scale (%)<input id="gi-sprite-scale" type="number" min="10" max="300" step="1" value="100"></label><label title="The classifier only picks this sprite once the character trusts you this much (0 to 5 hearts). Love and desire need 3, their numbered variants 4. Ignored while Trust is off.">Minimum Trust to be classified<input id="gi-sprite-trust" type="number" min="0" max="5" step="0.5" value="0"></label><label for="gi-rename-expression">Rename this expression in this set</label><div class="gi-wardrobe-row"><input id="gi-rename-expression" maxlength="60" placeholder="e.g. smug"><button type="button" data-w="rename-expression">Rename</button></div>
         <div class="gi-sprite-audio-tools"><h3>Sprite audio</h3><div class="gi-audio-list" aria-label="Audio assigned to selected sprite"></div><label>Audio files<input id="gi-audio-files" type="file" accept="audio/*,.m4a,.flac" multiple></label><button type="button" data-w="upload-audio">Add audio to selected sprite</button></div></div>
         <div class="gi-remove-confirm" hidden><p></p><button type="button" data-w="confirm-remove">Remove</button><button type="button" data-w="cancel-remove">Cancel</button></div>
-        <label for="gi-upload-expression">Upload expression</label><select id="gi-upload-expression"></select>
+        <details class="gi-sprite-import"><summary>Add sprites</summary><div class="gi-sprite-import-body"><label>Expression name<select id="gi-upload-expression"></select></label>
         <label>Image files<input id="gi-sprite-files" type="file" accept="image/png,image/webp,image/jpeg,image/gif,image/avif" multiple></label>
         <label class="gi-check"><input type="checkbox" id="gi-use-file-labels" checked>Use each filename as its expression (joy, love-1, etc.)</label>
         <label class="gi-check"><input type="checkbox" id="gi-replace-sprites">Replace matching filenames</label>
         <button type="button" data-w="upload">Add sprites</button>
-        <div class="gi-wardrobe-row"><input id="gi-new-expression" aria-label="New expression name" placeholder="New expression, e.g. smug" maxlength="60"><button type="button" data-w="add-expression">Add expression</button></div>
+        <div class="gi-wardrobe-row"><input id="gi-new-expression" aria-label="New expression name" placeholder="New expression, e.g. smug" maxlength="60"><button type="button" data-w="add-expression">Add expression name</button></div></div></details>
         </div>
-        <div data-panel="cgs" hidden><p class="gi-cg-intro">A scene appears when a reply matches it. The classifier reads each label and its description. Scenes can be images, GIFs or videos.</p><div class="gi-cg-grid" aria-label="Character scene artworks"></div>
-        <section class="gi-cg-section gi-cg-details"><h3>Scene details</h3><label>Scene label<input id="gi-cg-label" maxlength="60" placeholder="Fish Blasting"></label><label>Additional classifications (one per line)<textarea id="gi-cg-classifications" rows="2" maxlength="1200" placeholder="Fish Blasting&#10;Fishing adventure"></textarea></label><label>When should this artwork appear?<textarea id="gi-cg-description" rows="4" maxlength="1200" placeholder="Klee is actively blasting fish by the lake."></textarea></label><label>How it appears<select id="gi-cg-display"><option value="scene">Replace background and sprites</option><option value="frame">Framed window</option></select><small>Phones always use a framed window.</small></label>
+        <div data-panel="cgs" hidden><p class="gi-cg-intro" title="The classifier uses scene labels and descriptions to match artwork to replies, considering everyone present. Images, GIFs and videos are supported.">Scene artwork appears when a reply matches its label and description.</p><div class="gi-cg-grid" aria-label="Character scene artworks"></div>
+        <section class="gi-cg-section gi-cg-details"><h3>Scene details</h3><label>Scene label<input id="gi-cg-label" maxlength="60" placeholder="Fish Blasting"></label><label>Additional classifications (one per line)<textarea id="gi-cg-classifications" rows="2" maxlength="1200" placeholder="Fish Blasting&#10;Fishing adventure"></textarea></label><label>When should this artwork appear?<textarea id="gi-cg-description" rows="4" maxlength="1200" placeholder="Klee is actively blasting fish by the lake."></textarea></label><label>How it appears<select id="gi-cg-display"><option value="scene">Replace background and sprites</option><option value="frame">Framed window</option></select><small>Phones always use a framed window. The CG display setting in Silly Teyvat can override this for every CG.</small></label>
+        <fieldset class="gi-cg-needs" hidden><legend>Only show this scene when</legend><p class="gi-cg-needs-help">All conditions must be true. Scenes that do not qualify are left out of the classification prompt.</p>
+        <label title="This character's Trust toward you, from 0 to 5 hearts. Applies while Trust is enabled. Saved scenes and manual previews remain available.">Required Trust<input id="gi-cg-required-trust" type="number" min="0" max="${TRUST_MAX}" step="0.1" value="0"></label>
+        <div class="gi-cg-need"><span id="gi-cg-need-people-label">These characters are present</span><div class="gi-cg-chips" data-need="people" role="list" aria-labelledby="gi-cg-need-people-label"></div><div class="gi-wardrobe-row"><input id="gi-cg-need-character" list="gi-cg-character-names" placeholder="Character name" aria-labelledby="gi-cg-need-people-label" autocomplete="off"><datalist id="gi-cg-character-names"></datalist><button type="button" class="gi-cg-need-add" data-need="people">Add character</button></div></div>
+        <div class="gi-cg-need"><span id="gi-cg-need-places-label">The party is at one of these locations</span><div class="gi-cg-chips" data-need="places" role="list" aria-labelledby="gi-cg-need-places-label"></div><div class="gi-wardrobe-row"><select id="gi-cg-need-location" aria-labelledby="gi-cg-need-places-label"></select><button type="button" class="gi-cg-need-add" data-need="places">Add location</button></div></div></fieldset>
         <div class="gi-cg-video-tools" hidden><label>Video volume <output id="gi-cg-video-volume-value">100%</output><input id="gi-cg-video-volume" type="range" min="0" max="100" step="5"></label><label class="gi-check"><input id="gi-cg-video-loop" type="checkbox">Loop video</label></div>
         <div class="gi-wardrobe-row"><button type="button" data-w="save-cg">Save label & details</button><button type="button" data-w="preview-cg">Preview CG</button><button type="button" data-w="remove-cg">Remove selected CG</button></div></section>
         <section class="gi-cg-section gi-cg-audio-tools" hidden><h3>CG audio</h3><div class="gi-cg-audio-list" aria-label="Audio assigned to selected CG"></div><label>Linked audio volume <output id="gi-cg-audio-volume-value">100%</output><input id="gi-cg-audio-volume" type="range" min="0" max="100" step="5"></label><label>CG audio files<input id="gi-cg-audio-files" type="file" accept="audio/*,.m4a,.flac" multiple></label><button type="button" data-w="upload-cg-audio">Add audio to selected CG</button></section>
         <section class="gi-cg-section"><h3>Add artwork</h3><label>Artwork files<input id="gi-cg-files" type="file" accept="image/png,image/webp,image/jpeg,image/gif,image/avif,video/mp4,video/webm,video/quicktime,.m4v,.mov" multiple></label><div class="gi-wardrobe-row"><button type="button" data-w="upload-cg">Add scene artwork</button><button type="button" data-w="recheck-cg">Recheck visible message</button></div></section>
         </div>
         </section></div><footer><p role="status" aria-live="polite"></p><button type="button" data-w="undo" hidden>Undo remove</button></footer>`;
-    const backgroundPanel=document.createElement('div');backgroundPanel.dataset.panel='backgrounds';backgroundPanel.hidden=true;dialog.querySelector('.gi-wardrobe-controls').append(backgroundPanel);
     host.append(dialog);
     const abort = new AbortController();
-    const trimmer = createSpriteTrimmer({ inventory: folder => adapter.list(folder) });
+    // Pinching the page zoom (a laptop trackpad, a phone) re-rasterises the screen under the fingers. The sprite's reflection,
+    // its shadow and the large drifting nebula layers made that stage slow to settle: the figure could show at the wrong size and
+    // over other panels until it had caught up. While the viewport is being pinched or panned they are switched off, and
+    // switched back on a moment after it settles.
+    let pinchTimer = 0;
+    const pinching = () => { dialog.classList.add('gi-pinching'); clearTimeout(pinchTimer); pinchTimer = setTimeout(() => dialog.classList.remove('gi-pinching'), 400); };
+    for (const type of ['resize', 'scroll']) globalThis.visualViewport?.addEventListener(type, pinching, { passive: true, signal: abort.signal });
+    const trimmer = createSpriteTrimmer({ inventory: path => path === folder() ? Promise.resolve(sprites) : adapter.list(path), concurrency: 2 });
     const $ = sel => dialog.querySelector(sel);
-    let character, sets = [], sprites = [], selected, selectedCG, tab = 'attributes', backup, revision = 0, busy = false, opener,personaRefreshPending=false;
+    const spriteTrustUI=mountHeartInput({input:$('#gi-sprite-trust'),signal:abort.signal}),cgTrustUI=mountHeartInput({input:$('#gi-cg-required-trust'),signal:abort.signal});
+    let character, sets = [], sprites = [], selected, selectedCG, tab = 'attributes', backup, revision = 0, opener,personaRefreshPending=false;
     const status = text => { const p=$('footer p'); p.textContent = text; p.classList.remove('gi-toast'); void p.offsetWidth; p.classList.add('gi-toast'); };
-    const backgroundUI=mountBackgroundWardrobe({panel:backgroundPanel,getContext,adapter:mediaAdapter,onChange:onMediaChange,status,openMap:options=>{dialog.close();return openMap(options);},preview:(location,region)=>{
-        if(tab!=='backgrounds')return;const img=$('.gi-wardrobe-preview img');clearArt(img);img.hidden=!location?.path;if(location?.path)img.src=localMediaPath(location.path);else img.removeAttribute('src');$('.gi-cs-identity h3').textContent=region?.name || 'World travel';$('.gi-outfit-caption').textContent=location?.label || 'Choose a region and add locations';
-    }});
     const propertiesPanel=document.createElement('details');propertiesPanel.className='gi-card-properties';$('.gi-character-staging').before(propertiesPanel);
-    const propertiesUI=mountCharacterProperties({panel:propertiesPanel,getContext,getCharacter:()=>character,status,onChange:()=>{startingTrustUI.refresh();paintElement();onChange(character,{classification:true});}});
+    const propertiesUI=mountCharacterProperties({panel:propertiesPanel,getContext,getCharacter:()=>character,status,onChange:()=>{startingTrustUI.refresh();starterDeckUI.refresh();paintElement();onChange(character,{classification:true});}});
     const trustPanel=document.createElement('details');trustPanel.className='gi-card-properties gi-start-trust';propertiesPanel.after(trustPanel);
     const startingTrustUI=mountStartingTrust({panel:trustPanel,getContext,getCharacter:()=>character,status});
+    // Starter deck: the twenty cards a new journey with this character starts with.
+    const deckPanel=document.createElement('details');deckPanel.className='gi-card-properties';trustPanel.after(deckPanel);
+    const starterDeckUI=mountStarterDeck({panel:deckPanel,getContext,getCharacter:()=>character,status});
     const personaPanel=document.createElement('section');
     $('.gi-sprite-detail').insertAdjacentHTML('afterbegin','<button type="button" data-w="use-persona-sprite" hidden>Use this expression</button>');
     $('.gi-character-staging').insertAdjacentHTML('afterbegin','<label class="gi-check" id="gi-persona-display-control" hidden><input id="gi-persona-visible" type="checkbox">Show your persona in the scene</label>');
+    $('.gi-character-staging').insertAdjacentHTML('afterbegin','<h3 class="gi-cs-heading">Stage placement</h3>');
+    const propertiesHeading=document.createElement('h3');propertiesHeading.className='gi-cs-heading';propertiesHeading.textContent='Properties';propertiesPanel.before(propertiesHeading);
     const personaProfileUI=mountPersonaProfile({panel:personaPanel,getContext,getCharacter:()=>character,adapter:personaAdapter,status,onChange:async card=>{await renderRoster();await onChange(card,{presentation:true});}});
     {
         // Genshin character screen: top bar (crest and name, party strip, close), section rail, centre stage, detail column.
         const header=$('header'),title=header.firstElementChild,body=$('.gi-wardrobe-body'),controls=$('.gi-wardrobe-controls');
         title.className='gi-cs-title';title.insertAdjacentHTML('afterbegin','<span class="gi-cs-emblem" aria-hidden="true"></span>');
-        header.insertBefore($('.gi-roster'),header.lastElementChild);
-        const keyCap=(action,key,label)=>`<button type="button" class="gi-cs-key" data-w="${action}" data-gi-sound="none" aria-label="${label}" title="${label}">${key}</button>`;
-        $('.gi-roster').insertAdjacentHTML('beforebegin',keyCap('character-prev','Q','Previous character'));$('.gi-roster').insertAdjacentHTML('afterend',keyCap('character-next','E','Next character'));
-        const rail=document.createElement('div');rail.className='gi-cs-rail';rail.innerHTML=`<div class="gi-cs-keys">${keyCap('section-prev','W','Previous section')}${keyCap('section-next','S','Next section')}</div>`;rail.append($('.gi-wardrobe-tabs'));body.prepend(rail);
-        // The name sits above the details, as in the game, and the sprite has the middle to itself.
-        const side=document.createElement('div');side.className='gi-cs-side';side.innerHTML='<div class="gi-cs-identity"></div><div class="gi-cs-actions"></div>';
+        const keyCap=(action,key,label)=>`<button type="button" class="gi-cs-key" data-w="${action}" data-gi-sound="none" aria-label="${label}" aria-keyshortcuts="${key}" title="${label}"><span>${key}</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m${key==='Q'?'15 5-7 7 7 7':'9 5 7 7-7 7'}"/></svg></button>`;
+        const characterSelect=document.createElement('div');characterSelect.className='gi-cs-character-select';
+        characterSelect.innerHTML=keyCap('character-prev','Q','Previous character');characterSelect.append($('.gi-roster'));
+        characterSelect.insertAdjacentHTML('beforeend',keyCap('character-next','E','Next character'));header.insertBefore(characterSelect,header.lastElementChild);
+        const rail=document.createElement('div');rail.className='gi-cs-rail';rail.append($('.gi-wardrobe-tabs'));body.prepend(rail);
+        // Keep preview metadata for its existing updates without repeating it above the editor.
+        const side=document.createElement('div');side.className='gi-cs-side';side.innerHTML='<div class="gi-cs-identity" hidden></div><div class="gi-cs-actions"></div>';
         side.firstElementChild.append($('.gi-wardrobe-preview h3'),$('.gi-outfit-caption'));controls.before(side);side.firstElementChild.after(controls);
         dialog.insertAdjacentHTML('afterbegin','<div class="gi-cs-sky" aria-hidden="true"><i class="gi-cs-nebula gi-cs-nebula-shade"></i><i class="gi-cs-nebula gi-cs-nebula-far"></i><i class="gi-cs-nebula gi-cs-nebula-near"></i><canvas></canvas></div>');
-        const arrow='<svg viewBox="0 0 40 40" aria-hidden="true"><path d="M26 7 9 20l17 13-6-13Z"/><path d="m29 15 5 5-5 5-5-5Z"/></svg>';
-        body.insertAdjacentHTML('afterend',`<canvas class="gi-cs-motes" aria-hidden="true"></canvas><button type="button" class="gi-cs-step" data-w="character-prev" data-gi-sound="none" aria-label="Previous character">${arrow}</button><button type="button" class="gi-cs-step gi-cs-step-next" data-w="character-next" data-gi-sound="none" aria-label="Next character">${arrow}</button><section class="gi-cs-archive" aria-label="All characters" hidden><div class="gi-cs-archive-top"><div class="gi-cs-archive-title">All characters</div><button type="button" class="gi-cs-archive-close" data-w="archive-close" aria-label="Close character list">×</button></div><div class="gi-cs-archive-grid"></div></section>`);
-        $('.gi-cs-archive-title').after($('.gi-roster-tools'));
+        body.insertAdjacentHTML('afterend',`<canvas class="gi-cs-motes" aria-hidden="true"></canvas><section id="gi-character-browser" class="gi-cs-archive" role="dialog" aria-modal="true" aria-label="All characters" hidden><div class="gi-cs-archive-top"><div class="gi-cs-archive-title">All characters</div><button type="button" class="gi-cs-archive-close" data-w="archive-close" aria-label="Close character list">×</button></div><p class="gi-roster-empty" hidden>No matching characters. Try another search or reset the filters.</p><div class="gi-cs-archive-grid"></div></section>`);
+        $('.gi-cs-archive-top').append($('.gi-roster-tools'));
         $(':scope > footer').insertAdjacentHTML('afterbegin','<button type="button" class="gi-cs-archive-open" data-w="archive" data-gi-sound="screen" aria-label="All characters" title="All characters"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="7" height="7" rx="1.6"/><rect x="13" y="4" width="7" height="7" rx="1.6"/><rect x="4" y="13" width="7" height="7" rx="1.6"/><rect x="13" y="13" width="7" height="7" rx="1.6"/></svg></button>');
         const sprites=$('[data-panel="sprites"]'),outfits=document.createElement('div');outfits.dataset.panel='outfits';outfits.hidden=true;
         const firstHeading=sprites.querySelector('h3');while(sprites.firstChild&&sprites.firstChild!==firstHeading)outfits.append(sprites.firstChild);sprites.before(outfits);
-        const attributes=document.createElement('div');attributes.dataset.panel='attributes';propertiesPanel.open=true;attributes.append(personaPanel,propertiesPanel,trustPanel);
-        const takeOver=document.createElement('section');takeOver.className='gi-takeover';takeOver.innerHTML='<button type="button" data-w="take-over"></button><small>Use this character as your persona. While you play them they leave the world’s random encounters and share one set of sprites with your persona.</small>';$('.gi-cs-actions').append(takeOver);
+        const attributes=document.createElement('div');attributes.dataset.panel='attributes';propertiesPanel.open=true;attributes.append(personaPanel,propertiesHeading,propertiesPanel,trustPanel);
+        const takeOver=document.createElement('section');takeOver.className='gi-takeover';takeOver.innerHTML='<button type="button" data-w="take-over" title="Use this character as your persona. While you play them they leave the world’s random encounters and share one set of sprites with your persona."></button>';$(':scope > footer').append(takeOver);
         const weapon=document.createElement('div');weapon.dataset.panel='weapon';weapon.hidden=true;const staging=$('.gi-character-staging');staging.open=true;weapon.append(staging);
-        // Moveset: the three battle moves, right after Profile.
+        // Combat: stats, the three battle moves, their art and the starter deck, right after Profile.
         const moveset=document.createElement('div');moveset.dataset.panel='moveset';moveset.hidden=true;
-        $('[data-w="tab-attributes"]').insertAdjacentHTML('afterend','<button type="button" data-w="tab-moveset" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.5 3.5h6v6L9 21l-6-6Z"/><path d="m11 13 3-3M3 21l3-3"/></svg><span>Moveset</span></button>');
+        $('[data-w="tab-attributes"]').insertAdjacentHTML('afterend','<button type="button" data-w="tab-moveset" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.5 3.5h6v6L9 21l-6-6Z"/><path d="m11 13 3-3M3 21l3-3"/></svg><span>Combat</span></button>');
         controls.prepend(attributes,moveset,weapon);sprites.hidden=true;
-        $('.gi-wardrobe-preview').insertAdjacentHTML('afterbegin','<i class="gi-cs-pedestal" aria-hidden="true"></i>');$('.gi-wardrobe-preview > img').insertAdjacentHTML('afterend','<i class="gi-cs-tint" aria-hidden="true"></i><button type="button" class="gi-cs-zoom" data-w="zoom" aria-pressed="false" aria-label="Zoom in" title="Zoom in"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 5 5M10.5 7.5v6M7.5 10.5h6"/></svg></button>');
+        $('.gi-wardrobe-preview').insertAdjacentHTML('afterbegin','<i class="gi-cs-pedestal" aria-hidden="true"></i>');$('.gi-wardrobe-preview > img').insertAdjacentHTML('afterend','<i class="gi-cs-tint" aria-hidden="true"></i><button type="button" class="gi-cs-zoom" data-w="zoom" aria-pressed="false" aria-label="Zoom in" title="Zoom in"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 5 5M7.5 10.5h6"/><path class="gi-cs-zoom-plus" d="M10.5 7.5v6"/></svg></button>');
     }
-    for(const button of dialog.querySelectorAll('.gi-wardrobe-tabs button'))button.dataset.giSound='section-tab';
+    for(const button of dialog.querySelectorAll('.gi-wardrobe-tabs button')){
+        button.dataset.giSound='section-tab';button.setAttribute('aria-label',button.textContent.trim());
+        button.setAttribute('aria-controls',`gi-character-panel-${button.dataset.w.slice(4)}`);
+    }
+    for(const panel of dialog.querySelectorAll('[data-panel]')){panel.id=`gi-character-panel-${panel.dataset.panel}`;panel.setAttribute('aria-label',$(`[data-w="tab-${panel.dataset.panel}"]`).textContent.trim());}
+    const browse=$('.gi-cs-archive-open');browse.insertAdjacentHTML('beforeend','<span>All characters</span>');browse.setAttribute('aria-expanded','false');browse.setAttribute('aria-controls','gi-character-browser');
+    for(const [action,key] of [['character-prev','Q'],['character-next','E']]){
+        const button=$(`[data-w="${action}"]`);button.title+=` (${key})`;
+    }
+    // Less frequent tools stay available without overwhelming the collection.
+    function disclosure(node,label){const details=document.createElement('details');details.className='gi-editor-disclosure';const summary=document.createElement('summary');summary.textContent=label;node.before(details);details.append(summary,node);return details;}
+    disclosure($('.gi-sprite-audio-tools'),'Expression audio');
+    disclosure($('.gi-cg-audio-tools'),'Scene audio');
+    for(const [action,label] of [['remove','Remove sprite'],['remove-cg','Remove scene'],['set-delete','Delete set']]){$(`[data-w="${action}"]`).classList.add('gi-action-danger');$(`[data-w="${action}"]`).textContent=label;}
+    $('[data-w="preview-cg"]').textContent='Preview scene';$('[data-w="save-cg"]').textContent='Save scene details';
+    // Scrolling strips (portraits, phone sections, list filters, the editor) fade at an edge that has more to show.
+    function edgeHints(strip){
+        const paint=()=>{
+            const y=strip.scrollHeight>strip.clientHeight+1&&strip.scrollWidth<=strip.clientWidth+1,at=y?strip.scrollTop:Math.abs(strip.scrollLeft),room=y?strip.scrollHeight-strip.clientHeight:strip.scrollWidth-strip.clientWidth;
+            const more=[at>2&&'start',at<room-2&&'end'].filter(Boolean).join(' ');
+            if(more)strip.dataset.more=more;else delete strip.dataset.more;strip.dataset.axis=y?'y':'x';
+        };
+        strip.addEventListener('scroll',paint,{passive:true,signal:abort.signal});
+        const sizes=new ResizeObserver(paint),items=new MutationObserver(paint);sizes.observe(strip);items.observe(strip,{childList:true});
+        if(strip.matches('.gi-wardrobe-controls'))for(const panel of strip.children)sizes.observe(panel);
+        abort.signal.addEventListener('abort',()=>{sizes.disconnect();items.disconnect();},{once:true});paint();
+    }
+    for(const strip of dialog.querySelectorAll('header .gi-roster, .gi-wardrobe-tabs, .gi-roster-view, .gi-wardrobe-controls'))edgeHints(strip);
+    {
+        const refit=()=>{fitRoster();centreSelectedFace();},sizes=new ResizeObserver(refit),faces=new MutationObserver(refit);
+        sizes.observe($('header'));faces.observe($('header .gi-roster'),{childList:true});
+        abort.signal.addEventListener('abort',()=>{sizes.disconnect();faces.disconnect();},{once:true});
+    }
+    // Drawn crosses sit exactly in the middle of their circles, unlike a text glyph.
+    for(const button of dialog.querySelectorAll('header > [data-w="close"], .gi-cs-archive-close'))button.innerHTML='<svg class="gi-cs-cross" viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/></svg>';
     const backdrop=mountCharacterBackdrop({sky:$('.gi-cs-sky'),behind:$('.gi-cs-sky canvas'),front:$('.gi-cs-motes'),stage:$('.gi-wardrobe-preview')});
     // A new character stands in lit by their element, and the beams rise as they appear. The tint is the
     // sprite's own outline, so it waits for the final (trimmed) image rather than the first load.
-    let arrival=0;
+    let arrival=false;
     function replay(element,name){element.classList.remove(name);void element.offsetWidth;element.classList.add(name);}
     function playArrival(){
-        clearTimeout(arrival);arrival=0;const img=$('.gi-wardrobe-preview > img'),tint=$('.gi-cs-tint');
+        arrival=false;const img=$('.gi-wardrobe-preview > img'),tint=$('.gi-cs-tint');
         if(!img.hidden&&img.currentSrc){
             Object.assign(tint.style,{left:`${img.offsetLeft}px`,top:`${img.offsetTop}px`,width:`${img.offsetWidth}px`,height:`${img.offsetHeight}px`});
-            tint.style.setProperty('--cs-sprite',`url("${img.currentSrc}")`);replay(dialog,'gi-cs-arrive');
+            tint.style.setProperty('--cs-sprite',`url("${img.currentSrc}")`);
+            // A cropped-by-CSS image still has its whole file as the tint's mask: place the mask so the cropped part fills the tint, as the image does.
+            const box=img.dataset.box?.split(',').map(Number);
+            if(box?.length===4&&img.naturalWidth){
+                const [l,t,r,b]=box,W=img.naturalWidth,H=img.naturalHeight,bw=img.offsetWidth,bh=img.offsetHeight,cw=(r-l)*W,ch=(b-t)*H,fit=Math.min(bw/cw,bh/ch);
+                for(const prefix of ['','-webkit-']){tint.style.setProperty(`${prefix}mask-size`,`${W*fit}px ${H*fit}px`);tint.style.setProperty(`${prefix}mask-position`,`${(bw-cw*fit)/2-l*W*fit}px ${bh-ch*fit-t*H*fit}px`);}
+            }else for(const prefix of ['','-webkit-']){tint.style.removeProperty(`${prefix}mask-size`);tint.style.removeProperty(`${prefix}mask-position`);}
+            replay(dialog,'gi-cs-arrive');
         }
         backdrop.arrive();
     }
-    function expectArrival(){clearTimeout(arrival);arrival=setTimeout(playArrival,700);}
-    $('.gi-wardrobe-preview > img').addEventListener('load',event=>{if(arrival&&event.target.style.visibility!=='hidden')playArrival();},{signal:abort.signal});
-    const movesetUI=mountMovesetEditor({panel:$('[data-panel="moveset"]'),getContext,getCharacter:()=>character,status});
-    const burstPanel=document.createElement('section');$('[data-panel="sprites"]').append(burstPanel);
+    function expectArrival(){arrival=true;dialog.classList.remove('gi-cs-arrive');}
+    const movesetEditor=document.createElement('section');$('[data-panel="moveset"]').append(movesetEditor);
+    const movesetUI=mountMovesetEditor({panel:movesetEditor,getContext,getCharacter:()=>character,status});
+    const artPanel=document.createElement('section');$('[data-panel="moveset"]').append(artPanel,deckPanel);deckPanel.classList.add('gi-editor-disclosure');
+    const combatArtUI=mountCombatArtEditor({panel:artPanel,getContext,getCharacter:()=>character,adapter:mediaAdapter,status});
+    movesetEditor.addEventListener('click',event=>{if(event.target.closest('[data-save-kit],[data-reset-kit]'))setTimeout(()=>combatArtUI.refresh());},{signal:abort.signal});
+    const burstPanel=document.createElement('section');$('[data-panel="moveset"]').append(burstPanel);
+    disclosure(burstPanel,'Elemental Burst audio');
     const burstAudioUI=mountBurstAudioEditor({panel:burstPanel,getContext,getCharacter:()=>character,adapter:mediaAdapter,previewAudio,status});
     // A persona that plays a character card shares that card's sprites and sets.
     const regKey = c => c?.isPersona ? (linkedCardAvatar(getContext(), c.personaAvatar) || c.avatar) : c?.avatar;
     const origFolder = c => c.isPersona ? (linkedCard(getContext(), c.personaAvatar)?.name ?? personaFolder(c.personaAvatar)) : c.name;
     const folder = () => $('#gi-outfit').value;
+    // The character's own folder is listed as Original until renamed. Its entry in the set registry
+    // only carries that name, or hidden when it was removed from the list.
+    const rootEntry = c => (registry()[regKey(c)] || []).find(x => x.folder === origFolder(c));
+    const originalLabel = c => rootEntry(c)?.label || 'Original';
+    const characterSets = c => {
+        const root = rootEntry(c), others = (registry()[regKey(c)] || []).filter(x => x !== root);
+        return [...(root?.hidden ? [] : [{label:originalLabel(c), folder:origFolder(c)}]), ...others];
+    };
     const registry = () => {
         const prefs = getContext().extensionSettings[KEY]; prefs.outfits ??= {}; return prefs.outfits;
     };
@@ -244,36 +315,72 @@ export function mountWardrobe({host, getContext, onChange = async () => {}, onMe
         $('#gi-upload-expression').replaceChildren(...labels.map(label => new Option(label, label)));
         if (labels.includes('neutral')) $('#gi-upload-expression').value = 'neutral';
     }
-    // Sprites show without their empty padding, matching the stage. The raw art
-    // loads first but stays hidden until the trimmed copy (if any) replaces it.
-    // Whatever replaces a sprite in a shared preview also cancels any crop still on its way to it.
-    function clearArt(img) { delete img.dataset.art; img.style.visibility = ''; }
-    function setArt(img, spriteFolder, path) {
-        img.dataset.art = path; img.src = path;
-        if (mediaSettings(getContext()).trimSprites === false) return;
-        img.style.visibility = 'hidden';
-        const generation = trimmer.generation;
-        trimmer.trim(spriteFolder, path).catch(() => null).then(trimmed => {
-            // A reset while this crop was pending revoked it; crop again instead of showing a dead blob.
-            if (trimmer.generation !== generation) { if (img.dataset.art === path) setArt(img, spriteFolder, path); return; }
-            if (img.dataset.art !== path || img.getAttribute('src') !== path) { img.style.visibility = ''; return; }
-            if (trimmed) img.src = trimmed.url;
-            img.style.visibility = '';
-        });
+    // Load the neutral first, but reveal only the decoded final crop. Showing
+    // the padded original first makes the figure jump in size after its arrival.
+    // A stale crop must never repaint another character, scene or background.
+    function clearArt(img) { delete img.dataset.art; delete img.dataset.box; img.style.visibility = ''; img.style.objectViewBox = ''; }
+    // A crop either swaps the image for a trimmed copy, or (Chrome, Edge) leaves the file alone and sets object-view-box.
+    function applyCrop(img, crop) {
+        if (crop.viewBox) { img.style.objectViewBox = crop.viewBox; img.dataset.box = [crop.box.left, crop.box.top, crop.box.right, crop.box.bottom].join(','); }
+        else { img.style.objectViewBox = ''; delete img.dataset.box; img.src = crop.url; }
     }
-    function chooseSprite(sprite) {
+    function setArt(img, spriteFolder, path, trim = true) {
+        // Tab changes often reselect the same sprite. Keep a finished crop in
+        // place instead of resetting its source to the original padded image.
+        if (img.dataset.art === path && img.style.visibility !== 'hidden' && img.complete && img.naturalWidth) return;
+        // Switching between sprites: keep the current figure on screen until the next one has loaded and
+        // decoded, then swap in one step so there is never a frame with neither visible.
+        if (img.getAttribute('src') && img.style.visibility !== 'hidden' && img.complete && img.naturalWidth && img.getAttribute('src') !== path) {
+            img.dataset.art = path;
+            const probe = new Image(); probe.src = path;
+            probe.decode().catch(() => {}).then(() => {
+                if (img.dataset.art !== path) return;
+                beginArt(img, spriteFolder, path, trim, false);
+            });
+            return;
+        }
+        beginArt(img, spriteFolder, path, trim, true);
+    }
+    function beginArt(img, spriteFolder, path, trim, hide) {
+        img.dataset.art = path; if (hide) img.style.visibility = 'hidden'; img.style.objectViewBox = ''; delete img.dataset.box; if (img.getAttribute('src') !== path) img.src = path;
+        if (!trim) { if (!hide) img.style.visibility = ''; return; }
+        const generation = trimmer.generation;
+        // The figure appears from its own outline at once; the crop shared by all its expressions follows, and
+        // swaps in quietly (no second arrival) if it differs. Boxes already known are used straight away.
+        let shown; const revealed = new Promise(resolve => { shown = resolve; });
+        const refine = promise => promise.catch(() => null).then(async better => {
+            await revealed;
+            if (!better || trimmer.generation !== generation || !dialog.open || img.dataset.art !== path || !img.naturalWidth) return;
+            if (!better.viewBox) { const probe = new Image(); probe.src = better.url; await probe.decode().catch(() => {}); }
+            if (trimmer.generation !== generation || img.dataset.art !== path) return;
+            applyCrop(img, better);
+        });
+        const crop = mediaSettings(getContext()).trimSprites === false ? Promise.resolve(null) : trimmer.trim(spriteFolder, path, { refine, viewBox: supportsViewBox(), dims: img.complete && img.naturalWidth && img.getAttribute('src') === path ? `${img.naturalWidth}x${img.naturalHeight}` : undefined });
+        crop.catch(() => null).then(async trimmed => {
+            if (trimmer.generation !== generation || !img.isConnected || img.dataset.art !== path || img.getAttribute('src') !== path) return;
+            if (trimmed) applyCrop(img, trimmed);
+            await img.decode().catch(() => {});
+            if (trimmer.generation !== generation || !dialog.open || img.dataset.art !== path || img.getAttribute('src') !== (trimmed?.url || path) || !img.naturalWidth) return;
+            img.style.visibility = '';
+            if (arrival) playArrival();
+        }).finally(shown);
+    }
+    function chooseSprite(sprite, trim = true) {
         selected = sprite;
         const preview = $('.gi-wardrobe-preview img'); preview.hidden = Boolean(sprite.blank);
-        if(sprite.blank){clearArt(preview);preview.removeAttribute('src');}else setArt(preview, folder(), sprite.path);
+        showCGVideo(null);
+        if(sprite.blank){clearArt(preview);preview.removeAttribute('src');}else setArt(preview, folder(), sprite.path, trim);
         $('.gi-outfit-caption').textContent = `${$('#gi-outfit').selectedOptions[0]?.textContent} · ${spriteIdentity(sprite.path).name}`;
         $('.gi-sprite-detail').hidden = false; $('.gi-sprite-detail span').textContent = spriteIdentity(sprite.path).filename;
         $('button[data-w="use-persona-sprite"]').hidden=!character.isPersona || Boolean(sprite.blank);
         $('.gi-remove-confirm').hidden = true;
-        $('.gi-selected-sprite-tools').hidden = false; $('#gi-rename-expression').value = sprite.label;const prefs=mediaSettings(getContext());$('#gi-sprite-scale').value=prefs.spriteScales?.[spriteAudioKey(folder(),sprite.path)] ?? 100;
-        $('#gi-sprite-scale').closest('label').hidden=Boolean(sprite.blank);$('.gi-sprite-audio-tools').hidden=Boolean(sprite.blank);
+        $('.gi-selected-sprite-tools').hidden = false; $('#gi-rename-expression').value = sprite.label;const prefs=mediaSettings(getContext());$('#gi-sprite-scale').value=prefs.spriteScales?.[spriteAudioKey(folder(),sprite.path)] ?? 100;$('#gi-sprite-trust').value=requiredSpriteTrust(getContext(),folder(),sprite.path);
+        spriteTrustUI.refresh();
+        $('#gi-sprite-scale').closest('label').hidden=Boolean(sprite.blank);spriteTrustUI.field.hidden=Boolean(sprite.blank);$('.gi-sprite-audio-tools').hidden=Boolean(sprite.blank);
+        $('.gi-sprite-audio-tools').closest('details').hidden=Boolean(sprite.blank);
         if(!sprite.blank)renderAudio();
         $('button[data-w="upload"]').textContent=sprite.blank?`Add image to ${sprite.name}`:'Add sprites';
-        if(sprite.blank){$('#gi-use-file-labels').checked=false;$('#gi-upload-expression').value=sprite.label;status(`Empty ${sprite.name}. Rename it or choose an image to fill this slot.`);}
+        if(sprite.blank){$('.gi-sprite-import').open=true;$('#gi-use-file-labels').checked=false;$('#gi-upload-expression').value=sprite.label;status(`Empty ${sprite.name}. Rename it or choose an image to fill this slot.`);}
         for (const b of dialog.querySelectorAll('.gi-expression-grid button:not(.gi-add-tile)')) b.setAttribute('aria-pressed', String(b.dataset.path === sprite.path));
     }
     function audioFiles() { return mediaSettings(getContext()).spriteAudioFiles[spriteAudioKey(folder(),selected.path)] ??= []; }
@@ -304,12 +411,57 @@ export function mountWardrobe({host, getContext, onChange = async () => {}, onMe
         const pane=$('.gi-wardrobe-preview');pane.querySelector('.gi-cg-video-preview')?.remove();
         if(cg){const video=cgThumbnail(cg.path);video.className='gi-cg-video-preview';pane.append(video);}
     }
+    // Conditions: characters who must all be present, and locations of which the party must be at one.
+    const NEEDS={people:'requiredCharacters',places:'requiredLocations'};
+    const allLocations=()=>backgroundRegions(getContext()).flatMap(region=>(region.locations || []).filter(l=>l?.id).map(location=>({region,location})));
+    function needName(kind,id){
+        const ctx=getContext();
+        if(kind==='people')return ctx.characters?.find(card=>card.avatar===id)?.name || `${id.replace(/\.[a-z]+$/i,'')} (no card)`;
+        const found=allLocations().find(x=>x.location.id===id);return found?`${found.location.label} · ${found.region.name}`:'Removed location';
+    }
+    function renderCGNeeds(){
+        const box=$('.gi-cg-needs');box.hidden=!selectedCG;if(!selectedCG)return;
+        $('#gi-cg-required-trust').value=requiredCGTrust(selectedCG);
+        cgTrustUI.refresh();
+        for(const [kind,key] of Object.entries(NEEDS)){
+            const ids=Array.isArray(selectedCG[key])?selectedCG[key]:[];
+            const chips=box.querySelector(`.gi-cg-chips[data-need="${kind}"]`);
+            chips.replaceChildren(...ids.map(id=>{
+                const chip=document.createElement('span');chip.className='gi-cg-chip';chip.setAttribute('role','listitem');
+                const text=document.createElement('span');text.textContent=needName(kind,id);
+                const remove=makeButton('×',()=>{selectedCG[key]=ids.filter(x=>x!==id);if(!selectedCG[key].length)delete selectedCG[key];saveNeeds(`Removed ${needName(kind,id)}.`);});
+                remove.setAttribute('aria-label',`Remove ${needName(kind,id)}`);chip.append(text,remove);return chip;
+            }));
+            if(!ids.length){const none=document.createElement('small');none.textContent=kind==='people'?'Anyone':'Anywhere';chips.append(none);}
+        }
+        const ctx=getContext(),people=new Set(selectedCG.requiredCharacters || []),places=new Set(selectedCG.requiredLocations || []);
+        $('#gi-cg-character-names').replaceChildren(...[...new Set((ctx.characters || []).filter(card=>card.avatar!==character?.avatar&&!people.has(card.avatar)).map(card=>card.name))].sort((a,b)=>a.localeCompare(b)).map(name=>new Option('',name)));
+        const select=$('#gi-cg-need-location');select.replaceChildren(new Option('Choose a location',''));
+        for(const region of backgroundRegions(ctx)){
+            const options=(region.locations || []).filter(l=>l?.id&&!places.has(l.id)).map(l=>new Option(l.label || 'Unnamed location',l.id));
+            if(options.length){const group=document.createElement('optgroup');group.label=region.name || 'Region';group.append(...options);select.append(group);}
+        }
+    }
+    function saveNeeds(message){getContext().saveSettingsDebounced();renderCGNeeds();onMediaChange();status(message);}
+    function addNeed(kind){
+        if(!selectedCG)return status('Select a scene first.');
+        const ctx=getContext(),key=NEEDS[kind];let id;
+        if(kind==='people'){
+            const input=$('#gi-cg-need-character'),name=input.value.trim().toLocaleLowerCase();if(!name)return status('Type a character name first.');
+            const card=(ctx.characters || []).find(c=>c.name?.toLocaleLowerCase()===name&&c.avatar!==character?.avatar);
+            if(!card)return status(`No other character card is named ${input.value.trim()}.`);
+            id=card.avatar;input.value='';
+        }else{id=$('#gi-cg-need-location').value;if(!id)return status('Choose a location first.');}
+        const ids=Array.isArray(selectedCG[key])?selectedCG[key]:[];if(!ids.includes(id))selectedCG[key]=[...ids,id];
+        saveNeeds(`${selectedCG.label} now needs ${needName(kind,id)}.`);
+    }
     function classifications(){return [...new Set($('#gi-cg-classifications').value.split(/[\n,;]/).map(x=>x.trim()).filter(Boolean))];}
     function chooseCG(cg) {
+        $('.gi-cg-details').hidden=false;$('.gi-cg-audio-tools').closest('details').hidden=false;
         selectedCG = cg; const img=$('.gi-wardrobe-preview img'),isVideo=isVideoCG(cg);clearArt(img);img.hidden=!cg.path||isVideo;if(cg.path&&!isVideo)img.src=cg.path;else if(!cg.path)img.removeAttribute('src');
         showCGVideo(isVideo?cg:null);$('#gi-cg-display').value=cg.display==='frame'?'frame':'scene';$('.gi-cg-video-tools').hidden=!isVideo;$('#gi-cg-video-loop').checked=Boolean(cg.videoLoop);
         paintCGVolume('video',cg.videoVolume ?? 100);paintCGVolume('audio',cg.audioVolume ?? 100);
-        $('.gi-outfit-caption').textContent=cg.label;$('#gi-cg-label').value=cg.label;$('#gi-cg-description').value=cg.description || '';$('#gi-cg-classifications').value=(cg.classifications || []).join('\n');renderCGAudio();
+        $('.gi-outfit-caption').textContent=cg.label;$('#gi-cg-label').value=cg.label;$('#gi-cg-description').value=cg.description || '';$('#gi-cg-classifications').value=(cg.classifications || []).join('\n');renderCGAudio();renderCGNeeds();
         $('.gi-cg-grid').querySelectorAll('button:not(.gi-add-tile)').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.cg===cg.id)));
     }
     function renderCGs() {
@@ -319,42 +471,88 @@ export function mountWardrobe({host, getContext, onChange = async () => {}, onMe
         }));
         $('.gi-cg-grid').append(addTile('add-blank-cg','Add scene'));
         selectedCG = cgs().find(c=>c.id===selectedCG?.id);
-        if(selectedCG)chooseCG(selectedCG);else{renderCGAudio();showCGVideo(null);$('.gi-cg-video-tools').hidden=true;}
+        if(selectedCG)chooseCG(selectedCG);else{renderCGAudio();renderCGNeeds();showCGVideo(null);$('.gi-cg-video-tools').hidden=true;$('.gi-cg-details').hidden=true;$('.gi-cg-audio-tools').closest('details').hidden=true;}
     }
-    // The breadcrumb names the element and the character, as in the game; the rail shows the section.
+    // Match the game's element / character breadcrumb; unaligned cards show only their name.
     function paintTitle(){
         const element=character?characterProperties(getContext(),character).element:'None';
-        $('#gi-wardrobe-title').textContent=tab==='backgrounds'?'Teyvat / Backgrounds':character?`${element==='None'?'Character':element} / ${character.name}`:'Characters';
+        const name=character?.name || 'Characters';
+        // The crest names the element, so the heading carries only the character's name.
+        const emblem=$('.gi-cs-emblem');
+        if(emblem){if(element==='None'){emblem.setAttribute('aria-hidden','true');emblem.removeAttribute('role');emblem.removeAttribute('aria-label');}else{emblem.removeAttribute('aria-hidden');emblem.setAttribute('role','img');emblem.setAttribute('aria-label',element);}}
+        $('#gi-wardrobe-title').textContent=name;$('#gi-wardrobe-title').title=element==='None'?name:`${element} · ${name}`;
+        if(dialog.open){fitRoster();centreSelectedFace();}
     }
     function paintElement(){
         const element=character?characterProperties(getContext(),character).element:'None';
         dialog.dataset.element=element;$('.gi-cs-emblem').innerHTML=elementCrest(element);backdrop.setElement(element);paintTitle();
     }
-    // Expressions opens on the whole figure; this moves in on the face to judge one expression.
-    function setZoom(on){
-        dialog.dataset.zoom=on?'on':'off';const button=$('.gi-cs-zoom'),label=on?'Zoom out':'Zoom in';
-        button.setAttribute('aria-pressed',String(on));button.setAttribute('aria-label',label);button.title=label;
+    // The stage opens on the whole figure; two steps move in on the face, and a third returns to the whole figure.
+    function setZoom(level){
+        level=Math.max(0,Math.min(2,Number(level)||0));dialog.dataset.zoom=String(level);
+        const button=$('.gi-cs-zoom'),label=level<2?'Zoom in':'Back to full view';
+        button.dataset.level=String(level);button.setAttribute('aria-pressed',String(level>0));button.setAttribute('aria-label',label);button.title=label;
     }
     function stepSection(by){const tabs=[...dialog.querySelectorAll('.gi-wardrobe-tabs button')],at=tabs.findIndex(b=>b.dataset.w===`tab-${tab}`);tabs[(at+by+tabs.length)%tabs.length].click();}
     function stepCharacter(by){
         const faces=[...dialog.querySelectorAll('.gi-roster button')],at=faces.findIndex(b=>b.getAttribute('aria-pressed')==='true');
-        if(tab!=='backgrounds'&&faces.length>1)faces[(at+by+faces.length)%faces.length].click();
+        if(faces.length>1)faces[(at+by+faces.length)%faces.length].click();
+    }
+    // At most nine portraits show at once on any screen; odd, so the selected one can sit in the middle.
+    const ROSTER_MAX=9;
+    // The portrait group is centred on the screen. When it shares a row with the title, it takes the width the title
+    // and close button leave on both sides; the strip then shows a whole, odd number of portraits, so the selected
+    // one sits in the middle and none is cut off.
+    function fitRoster(){
+        const header=$('header'),group=$('.gi-cs-character-select'),title=$('.gi-cs-title'),name=$('#gi-wardrobe-title'),close=$('header > [data-w="close"]');
+        const strip=$('header .gi-roster'),faces=strip.querySelectorAll(':scope > button');
+        if(!group||!dialog.open)return;
+        strip.style.width='';group.style.maxWidth='';title.style.maxWidth='';
+        const hr=header.getBoundingClientRect(),gr=group.getBoundingClientRect(),tr=title.getBoundingClientRect();let sameRow=false;
+        if(tr.bottom>gr.top+1&&tr.top<gr.bottom-1){
+            // The room kept for the title is the same for every character (a name as long as "Aether"), so the
+            // number of portraits never depends on who is selected; longer names use what the portraits leave.
+            const need=Math.max(name.getBoundingClientRect().left-hr.left+nameRoom(name)+4,hr.right-close.getBoundingClientRect().left)+12;
+            const side=Math.min(need,(hr.width-Math.min(hr.width*.5,330))/2);
+            group.style.maxWidth=`${hr.width-2*side}px`;sameRow=true;
+        }
+        if(faces.length>=2){
+            dialog.classList.add('gi-cs-measure');
+            const css=getComputedStyle(strip),pad=parseFloat(css.paddingLeft)+parseFloat(css.paddingRight),gap=parseFloat(css.columnGap)||0;
+            const room=strip.clientWidth-pad,size=faces[faces.length-1].offsetWidth,split=strip.querySelector('[data-party="true"] + button:not([data-party])');
+            dialog.classList.remove('gi-cs-measure');
+            const extra=split?parseFloat(getComputedStyle(split).marginLeft)||0:0;
+            let count=Math.min(ROSTER_MAX,Math.max(1,Math.floor((room-extra+gap)/(size+gap))));if(count%2===0)count--;
+            if(count<faces.length&&size>0)strip.style.width=`${count*size+(count-1)*gap+extra+pad}px`;
+        }
+        if(sameRow)title.style.maxWidth=`${Math.max(0,group.getBoundingClientRect().left-tr.left-12)}px`;
+    }
+    let nameMeasure;
+    function nameRoom(name){
+        nameMeasure??=document.createElement('canvas').getContext('2d');nameMeasure.font=getComputedStyle(name).font;
+        return Math.ceil(nameMeasure.measureText('Aether').width);
     }
     function centreSelectedFace(){
         const strip=$('.gi-roster'),face=strip.querySelector('button[aria-pressed="true"]');if(!face)return;
         const left=strip.scrollLeft+face.getBoundingClientRect().left-strip.getBoundingClientRect().left-(strip.clientWidth-face.offsetWidth)/2;
-        strip.scrollTo({left,behavior:document.body.classList.contains('gi-reduced-motion')?'auto':'smooth'});
+        strip.scrollTo({left,top:0,behavior:document.body.classList.contains('gi-reduced-motion')?'auto':'smooth'});
     }
     function switchTab(next) {
         if(next!==tab&&dialog.open)replay(dialog,'gi-cs-sweep');
+        const changedTab=next!==tab;
         tab=next;dialog.dataset.tab=tab;for(const panel of dialog.querySelectorAll('[data-panel]'))panel.hidden=panel.dataset.panel!==tab;
-        $('.gi-roster').hidden=tab==='backgrounds';paintTitle();$('.gi-wardrobe-controls').classList.remove('gi-panel-in');void $('.gi-wardrobe-controls').offsetWidth;$('.gi-wardrobe-controls').classList.add('gi-panel-in');dialog.classList.toggle('gi-background-wardrobe',tab==='backgrounds');
-        for(const button of dialog.querySelectorAll('.gi-wardrobe-tabs button'))button.setAttribute('aria-pressed',String(button.dataset.w===`tab-${tab}`));
-        if(tab==='backgrounds'){backgroundUI.refresh();return;}
-        if(tab==='moveset')movesetUI.refresh();
+        if(changedTab)$('.gi-wardrobe-controls').scrollTop=0;
+        paintTitle();$('.gi-wardrobe-controls').classList.remove('gi-panel-in');void $('.gi-wardrobe-controls').offsetWidth;$('.gi-wardrobe-controls').classList.add('gi-panel-in');
+        for(const button of dialog.querySelectorAll('.gi-wardrobe-tabs button')){
+            const active=button.dataset.w===`tab-${tab}`;button.setAttribute('aria-pressed',String(active));
+            if(active&&dialog.open)button.scrollIntoView({block:'nearest',inline:'nearest'});
+        }
+        if(!ready())return;
+        if(tab==='moveset'){movesetUI.refresh();combatArtUI.refresh();burstAudioUI.refresh();}
         $('.gi-cs-identity h3').textContent=character?.name || '';
-        if(tab==='cgs'){renderCGs();if(!selectedCG&&cgs().length)chooseCG(cgs()[0]);else if(!selectedCG){$('.gi-wardrobe-preview img').hidden=true;$('.gi-outfit-caption').textContent='Scene artwork';}const n=cgs().filter(cg=>cg.path).length;status(n?`${n} scene ${n===1?'artwork':'artworks'} for ${character?.name || 'this character'}.`:`No scene artwork for ${character?.name || 'this character'} yet. Add some below.`);}
+        if(tab==='cgs'){renderCGs();if(!selectedCG&&cgs().length)chooseCG(cgs()[0]);else if(!selectedCG){$('.gi-wardrobe-preview img').hidden=true;$('.gi-outfit-caption').textContent='Scene artwork';}const n=cgs().filter(cg=>cg.path).length;status(n?`${n} scene ${n===1?'artwork':'artworks'} for ${character?.name || 'this character'}.`:`No scene artwork for ${character?.name || 'this character'}.`);}
         else if(selected)chooseSprite(selected);
+        if(changedTab&&tab!=='cgs'&&!selected?.blank)status(sprites.length?`${sprites.length} sprites · ${$('#gi-outfit').selectedOptions[0]?.textContent || folder()}`:'No sprites yet. Open Expressions to add images.');
     }
     function placeholder(symbol='◇') {
         const art=document.createElement('span');art.className='gi-slot-placeholder';art.textContent=symbol;art.setAttribute('aria-hidden','true');return art;
@@ -370,34 +568,68 @@ export function mountWardrobe({host, getContext, onChange = async () => {}, onMe
             const name=spriteIdentity(sprite.path).name,button=makeButton('',()=>chooseSprite(sprite));
             button.dataset.path=sprite.path;button.setAttribute('aria-label',`Preview ${name}${sprite.blank?' (empty)':''}`);
             const art=sprite.blank?placeholder():document.createElement('img');
-            if(!sprite.blank){setArt(art,folder(),sprite.path);art.alt='';art.loading='lazy';}
+            if(!sprite.blank){art.alt='';art.loading='lazy';art.decoding='async';art.src=sprite.path;}
             const label=document.createElement('span');label.textContent=name;button.append(art,label);grid.append(button);
         }
         grid.append(addTile('add-blank-sprite','Add expression'));
     }
+    // The character's sprites: not loaded yet, loading (controls inert), ready, or failed. A failed load used to
+    // leave the controls inert for good; now the player can pick another outfit or character to try again.
+    const content = createMachine({ name: 'wardrobe-content', initial: 'empty', states: {
+        empty: { on: { LOAD: 'loading', CLOSE: { target: 'empty', internal: true } } },
+        loading: { on: { LOAD: 'loading', READY: 'ready', FAIL: 'failed', CLOSE: 'empty' } },
+        ready: { on: { LOAD: 'loading', CLOSE: 'empty' } },
+        failed: { on: { LOAD: 'loading', CLOSE: 'empty' } },
+    }, onChange: state => { $('.gi-wardrobe-controls').inert = state === 'loading'; } });
+    // One action at a time (upload, save, delete...); the dialog is marked busy and its controls disabled meanwhile.
+    const task = createMachine({ name: 'wardrobe-task', initial: 'idle', states: {
+        idle: { on: { WORK: 'working' } }, working: { on: { DONE: 'idle' } },
+    }, onChange: state => { if (state === 'working') dialog.setAttribute('aria-busy', 'true'); else dialog.removeAttribute('aria-busy'); } });
+    const ready = () => content.is('ready'), busy = () => task.is('working');
+    function paintOutfitState(){
+        const equipped=folder()===currentFolder(),button=$('[data-w="equip"]');
+        button.textContent=equipped?'Equipped':'Equip set';button.disabled=busy()||equipped;
+        $('.gi-current-outfit').textContent=equipped?'This set is equipped.':`Preview only · Equipped: ${sets.find(x=>x.folder===currentFolder())?.label || currentFolder()}`;
+    }
     async function load() {
-        const token = ++revision, path = folder(); selected = undefined; trimmer.reset(); $('.gi-sprite-detail').hidden = true; $('.gi-remove-confirm').hidden = true;
+        const token = ++revision, path = folder(); content.send('LOAD');
+        selected = undefined; sprites = []; trimmer.reset(); $('.gi-sprite-detail').hidden = true; $('.gi-remove-confirm').hidden = true;
         $('.gi-selected-sprite-tools').hidden = true;
-        $('.gi-expression-grid').replaceChildren(); $('.gi-wardrobe-preview img').hidden = true;
-        sprites = await adapter.list(path);
+        $('.gi-expression-grid').replaceChildren(); $('.gi-cg-grid').replaceChildren(); showCGVideo(null);
+        const preview = $('.gi-wardrobe-preview img'); clearArt(preview); preview.hidden = true; preview.removeAttribute('src');
+        let files;
+        try { files = await adapter.list(path); } catch (error) { if (token === revision) content.send('FAIL'); throw error; }
         if (token !== revision || !dialog.open) return;
-        $('.gi-current-outfit').textContent = `Equipped: ${sets.find(x => x.folder === currentFolder())?.label || currentFolder()}`;
-        renderSprites();
-        populateExpressions();
-        if (sprites.length) chooseSprite((character.isPersona && sprites.find(x=>spriteIdentity(x.path).name===personaSpriteSettings(getContext(),character.personaAvatar).expression)) || sprites.find(x => x.label === 'neutral') || sprites[0]);
-        else if(spriteDrafts(getContext(),folder()).length)chooseSprite(draftSprite(folder(),spriteDrafts(getContext(),folder())[0]));
-        renderCGs(); switchTab(tab);
-        status(tab==='backgrounds'?'Choose your travel region and manage its location backgrounds.':sprites.length ? `${sprites.length} sprites in ${path}. Select a sprite to preview it. Use set equips the outfit.` : `No sprites in ${path}. Add images below to create this set.`);
+        sprites = files;
+        paintOutfitState();
+        const first = sprites.find(x => x.label === 'neutral') || sprites[0];
+        if (first) {
+            preview.fetchPriority = 'high'; preview.decoding = 'async';
+            chooseSprite(first, false);
+            // No other sprite images or detail panels start loading until the
+            // neutral has decoded. It stays hidden until its final crop arrives.
+            await preview.decode().catch(() => {});
+        }
+        await new Promise(resolve => requestAnimationFrame(() => setTimeout(resolve, 0)));
+        if (token !== revision || !dialog.open) return;
+        propertiesUI.refresh(); startingTrustUI.refresh(); starterDeckUI.refresh(); personaProfileUI.refresh(); burstAudioUI.refresh();
+        populateExpressions(); renderSprites(); content.send('READY');
+        const personaExpression = character.isPersona && sprites.find(x => spriteIdentity(x.path).name === personaSpriteSettings(getContext(),character.personaAvatar).expression);
+        if (personaExpression && personaExpression !== first) chooseSprite(personaExpression);
+        if (!first && spriteDrafts(getContext(),folder()).length) chooseSprite(draftSprite(folder(),spriteDrafts(getContext(),folder())[0]));
+        switchTab(tab);
+        if(tab!=='cgs')status(sprites.length ? `${sprites.length} sprites · ${selectedSet()?.label || path}` : 'No sprites yet. Open Expressions to add images.');
     }
     async function selectCharacter(c) {
-        character = c;expectArrival();burstAudioUI.refresh();paintElement();propertiesUI.refresh();startingTrustUI.refresh();if(tab==='moveset')movesetUI.refresh();const cp=characterPreferences(getContext(),c.avatar);$('#gi-character-expression-mode').value=cp.expressionMode || 'inherit';$('#gi-character-scale').value=cp.scale ?? 100;$('#gi-manual-position').checked=cp.positionX!=null;$('#gi-character-x').value=cp.positionX ?? 50;$('#gi-character-x').disabled=cp.positionX==null;$('#gi-character-y').value=cp.offsetY ?? 0; selectedCG=undefined;$('#gi-cg-label').value='';$('#gi-cg-description').value='';$('#gi-cg-classifications').value='';$('.gi-cs-identity h3').textContent = c.name;
-        personaProfileUI.refresh();$('#gi-persona-display-control').hidden=!c.isPersona;
+        dialog.classList.remove('gi-cs-sweep');
+        character = c;expectArrival();paintElement();const cp=characterPreferences(getContext(),c.avatar);$('#gi-character-expression-mode').value=cp.expressionMode || 'inherit';$('#gi-character-scale').value=cp.scale ?? 100;$('#gi-manual-position').checked=cp.positionX!=null;$('#gi-character-x').value=cp.positionX ?? 50;$('#gi-character-x').disabled=cp.positionX==null;$('#gi-character-y').value=cp.offsetY ?? 0; selectedCG=undefined;$('#gi-cg-label').value='';$('#gi-cg-description').value='';$('#gi-cg-classifications').value='';$('.gi-cs-identity h3').textContent = c.name;
+        $('#gi-persona-display-control').hidden=!c.isPersona;
         $('.gi-takeover').hidden=Boolean(c.isPersona);$('[data-w="take-over"]').textContent=`Play as ${c.name}`;
         $('#gi-persona-visible').checked=Boolean(c.isPersona&&personaSpriteSettings(getContext(),c.personaAvatar).enabled);
         $('#gi-character-expression-mode').closest('label').hidden=Boolean(c.isPersona);
         const equipped = currentFolder();
-        sets = [{label:'Original',folder:origFolder(c)}, ...(registry()[regKey(c)] || [])];
-        if (!sets.some(x => x.folder === equipped)) sets.push({label:equipped, folder:equipped});
+        sets = characterSets(c);
+        if (!sets.some(x => x.folder === equipped)) sets.push({label:equipped===origFolder(c)?originalLabel(c):equipped, folder:equipped});
         $('#gi-outfit').replaceChildren(...sets.map(x => new Option(x.label, x.folder)));
         $('#gi-outfit').value = equipped;
         $('#gi-outfit-folder').placeholder = `${origFolder(c).split('/')[0]}/Summer`;
@@ -412,8 +644,7 @@ export function mountWardrobe({host, getContext, onChange = async () => {}, onMe
     const originalFolder = () => origFolder(character);
     const selectedSet = () => sets.find(x => x.folder === folder());
     function openSetEditor(mode) {
-        const editor = $('.gi-set-editor'), original = folder() === originalFolder(), equipped = folder() === currentFolder();
-        if ((mode === 'rename' || mode === 'delete') && original) { status('The Original set cannot be renamed or deleted.'); return; }
+        const editor = $('.gi-set-editor'), equipped = folder() === currentFolder();
         setMode = mode; editor.hidden = false;
         $('.gi-set-name-row').hidden = mode === 'delete'; $('.gi-set-copy-row').hidden = mode !== 'new';
         $('[data-w="set-confirm"]').hidden = mode === 'delete'; $('[data-w="set-delete-files"]').hidden = mode !== 'delete'; $('[data-w="set-forget"]').hidden = mode !== 'delete';
@@ -424,7 +655,7 @@ export function mountWardrobe({host, getContext, onChange = async () => {}, onMe
         if (mode === 'new') note.textContent = `Creates the folder ${setBase()}/<name>. Add sprites to it afterwards.`;
         if (mode === 'rename') note.textContent = 'Changes the name shown in this list. Sprite files stay in their folder.';
         if (mode === 'delete') {
-            note.textContent = equipped ? 'This set is equipped. Equip another set first.' : `“${selectedSet()?.label || folder()}” (${sprites.length} sprite${sprites.length === 1 ? '' : 's'}): Remove from list keeps the files; Delete set and sprites erases them.`;
+            note.textContent = equipped ? 'This set is equipped. Equip another set first.' : `“${selectedSet()?.label || folder()}” (${sprites.length} sprite${sprites.length === 1 ? '' : 's'}): Remove from list keeps the files; Delete set and sprites erases them${folder() === originalFolder() ? ' and keeps the other sets' : ''}.`;
             $('[data-w="set-delete-files"]').disabled = equipped;
             $('[data-w="set-forget"]').disabled = equipped;
         }
@@ -436,18 +667,19 @@ export function mountWardrobe({host, getContext, onChange = async () => {}, onMe
     async function action(name) {
         if (name === 'close') { dialog.close(); return; }
         if (name === 'archive' || name === 'archive-close') { showArchive(name === 'archive'); return; }
-        if (name === 'zoom') { setZoom(dialog.dataset.zoom !== 'on'); return; }
-        if (busy) return;
+        if (name === 'zoom') { setZoom(((Number(dialog.dataset.zoom)||0)+1)%3); return; }
+        if (busy()) return;
         if (name.startsWith('tab-')) { switchTab(name.slice(4)); return; }
         if (name === 'section-prev' || name === 'section-next') { stepSection(name === 'section-next' ? 1 : -1); return; }
         if (name === 'character-prev' || name === 'character-next') { stepCharacter(name === 'character-next' ? 1 : -1); return; }
+        if (!ready()) return;
         if (!character) return;
         if (name === 'remove') { $('.gi-remove-confirm').hidden = false; $('.gi-remove-confirm p').textContent = `Remove ${spriteIdentity(selected.path).filename} from this set? Saved scenes using this image need the file. Undo is available until this page is reloaded.`; return; }
         if (name === 'cancel-remove') { $('.gi-remove-confirm').hidden = true; return; }
         if (name === 'set-new' || name === 'set-rename' || name === 'set-delete') { openSetEditor(name.slice(4)); return; }
         if (name === 'set-cancel') { closeSetEditor(); return; }
         let uploaded = 0;
-        busy = true; dialog.setAttribute('aria-busy', 'true');
+        task.send('WORK');
         dialog.querySelectorAll('input, select, textarea, button:not([data-w="close"])').forEach(el => el.disabled = true);
         try {
             if(name==='add-blank-sprite'){
@@ -480,7 +712,9 @@ export function mountWardrobe({host, getContext, onChange = async () => {}, onMe
                 const label = $('#gi-outfit-name').value.trim(), path = $('#gi-outfit-folder').value.trim();
                 if (!label || !validFolder(path)) throw new Error('Enter a set name and a folder such as Klee/Summer.');
                 if (sets.some(x => x.folder === path)) throw new Error('That sprite folder is already in the list.');
-                const entries = registry()[regKey(character)] ??= []; entries.push({label,folder:path}); sets.push({label,folder:path});
+                const entries = registry()[regKey(character)] ??= [], hidden = entries.find(x => x.folder === path);
+                if (hidden) { delete hidden.hidden; hidden.label = label; } else entries.push({label,folder:path});
+                sets.push({label,folder:path});
                 getContext().saveSettingsDebounced(); $('#gi-outfit').append(new Option(label,path)); $('#gi-outfit').value = path; await load();
             }
             if (name === 'set-confirm') {
@@ -503,7 +737,7 @@ export function mountWardrobe({host, getContext, onChange = async () => {}, onMe
                     status(copyFrom.length ? `Created ${label} with ${copyFrom.length} copied sprites. Use set equips it.` : `Created ${label}. Add sprites to fill it, then use Use set.`);
                 } else if (setMode === 'rename') {
                     const current = selectedSet();
-                    if (!current || folder() === originalFolder()) throw new Error('The Original set cannot be renamed.');
+                    if (!current) throw new Error('Choose a set first.');
                     if (!uniqueSetName(label, current)) throw new Error('A set with that name already exists.');
                     current.label = label; registerSet({ label, folder: current.folder });
                     registry()[regKey(character)].find(x => x.folder === current.folder).label = label;
@@ -514,14 +748,15 @@ export function mountWardrobe({host, getContext, onChange = async () => {}, onMe
             }
             if (name === 'set-forget' || name === 'set-delete-files') {
                 const target = folder();
-                if (target === originalFolder()) throw new Error('The Original set cannot be deleted.');
                 if (target === currentFolder()) throw new Error('Switch away from the equipped set first.');
                 const label = selectedSet()?.label || target;
                 if (name === 'set-delete-files') {
                     for (const sprite of sprites.filter(x => !x.blank)) await adapter.remove(target, sprite);
                     spriteDrafts(getContext(), target).splice(0);
                 }
-                registry()[regKey(character)] = (registry()[regKey(character)] || []).filter(x => x.folder !== target);
+                // The character's own folder stays in the registry as hidden, or Original would come back.
+                if (target === originalFolder()) { registerSet({ label: selectedSet()?.label || 'Original', folder: target }); rootEntry(character).hidden = true; }
+                else registry()[regKey(character)] = (registry()[regKey(character)] || []).filter(x => x.folder !== target);
                 getContext().saveSettingsDebounced(); closeSetEditor(); await adapter.refreshNative?.(character); await selectCharacter(character);
                 status(name === 'set-delete-files' ? `Deleted ${label} and its sprites.` : `Removed ${label} from the list. Its files were kept.`);
             }
@@ -546,7 +781,7 @@ export function mountWardrobe({host, getContext, onChange = async () => {}, onMe
                     return;
                 }
                 const copies=await adapter.rename(folder(),sprites,old,label),prefs=mediaSettings(getContext());
-                for(const copy of copies){prefs.archivedSprites[localMediaPath(copy.sprite.path)]=copy.archive.path;const files=prefs.spriteAudioFiles[spriteAudioKey(folder(),copy.sprite.path)];if(files)prefs.spriteAudioFiles[spriteAudioKey(folder(),copy.newPath)]=structuredClone(files);if(prefs.spriteScales?.[spriteAudioKey(folder(),copy.sprite.path)]!=null)prefs.spriteScales[spriteAudioKey(folder(),copy.newPath)]=prefs.spriteScales[spriteAudioKey(folder(),copy.sprite.path)];}
+                for(const copy of copies){prefs.archivedSprites[localMediaPath(copy.sprite.path)]=copy.archive.path;const files=prefs.spriteAudioFiles[spriteAudioKey(folder(),copy.sprite.path)];if(files)prefs.spriteAudioFiles[spriteAudioKey(folder(),copy.newPath)]=structuredClone(files);if(prefs.spriteScales?.[spriteAudioKey(folder(),copy.sprite.path)]!=null)prefs.spriteScales[spriteAudioKey(folder(),copy.newPath)]=prefs.spriteScales[spriteAudioKey(folder(),copy.sprite.path)];if(prefs.spriteTrust?.[spriteAudioKey(folder(),copy.sprite.path)]!=null)prefs.spriteTrust[spriteAudioKey(folder(),copy.newPath)]=prefs.spriteTrust[spriteAudioKey(folder(),copy.sprite.path)];}
                 if(!expressionLabels.includes(label))registerExpression(getContext(),label);
                 const native=getContext().extensionSettings.expressions;if(native?.fallback_expression===old)native.fallback_expression=label;
                 getContext().saveSettingsDebounced();await changed(folder(),{renamedFrom:old,renamedTo:label});await load();status(`Renamed ${old} to ${label} in ${folder()}. Character Expressions has the new label.`);
@@ -620,16 +855,19 @@ export function mountWardrobe({host, getContext, onChange = async () => {}, onMe
             if (uploaded) { try { await changed(); await load(); } catch {} }
             status((uploaded ? `${uploaded} sprites uploaded before the error. ` : '') + (error.message || 'Sprite operation failed.'));
         }
-        finally { busy = false; dialog.removeAttribute('aria-busy'); dialog.querySelectorAll('input, select, textarea, button').forEach(el => el.disabled = false);$('#gi-character-x').disabled=!$('#gi-manual-position').checked;if(personaRefreshPending){personaRefreshPending=false;void renderRoster().catch(e=>status(e.message));} }
+        finally { task.send('DONE'); dialog.querySelectorAll('input, select, textarea, button').forEach(el => el.disabled = false);paintOutfitState();$('#gi-character-x').disabled=!$('#gi-manual-position').checked;if(personaRefreshPending){personaRefreshPending=false;void renderRoster().catch(e=>status(e.message));} }
     }
     dialog.addEventListener('click', e => { const name = e.target.closest('[data-w]')?.dataset.w; if (name) void action(name); }, {signal:abort.signal});
     const editCG=(id,event,apply)=>$(id).addEventListener(event,e=>{if(!selectedCG)return;apply(e.target);getContext().saveSettingsDebounced();},{signal:abort.signal});
     editCG('#gi-cg-display','change',input=>{selectedCG.display=input.value;});
+    editCG('#gi-cg-required-trust','change',input=>{selectedCG.requiredTrust=requiredCGTrust({requiredTrust:input.value});input.value=selectedCG.requiredTrust;onMediaChange();status('Required Trust saved.');});
+    for(const button of dialog.querySelectorAll('.gi-cg-need-add'))button.addEventListener('click',()=>addNeed(button.dataset.need),{signal:abort.signal});
+    $('#gi-cg-need-character').addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();addNeed('people');}},{signal:abort.signal});
     editCG('#gi-cg-video-loop','change',input=>{selectedCG.videoLoop=input.checked;});
     editCG('#gi-cg-video-volume','input',input=>{selectedCG.videoVolume=Number(input.value);paintCGVolume('video',selectedCG.videoVolume);});
     editCG('#gi-cg-audio-volume','input',input=>{selectedCG.audioVolume=Number(input.value);paintCGVolume('audio',selectedCG.audioVolume);});
     dialog.addEventListener('change',event=>{
-        if(busy||!character)return;const cp=characterPreferences(getContext(),character.avatar);let classification=false;
+        if(busy()||!character)return;const cp=characterPreferences(getContext(),character.avatar);let classification=false,trustChanged=false;
         switch(event.target.id){
             case 'gi-persona-visible':if(!character.isPersona)return;setPersonaSpriteSetting(getContext(),'enabled',event.target.checked,character.personaAvatar);break;
             case 'gi-character-expression-mode':cp.expressionMode=event.target.value;classification=true;break;
@@ -638,16 +876,31 @@ export function mountWardrobe({host, getContext, onChange = async () => {}, onMe
             case 'gi-character-x':cp.positionX=bounded(event.target.value,0,100,50);event.target.value=cp.positionX;break;
             case 'gi-character-y':cp.offsetY=bounded(event.target.value,-40,50,0);event.target.value=cp.offsetY;break;
             case 'gi-sprite-scale':if(!selected || selected.blank)return;const prefs=mediaSettings(getContext());prefs.spriteScales ??= {};event.target.value=prefs.spriteScales[spriteAudioKey(folder(),selected.path)]=bounded(event.target.value,10,300,100);break;
+            case 'gi-sprite-trust':{
+                if(!selected || selected.blank)return;
+                trustChanged=true;
+                const prefs=mediaSettings(getContext()),key=spriteAudioKey(folder(),selected.path);prefs.spriteTrust ??= {};
+                // An empty field, or the default value, goes back to following the default.
+                const value=event.target.value===''?null:bounded(event.target.value,0,5,0);
+                if(value===null||value===defaultSpriteTrust(selected.path))delete prefs.spriteTrust[key];else prefs.spriteTrust[key]=Math.round(value*10)/10;
+                event.target.value=requiredSpriteTrust(getContext(),folder(),selected.path);break;
+            }
             default:return;
         }
-        getContext().saveSettingsDebounced();void onChange(character,classification?{classification:true}:{presentation:true}).then(()=>status(classification?'Sprite classification mode saved.':'Scale and placement saved for this scene and future scenes.')).catch(e=>status(e.message));
+        getContext().saveSettingsDebounced();void onChange(character,classification?{classification:true}:{presentation:true}).then(()=>status(trustChanged?'Required Trust saved.':classification?'Sprite classification mode saved.':'Scale and placement saved for this scene and future scenes.')).catch(e=>status(e.message));
     },{signal:abort.signal});
-    $('#gi-outfit').addEventListener('change', () => { closeSetEditor(); if (!busy) load().catch(e => status(e.message)); }, {signal:abort.signal});
-    dialog.addEventListener('close', () => { revision++; clearTimeout(arrival);arrival=0;dialog.classList.remove('gi-cs-arrive','gi-cs-sweep');setZoom(false);backdrop.stop(); showArchive(false); opener?.focus(); }, {signal:abort.signal});
+    $('#gi-outfit').addEventListener('change', () => { closeSetEditor(); if (!busy()) load().catch(e => status(e.message)); }, {signal:abort.signal});
+    dialog.addEventListener('close', () => { clearTimeout(pinchTimer); dialog.classList.remove('gi-pinching'); revision++; trimmer.reset(); content.send('CLOSE'); arrival=false;dialog.classList.remove('gi-cs-arrive','gi-cs-sweep');setZoom(false);backdrop.stop(); showArchive(false); opener?.focus(); }, {signal:abort.signal});
     // Q/E change character and W/S change section, as in the game. Text fields keep their letters.
     dialog.addEventListener('keydown', event => {
         // Escape leaves the character list before it leaves the screen, even from its search box.
         if (event.key === 'Escape' && !$('.gi-cs-archive').hidden) { event.preventDefault(); showArchive(false); return; }
+        if(event.key==='Tab'&&!$('.gi-cs-archive').hidden){
+            const nodes=[...$('.gi-cs-archive').querySelectorAll('button,input,select')].filter(node=>!node.disabled&&node.getClientRects().length),first=nodes[0],last=nodes.at(-1);
+            if(event.shiftKey&&document.activeElement===first){event.preventDefault();last?.focus();}
+            else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first?.focus();}
+            return;
+        }
         if (event.ctrlKey || event.metaKey || event.altKey || event.target.closest?.('dialog') !== dialog || event.target.matches?.('input:not([type="checkbox"]),select,textarea,[contenteditable]') || !$('.gi-cs-archive').hidden) return;
         const name = {q:'character-prev',e:'character-next',w:'section-prev',s:'section-next'}[event.key.toLowerCase()];
         if (name) { event.preventDefault(); void action(name); }
@@ -660,15 +913,17 @@ export function mountWardrobe({host, getContext, onChange = async () => {}, onMe
     // Filters and sorting for the character list, kept between visits.
     const rosterView=ctx=>mediaSettings(ctx).rosterView ??= {};
     for(const select of dialog.querySelectorAll('[data-roster]'))select.addEventListener('change',()=>{const ctx=getContext(),view=rosterView(ctx);if(select.value)view[select.dataset.roster]=select.value;else delete view[select.dataset.roster];ctx.saveSettingsDebounced();paintRoster();},{signal:abort.signal});
-    $('.gi-roster-reset').addEventListener('click',()=>{const ctx=getContext();mediaSettings(ctx).rosterView={};ctx.saveSettingsDebounced();paintRoster();},{signal:abort.signal});
+    $('.gi-roster-reset').addEventListener('click',()=>{const ctx=getContext();mediaSettings(ctx).rosterView={};$('#gi-character-search').value='';ctx.saveSettingsDebounced();paintRoster();},{signal:abort.signal});
     function showArchive(open){
         const search=$('#gi-character-search');$('.gi-cs-archive').hidden=!open;
+        for(const node of [$('header'),$('.gi-wardrobe-body'),$('footer')])node.inert=open;
+        $('.gi-cs-archive-open').setAttribute('aria-expanded',String(open));
         if(open){paintRoster();search.focus();return;}
         if(search.value){search.value='';paintRoster();}
-        if(dialog.open)dialog.focus({preventScroll:true});
+        if(dialog.open)$('.gi-cs-archive-open').focus({preventScroll:true});
     }
     function archiveCard(ctx,c){
-        const b=makeButton('',()=>{if(busy)return;showArchive(false);selectCharacter(c).catch(e=>status(e.message));}),element=characterProperties(ctx,c).element,icon=elementCrest(element)&&document.createElement('img');
+        const b=makeButton('',()=>{if(busy())return;showArchive(false);selectCharacter(c).catch(e=>status(e.message));}),element=characterProperties(ctx,c).element,icon=elementCrest(element)&&document.createElement('img');
         b.dataset.element=element;b.dataset.giSound='section-profile';b.setAttribute('aria-label',c.isPersona?`${c.name} (your persona)`:c.name);b.setAttribute('aria-pressed',String(c.avatar===character?.avatar));
         const art=document.createElement('img');art.alt='';art.loading='lazy';art.src=circularCharacterAvatar(ctx,c);
         const face=document.createElement('span');face.className='gi-cs-archive-face';face.append(art);
@@ -691,14 +946,14 @@ export function mountWardrobe({host, getContext, onChange = async () => {}, onMe
         if(regionSelect.options.length-1!==regions.length||regions.some((r,i)=>regionSelect.options[i+1].value!==r))regionSelect.replaceChildren(new Option('All',''),...regions.map(r=>new Option(r,r)));
         for(const select of dialog.querySelectorAll('[data-roster]'))select.value=view[select.dataset.roster] ?? '';
         const filtered=['type','element','body','gender','region','sort'].some(key=>view[key]);
-        $('.gi-roster-reset').hidden=!filtered;$('.gi-roster-count').textContent=`${characters.length} shown`;$('.gi-cs-archive-open')?.toggleAttribute('data-filtered',filtered&&!!['type','element','body','gender','region'].some(key=>view[key]));
+        $('.gi-roster-reset').hidden=!filtered&&!query;$('.gi-roster-count').textContent=`${characters.length} shown`;$('.gi-roster-empty').hidden=characters.length>0;$('.gi-cs-archive-open')?.toggleAttribute('data-filtered',!!query||!!['type','element','body','gender','region'].some(key=>view[key]));
         $('#gi-hide-non-genshin').checked=hide;
         $('.gi-roster').replaceChildren(...characters.map(c=>{
-            const b=makeButton(c.name,()=>{if(!busy)selectCharacter(c).catch(e=>status(e.message));});b.dataset.avatar=c.avatar;b.dataset.giSound='section-profile';
+            const b=makeButton(c.name,()=>{if(!busy())selectCharacter(c).catch(e=>status(e.message));});b.dataset.avatar=c.avatar;b.dataset.giSound='section-profile';
             b.title=c.isPersona?`${c.name} (your persona)`:c.name;b.setAttribute('aria-label',b.title);
             if(c.isPersona){b.dataset.persona='true';const badge=document.createElement('span');badge.className='gi-persona-badge';badge.textContent='You';b.append(badge);}
             if(party.includes(c.avatar))b.dataset.party='true';
-            const img=document.createElement('img');img.alt='';img.loading='lazy';
+            const img=document.createElement('img');img.alt='';img.loading='lazy';img.draggable=false;
             img.src=circularCharacterAvatar(ctx,c);
             const face=document.createElement('span');face.className='gi-roster-face';face.append(img);b.prepend(face);
             if(c.avatar===character?.avatar)b.setAttribute('aria-pressed','true');
@@ -710,7 +965,7 @@ export function mountWardrobe({host, getContext, onChange = async () => {}, onMe
     async function renderRoster(preferred){
         const ctx=getContext(),persona=personaCard(ctx),characters=paintRoster();
         const chosen=characters.find(c=>c.avatar===preferred)||characters.find(c=>c.avatar===character?.avatar)||persona||ctx.characters?.[ctx.characterId]||characters[0];
-        if(chosen)await selectCharacter(chosen);else{paintElement();switchTab('backgrounds');status('Add regions and backgrounds, or import a character to manage sprites.');}
+        if(chosen)await selectCharacter(chosen);else{paintElement();switchTab('attributes');status('Import a character to manage sprites.');}
     }
     characterAvatarsReady.then(()=>{if(!abort.signal.aborted&&dialog.open)paintRoster();});
     return {
@@ -718,11 +973,11 @@ export function mountWardrobe({host, getContext, onChange = async () => {}, onMe
             opener = document.activeElement;
             if (!dialog.open) { dialog.showModal(); dialog.focus({preventScroll:true}); }
             backdrop.start();
-            if (busy) { status('Finishing the current sprite operation…'); personaRefreshPending = true; return; }
+            if (busy()) { status('Finishing the current sprite operation…'); personaRefreshPending = true; return; }
             await renderRoster(options.persona?personaCard(getContext())?.avatar:options.avatar);
         },
-        async refreshPersona(){if(!dialog.open)return;if(busy){personaRefreshPending=true;return;}await renderRoster(character?.isPersona?personaCard(getContext())?.avatar:undefined);},
+        async refreshPersona(){if(!dialog.open)return;if(busy()){personaRefreshPending=true;return;}await renderRoster(character?.isPersona?personaCard(getContext())?.avatar:undefined);},
         close() { if (dialog.open) dialog.close(); },
-        dispose() { revision++; abort.abort(); backdrop.dispose(); trimmer.reset(); propertiesUI.dispose();startingTrustUI.dispose();movesetUI.dispose();burstAudioUI.dispose();personaProfileUI.dispose();backgroundUI.dispose();dialog.close(); dialog.remove(); },
+        dispose() { clearTimeout(pinchTimer); revision++; abort.abort(); backdrop.dispose(); trimmer.reset(); propertiesUI.dispose();startingTrustUI.dispose();starterDeckUI.dispose();movesetUI.dispose();combatArtUI.dispose();burstAudioUI.dispose();personaProfileUI.dispose();dialog.close(); dialog.remove(); },
     };
 }

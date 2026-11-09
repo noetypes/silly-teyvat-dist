@@ -50,7 +50,8 @@
 /* Narrow screens: the HUD row spans the full width, so the minimap tucks below Paimon. */
 @media (max-width: 700px) {
     #gi-minimap { --gi-mm: 92px; top: calc(var(--gi-hud-top, 8px) + var(--gi-hud-cell, 30px) + 10px); left: calc(env(safe-area-inset-left, 0px) + 10px); gap: 3px; }
-    #gi-minimap .gi-minimap-label { font-size: 10.5px; }
+    /* The minimap is 10px from the edge, so the centred label may overhang it by 6px a side, not 18px, or its first letters fall off the screen. */
+    #gi-minimap .gi-minimap-label { font-size: 10.5px; max-width: calc(var(--gi-mm) + 12px); }
     #gi-minimap .gi-minimap-north { width: 16px; height: 16px; font-size: 9.5px; top: -5px; }
     #gi-minimap .gi-minimap-player { width: 16px; height: 16px; }
     .gi-minimap-ring { padding: 2px; }
@@ -85,6 +86,15 @@ dialog#gi-world-map#gi-world-map[open][data-enter="minimap"] { animation: gi-map
 }
 #gi-world-map .gi-map-surface { position: absolute; inset: 0; z-index: 0; isolation: isolate; min-width: 0; min-height: 0; overflow: hidden; background: #0f2433; }
 #gi-world-map .gi-map-canvas { position: absolute; inset: 0; background: #0f2433; }
+#gi-world-map .gi-map-surface { contain: layout paint; }
+/* Prepare shared camera/tile levels for GPU compositing while the map is open.
+   Never promote every pin or tile: that consumes texture memory on phones.
+   Closing the dialog releases these hints, including during its exit motion. */
+#gi-world-map[open] :is(.leaflet-map-pane, .leaflet-tile-container) { will-change: transform; }
+/* Avoid rerasterizing blurs and glowing pins behind moving map tiles. */
+#gi-world-map.gi-map-moving :is(.gi-map-round, .gi-map-region-current) { -webkit-backdrop-filter: none; backdrop-filter: none; }
+#gi-world-map.gi-map-moving .gi-waypoint > img { filter: none !important; transition: none; }
+#gi-world-map.gi-map-moving :is(.gi-waypoint-halo, .gi-map-player-pulse) { animation-play-state: paused; }
 #gi-world-map .gi-map-canvas:focus-visible { outline: none; }
 .gi-map-vignette { position: absolute; inset: 0; z-index: 401; pointer-events: none; background: linear-gradient(#08111cb3, #0000 110px), linear-gradient(0deg, #08111c99, #0000 90px), radial-gradient(ellipse 130% 110% at 50% 50%, #0000 62%, #08111c80 100%); }
 .gi-map-reticle { display: none; position: absolute; left: 50%; top: 50%; z-index: 402; width: 38px; height: 38px; translate: -50% -50%; border-radius: 50%; pointer-events: none; border: 1.5px solid var(--ty-gold-hi); box-shadow: 0 0 0 1px #0007, 0 0 12px #f2dca066; }
@@ -149,6 +159,8 @@ dialog#gi-world-map#gi-world-map[open][data-enter="minimap"] { animation: gi-map
 }
 #gi-world-map .gi-map-waypoint-list button:hover { background: linear-gradient(90deg, #ece5d826, #ece5d80a); translate: 3px 0; }
 #gi-world-map .gi-map-waypoint-list button[aria-current="true"] { background: linear-gradient(90deg, #d3bc8e40, #d3bc8e0d); box-shadow: inset 3px 0 0 var(--ty-gold-hi); }
+/* Waypoint rows below the fold are neither styled nor laid out until they scroll near. */
+#gi-world-map .gi-map-waypoint-list > button { content-visibility: auto; contain-intrinsic-size: auto 52px; }
 #gi-world-map .gi-map-waypoint-list img { width: 22px; height: 28px; object-fit: contain; }
 #gi-world-map .gi-map-waypoint-list span { display: grid; min-width: 0; }
 #gi-world-map .gi-map-waypoint-list b { font-weight: normal; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -212,7 +224,7 @@ dialog#gi-world-map#gi-world-map[open][data-enter="minimap"] { animation: gi-map
 #gi-world-map .gi-map-card-head small { order: -1; font-size: 11.5px; letter-spacing: .1em; color: var(--ty-gold-hi); }
 #gi-world-map .gi-map-card-close { display: grid; place-items: center; width: 32px; height: 32px; min-height: 0; padding: 8px; border: 0; border-radius: 50%; color: #ece5d8b3; background: none; transition: color 160ms ease, background 160ms ease, rotate 240ms var(--ty-ease); }
 #gi-world-map .gi-map-card-close:hover { color: var(--ty-ink); background: var(--ty-cream); rotate: 90deg; }
-#gi-world-map .gi-map-card-body { flex: 1; min-height: 0; padding: 14px 16px 10px; overflow: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: #d3bc8e55 #0000; }
+#gi-world-map .gi-map-card-body { flex: 1; min-height: 0; padding: 14px 16px 10px; overflow: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: #d3bc8e55 #0000; contain: layout paint; }
 #gi-world-map .gi-map-card-body > * { animation: ty-rise 300ms var(--ty-ease) both; }
 #gi-world-map .gi-map-card-body > :nth-child(2) { animation-delay: 40ms; }
 #gi-world-map .gi-map-card-body > :nth-child(n+3) { animation-delay: 80ms; }
@@ -305,6 +317,20 @@ dialog#gi-world-map#gi-world-map[open][data-enter="minimap"] { animation: gi-map
 .gi-waypoint-selected > img { transform: scale(1.25) translateY(-4px); filter: drop-shadow(0 0 6px #f2dca0) drop-shadow(0 0 2px #fff) !important; }
 .gi-waypoint-selected .gi-waypoint-halo { opacity: 1; animation: gi-halo 1.8s ease-in-out infinite; }
 @keyframes gi-halo { 50% { scale: 1.5; opacity: .45; } }
+/* Waypoint badges (waypoint-badges.js): characters here, wilderness or boss, stacked to the right of the pin. */
+/* Badges hang to the left of the waypoint, and only once the map is zoomed in to a region (gi-map-near). */
+.gi-waypoint-badges { position: absolute; right: 25px; top: 1px; z-index: 2; display: flex; flex-direction: column; gap: 2px; pointer-events: none; transition: opacity 180ms ease, scale 180ms ease; transform-origin: 100% 0; }
+#gi-world-map:not(.gi-map-near) .gi-waypoint .gi-waypoint-badges { opacity: 0; scale: .6; visibility: hidden; transition: opacity 180ms ease, scale 180ms ease, visibility 0s 180ms; }
+.gi-waypoint-badge { display: block; width: 17px; height: 17px; box-sizing: border-box; padding: 2px; object-fit: contain; border-radius: 50%; background: #1b2232e6; box-shadow: 0 0 0 1px #d3bc8ecc, 0 1px 3px #000a; }
+.gi-waypoint-badge[data-badge="wilderness"], .gi-waypoint-badge[data-badge="boss"] { padding: 0; }
+.gi-waypoint-badge[data-badge="boss"] { box-shadow: 0 0 0 1px #f0a36b, 0 0 5px #e0703acc; }
+/* A boss's own icon is a square portrait: it fills the round badge, a little larger than the emblems. */
+.gi-waypoint-badge[data-boss-icon] { width: 20px; height: 20px; object-fit: cover; background: #2a2030; }
+.gi-waypoint-badge[data-enemy-icon] { object-fit: cover; background: #2a2a34; }
+#gi-world-map .gi-map-waypoint-list .gi-waypoint-badge[data-boss-icon] { width: 20px; height: 20px; }
+#gi-world-map .gi-map-waypoint-list button:has(.gi-map-list-badges) { grid-template-columns: 22px minmax(0, 1fr) auto; }
+#gi-world-map .gi-map-waypoint-list .gi-map-list-badges, #gi-world-map .gi-map-waypoint-list .gi-map-list-badges .gi-waypoint-badges { position: static; display: flex; flex-direction: row; gap: 3px; }
+#gi-world-map .gi-map-waypoint-list .gi-waypoint-badge { width: 18px; height: 18px; }
 .gi-map-player { background: none !important; border: 0 !important; pointer-events: none !important; }
 .gi-map-player svg { position: absolute; inset: 5px; width: 20px; height: 20px; fill: #fff; stroke: #2a74b8; stroke-width: 1.4; stroke-linejoin: round; filter: drop-shadow(0 0 4px #4ecbff) drop-shadow(0 1px 2px #000a); }
 .gi-map-player-pulse { position: absolute; inset: 0; border-radius: 50%; border: 2px solid #7fd6ff; animation: gi-pulse 2.2s ease-out infinite; }

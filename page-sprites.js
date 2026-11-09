@@ -8,8 +8,13 @@ import { stageScene, createStageRoster, expressionMode, fitModelHeights, refresh
 import { chooseVisible, layoutStage, compactViewport } from './stage-layout.js';
 import { keyboardShown } from './keyboard-frame.js';
 import { stageCharacter } from './persona-wardrobe.js';
+import { playingEnemy } from './enemy-persona.js';
 import { previousSpeech, expressionContext } from './narration.js';
 import { createSpriteTrimmer } from './sprite-trim.js';
+import { healSceneSources } from './sprite-files.js';
+import { spriteTrustAllowed } from './sprite-trust.js';
+import { trustEnabled } from './trust.js';
+import { sceneTrustLevels } from './scene-trust.js';
 import { sceneMembers, activeEnemies } from './combat-state.js';
 const STORE = 'silly_teyvat';
 // A narration inherits the scene before it, which may still show someone who has since left (for
@@ -102,7 +107,9 @@ export function createNativeSpriteAdapter({ capture = captureScene } = {}) {
         async resolve(ctx, message, emotion, base, { keepVariant = false } = {}) {
             const { avatar, folder } = folderFor(ctx, message);
             if (!folder) return { scene: base, emotion };
-            const sprites = await inventory(folder);
+            // A sprite with a minimum Trust (love, desire…) is only offered once the character trusts the player that much.
+            const level = trustEnabled(ctx) && avatar && avatar !== '__user__' ? sceneTrustLevels(ctx, message)(avatar) : Infinity;
+            const sprites = (await inventory(folder)).filter(x => spriteTrustAllowed(ctx, folder, x.path, level));
             const settings = ctx.extensionSettings.expressions || {};
             let matches = sprites.filter(x => x.label === emotion);
             if (!matches.length) matches = sprites.filter(x => x.label === settings.fallback_expression);
@@ -130,17 +137,37 @@ export function createNativeSpriteAdapter({ capture = captureScene } = {}) {
             Object.assign(target, { src, expression: emotion, folder,avatar:target.avatar || avatar || '' });
             return { scene, emotion };
         },
+        // The player's own message picks their persona's expression. A label the persona has no
+        // sprite for keeps the expression they set, rather than a fallback that may not suit them.
+        async resolvePersona(ctx, emotion, base, isCurrent = () => true) {
+            let scene = structuredClone(base);
+            if (!scene.some(x => x.avatar === '__user__')) scene = [...scene, ...(await prepareRoster(ctx, [], isCurrent, { onlyPersona: true }) || [])];
+            const target = scene.find(x => x.avatar === '__user__');
+            if (!target?.folder) return scene;
+            const matches = (await inventory(target.folder)).filter(x => x.label === emotion);
+            const primary = file => decodeURIComponent(file.path).split('/').at(-1).replace(/\.[^.]+$/, '') === file.label;
+            const file = matches.find(primary) || matches[0], src = file && safeSource(file.path);
+            if (src) Object.assign(target, { src, expression: emotion });
+            return scene;
+        },
         reset() { inventories.clear(); },
     };
 }
 const travelled = message => Boolean(message?.extra?.silly_teyvat_travel);
-const beforeArrival = (ctx, id) => ctx.chat.slice(id + 1).some(travelled);
+const beforeArrival = (ctx, id) => { for (let i = id + 1; i < ctx.chat.length; i++) if (travelled(ctx.chat[i])) return true; return false; };
 // The newest arrival, while the party is still there. Its sprites follow the party as it settles in.
 const liveArrival = (ctx, id) => travelled(ctx.chat[id]) && !beforeArrival(ctx, id) && ctx.chatMetadata?.silly_teyvat_world?.location?.id === ctx.chat[id].extra.silly_teyvat_travel.to?.id;
 export function mountPageSprites({ host, getContext, adapter = createNativeSpriteAdapter(), isDefeated = () => false, announce = () => {}, renderMessage = () => null, onAppearance = () => {}, decodeImage = image => image.decode?.() || Promise.resolve(), trimmer = adapter.inventory ? createSpriteTrimmer({ inventory: adapter.inventory }) : null }) {
     const stage = document.createElement('div'); stage.id = 'gi-sprite-stage'; stage.setAttribute('aria-hidden', 'true'); host.append(stage);
     let active = false, selection = '', displayed = '', epoch = 0, lastScene = [], lastChat = null, selectedPage;
-    let drawVersion=0,committedVersion=0;
+    let drawVersion=0,committedVersion=0,initialPreparation=null,unmounted=false;
+    // Scenes saved before a sprite was converted (joy.png, now joy.webp) name the old file. Each folder's listing is
+    // loaded once; until it is, a saved sprite is held back, then the scene is drawn again with the right files.
+    const listings=new Map(),loading=new Map();
+    const listingFor=folder=>adapter.inventory?listings.get(folder):[];
+    function loadListings(folders){
+        return Promise.all(folders.map(folder=>loading.get(folder) ?? loading.set(folder,Promise.resolve(adapter.inventory(folder)).then(list=>{listings.set(folder,Array.isArray(list)?list:[]);},()=>{listings.set(folder,[]);})).get(folder)));
+    }
     // A defeated enemy stays off every later page of its encounter. One still on the stage keeps its
     // place until its fall has played (the round is saved before the battle screen closes).
     const fallen = new Set();
@@ -232,13 +259,14 @@ export function mountPageSprites({ host, getContext, adapter = createNativeSprit
         if (!staged.length) return;
         const typing = keyboardUp();
         const W = stage.clientWidth || innerWidth, H = typing ? stable.H : stage.clientHeight || innerHeight;
-        // Party on the left (you first), enemies on the right, as in a Genshin standoff.
-        const order = { user: 0, companion: 1, enemy: 2 };
+        // Party on the left (you first), enemies on the right, as in a Genshin standoff. Playing an enemy turns the
+        // sides around: you and the enemies stand on the left, and the characters facing you on the right.
+        const reversed = playingEnemy(ctx), order = reversed ? { user: 0, enemy: 1, companion: 2 } : { user: 0, companion: 1, enemy: 2 };
         staged.sort((a, b) => order[kindOf(a.sprite)] - order[kindOf(b.sprite)] || scene.indexOf(a.sprite) - scene.indexOf(b.sprite));
         const items = staged.map(({ image, sprite }) => {
             const card = stageCharacter(ctx, sprite), cp = p.characterSprites?.[card?.avatar || sprite.avatar] || {};
             const look = livePresentation(sprite, staged.length >= 3 && staged.some(x => x.sprite.presentation?.focus) && compactViewport(W, H));
-            return { group: kindOf(sprite) === 'enemy' ? 1 : 0, h: sprite.h, aspect: Number(image.dataset.trim) || sprite.aspect, scale: (sprite.presentation ? liveSpriteScale(ctx, sprite, card) : 1) * look.focusScale,
+            return { group: (kindOf(sprite) === 'enemy') !== reversed ? 1 : 0, h: sprite.h, aspect: Number(image.dataset.trim) || image.naturalWidth / image.naturalHeight || sprite.aspect, scale: (sprite.presentation ? liveSpriteScale(ctx, sprite, card) : 1) * look.focusScale,
                 lift: Math.max(-.4, Math.min(.5, 1 - sprite.h - sprite.y)), pinned: cp.positionX == null ? null : bounded(cp.positionX, 0, 100, 50) / 100 };
         });
         // On a phone on its side the HUD runs along the top edge; frame faces just under it.
@@ -270,6 +298,8 @@ export function mountPageSprites({ host, getContext, adapter = createNativeSprit
     globalThis.visualViewport?.addEventListener('resize', onResize, { passive: true });
     function draw(scene, key) {
         lastDraw = { scene, key };
+        const healed=healSceneSources(scene,listingFor),callerKey=key;scene=healed.scene;
+        if(healed.pending.length)void loadListings(healed.pending).then(()=>{if(!unmounted&&lastDraw?.key===callerKey){displayed='';draw(lastDraw.scene,lastDraw.key);}});
         scene=openingScene(getContext(),scene);key+=`:opening:${openingCharacter(getContext()) || ''}`;
         const gone = avatar => avatar && isDefeated(getContext(), avatar) && (fallen.has(avatar) || !enemyImage(avatar));
         scene = scene.filter(sprite => !gone(enemyOf(sprite)));
@@ -279,8 +309,9 @@ export function mountPageSprites({ host, getContext, adapter = createNativeSprit
         // Sizes come from current settings, so earlier pages follow Wardrobe changes.
         const scales=scene.map(sprite=>sprite.presentation?liveSpriteScale(getContext(),sprite):1);key+=`:scale:${scales.join(',')}`;
         const depth=scene.length>=3&&scene.some(sprite=>sprite.presentation?.focus)&&compactViewport(stage.clientWidth || innerWidth,stage.clientHeight || innerHeight);
-        const looks=scene.map(sprite=>livePresentation(sprite,depth));key+=`:look:${JSON.stringify(looks)}:${stage.clientWidth}x${stage.clientHeight}`;
+        const looks=scene.map(sprite=>livePresentation(sprite,depth));key+=`:look:${JSON.stringify(looks)}:${stage.clientWidth}x${stage.clientHeight}${playingEnemy(getContext())?':sides-reversed':''}`;
         document.body.classList.toggle('gi-sprite-replay', active && (scene.length > 0 || Boolean(openingCharacter(getContext()))));
+        document.body.classList.toggle('gi-sprite-crowd', scene.length >= 4);
         if (displayed === key) return;
         displayed = key; lastScene = scene;
         const version=++drawVersion,previousImages=[...stage.children].filter(el=>el.tagName==='IMG'),nextImages=[],decoding=[],swaps=new Map();
@@ -303,7 +334,7 @@ export function mountPageSprites({ host, getContext, adapter = createNativeSprit
             const place=()=>{
                 if(native)return;
                 // A trimmed copy is exactly the figure, so its box takes the cropped aspect.
-                const aspect=Number(image.dataset.trim) || sprite.aspect;
+                const aspect=Number(image.dataset.trim) || image.naturalWidth / image.naturalHeight || sprite.aspect;
                 Object.assign(image.style, { left: `${sprite.x * 100}vw`, top: `${sprite.y * 100}dvh`, width: `${sprite.w * 100}vw`, height: `${sprite.h * 100}dvh` });
                 if (aspect && Number.isFinite(sprite.centre)) {
                     image.style.width = `${sprite.h * aspect * 100}dvh`;
@@ -340,8 +371,9 @@ export function mountPageSprites({ host, getContext, adapter = createNativeSprit
             const live=previousImages.filter(image=>image.dataset.leaving!=='true');
             const before=new Set(live.map(image=>enemyOf({avatar:image.dataset.avatar,folder:image.dataset.folder})).filter(Boolean));
             const fresh=new Set(nextImages.filter(image=>!image.isConnected&&!swaps.has(image)));
-            for(const image of nextImages)stage.append(image);
-            for(const image of [...stage.children])if(image.dataset.leaving==='true')stage.append(image);
+            // Moving a node that is already in place restarts its animations and styles, so only a changed order is applied.
+            const order=[...nextImages,...[...stage.children].filter(image=>image.dataset.leaving==='true'&&!nextImages.includes(image))];
+            if(order.length!==stage.children.length||order.some((image,i)=>stage.children[i]!==image))for(const image of order)stage.append(image);
             const motion=!stillMotion();
             for(const image of live)if(!nextImages.includes(image)){
                 // A new expression replaces the old node at once (see above) and eases from its
@@ -419,6 +451,8 @@ export function mountPageSprites({ host, getContext, adapter = createNativeSprit
             if (!isCurrent()) return base;
             spoken = (await adapter.resolve(ctx, prior.message, emotion || 'neutral', base.length ? base : adapter.capture())).scene;
             speechSeeds.set(seedKey, spoken);
+            // Only the lines near the reader are ever asked for again, so a long chat does not keep every scene it has seeded.
+            while (speechSeeds.size > 64) speechSeeds.delete(speechSeeds.keys().next().value);
         }
         if (!base.length) return structuredClone(spoken);
         const scene = structuredClone(base);
@@ -435,22 +469,42 @@ export function mountPageSprites({ host, getContext, adapter = createNativeSprit
             const key = chatKey(ctx);
             if (key !== lastChat) { this.reset(); lastChat = key; }
             active = on;
-            if (!on) { selection = ''; document.body.classList.remove('gi-sprite-replay'); stage.hidden = true; return; }
+            if (!on) { selection = ''; document.body.classList.remove('gi-sprite-replay', 'gi-sprite-crowd'); stage.hidden = true; return; }
             stage.hidden = false;
             // The dialogue box moved (the scene opened, the reply box appeared, the UI was hidden): re-fit.
             if (arranged.images.length && arranged.images.every(image => image.isConnected) && !keyboardUp() && Math.abs(dialogueTop(stage.clientHeight || innerHeight) - arranged.top) > 12) arrange(arranged.images, arranged.scene);
             const message = ctx.chat[id];
-            if (!message) return;
+            if (!message) {
+                // A solo journey can have no messages while its first narration
+                // is generated quietly. Stage its neutral roster without a
+                // synthetic chat message, classification request or history save.
+                const identity = `${key}:initial`;
+                selection = identity; selectedPage = undefined; stageAt = -1;
+                if (initialPreparation || displayed) return;
+                const token = epoch, isCurrent = () => token === epoch && active && chatKey(getContext()) === key && selection === identity;
+                initialPreparation = Promise.resolve().then(() => {
+                    const base = adapter.capture();
+                    return adapter.prepare?.(ctx, base, isCurrent) || base;
+                }).then(prepared => {
+                    if (isCurrent()) draw(stageFresh(ctx, prepared || [], {is_system:true}, -1), identity);
+                }).catch(error => {
+                    console.warn('[Silly Teyvat] Initial sprites', error);
+                    if (isCurrent()) draw([], identity);
+                }).finally(() => { if (token === epoch) initialPreparation = null; });
+                return;
+            }
             stageAt = id;
             const prior = narration ? previousSpeech(ctx.chat, id, ctx.extensionSettings.genshin_dialogue_ui, page, renderMessage) : null;
             const anchor = prior ? `${prior.id}:${prior.page}:${prior.message.swipe_id || 0}:${pageSignature(expressionContext(ctx.chat, prior.id, prior.page, prior.text, ctx.extensionSettings.genshin_dialogue_ui, renderMessage))}` : 'none';
             const passive = message.is_user || message.is_system || message.extra?.type==='narrator';
             const kind = passive ? 'passive' : narration ? 'narration' : 'dialogue';
+            const stagePrefs = ctx.extensionSettings.genshin_dialogue_ui || {};
+            const personaClassify = Boolean(message.is_user && classifyPages && stagePrefs.personaSprite && stagePrefs.personaSpriteClassify && adapter.resolvePersona);
             const enemy=enemySpeaker(ctx,message),mode=enemy?'page':expressionMode(ctx,message);
             const fullSignature=pageSignature(message.mes || '');
             const action=enemy&&enemyAction==='attacking'?'attacking':'neutral';
             const contextText = !enemy && !passive && !narration && mode === 'page' ? expressionContext(ctx.chat, id, page, text, ctx.extensionSettings.genshin_dialogue_ui, renderMessage) : text;
-            const signature = pageSignature(text) + (contextText !== text ? `:context-v1:${pageSignature(contextText)}` : '') + (enemy?`:enemy-action:${action}`:'') + (mode==='message'?`:message:${fullSignature}`:'') + (narration ? `:narration:${anchor}` : '');
+            const signature = pageSignature(text) + (contextText !== text ? `:context-v1:${pageSignature(contextText)}` : '') + (enemy?`:enemy-action:${action}`:'') + (mode==='message'?`:message:${fullSignature}`:'') + (narration ? `:narration:${anchor}` : '') + (personaClassify ? ':persona-v1' : '');
             const arriving = liveArrival(ctx, id), party = arriving ? roster(ctx).map(c => c.avatar).join() : '';
             const identity = `${key}:${id}:${message.swipe_id ?? 0}:${page}:${signature}${arriving ? `:party:${party}` : ''}`;
             selection = identity;
@@ -486,7 +540,7 @@ export function mountPageSprites({ host, getContext, adapter = createNativeSprit
             // The first narration of a chat has nobody before it to inherit, so it seats the party itself.
             const seat = passive && !message.is_user && !past && !base.length && Boolean(ctx.extensionSettings.genshin_dialogue_ui?.nativeStaging);
             if (!complete && !seat || pending.has(identity)) return;
-            if (passive&&!hasEnemy(base)&&!seat) { const held=message.is_user && ctx.extensionSettings.genshin_dialogue_ui?.personaSprite?stageFresh(ctx,base,message,id):structuredClone(base);save(message, page, signature, { scene: held, emotion: null, kind }, ctx); draw(held, identity); return; }
+            if (passive&&!hasEnemy(base)&&!seat&&!personaClassify) { const held=message.is_user && ctx.extensionSettings.genshin_dialogue_ui?.personaSprite?stageFresh(ctx,base,message,id):structuredClone(base);save(message, page, signature, { scene: held, emotion: null, kind }, ctx); draw(held, identity); return; }
             if (!text.trim() || text.trim() === '...') return;
             // LLM classifiers share the main API. Wait for reply generation to finish.
             if (!enemy && generating && mode==='message') return;
@@ -496,6 +550,14 @@ export function mountPageSprites({ host, getContext, adapter = createNativeSprit
             queue = queue.catch(() => {}).then(async () => {
                 if (token !== epoch || chatKey(getContext()) !== key || !active) return;
                 const isCurrent = () => token === epoch && active && chatKey(getContext()) === key && (message.swipe_id ?? 0) === swipe;
+                if(personaClassify){
+                    const emotion=await classifyOnce(ctx,message,page,text);
+                    if(!isCurrent()||!ctx.chat.includes(message))return;
+                    let scene=emotion?await adapter.resolvePersona(ctx,emotion,base,isCurrent):structuredClone(base);
+                    scene=stageFresh(ctx,await resolveEnemyScene(ctx,adapter,scene,message,action),message,id);
+                    if(!isCurrent()||!ctx.chat.includes(message))return;
+                    save(message,page,signature,{scene,emotion:emotion || null,kind,enemyActionsVersion:1},ctx);if(selection===identity)draw(scene,identity);return;
+                }
                 if(cached || passive){
                     const start=seat?stageFresh(ctx,await adapter.prepare?.(ctx,[],isCurrent,{message,id}) || [],message,id):structuredClone(base);
                     const scene=await resolveEnemyScene(ctx,adapter,start,message,action);
@@ -613,7 +675,7 @@ export function mountPageSprites({ host, getContext, adapter = createNativeSprit
             image.dataset.leaving = 'true';
             if (stillMotion()) image.remove(); else animate(image, 'gi-enemy-defeat', () => image.remove());
         },
-        reset() { epoch++;drawVersion++;fallen.clear(); selection = displayed = ''; pending.clear(); speechSeeds.clear(); selectedPage = undefined; lastScene = []; lastDraw = null; stageAt = -1; adapter.reset?.(); stage.replaceChildren(); document.body.classList.remove('gi-sprite-replay'); },
-        dispose() { this.reset(); trimmer?.reset?.(); removeEventListener('resize', onResize); globalThis.visualViewport?.removeEventListener('resize', onResize); cancelAnimationFrame(resizeFrame); stage.remove(); },
+        reset() { epoch++;drawVersion++;initialPreparation=null;fallen.clear(); selection = displayed = ''; pending.clear(); speechSeeds.clear(); selectedPage = undefined; lastScene = []; lastDraw = null; stageAt = -1; adapter.reset?.(); stage.replaceChildren(); document.body.classList.remove('gi-sprite-replay', 'gi-sprite-crowd'); },
+        dispose() { unmounted=true; this.reset(); trimmer?.reset?.(); removeEventListener('resize', onResize); globalThis.visualViewport?.removeEventListener('resize', onResize); cancelAnimationFrame(resizeFrame); stage.remove(); },
     };
 }

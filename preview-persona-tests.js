@@ -6,7 +6,14 @@ import {mountPageSprites} from './page-sprites.js';
 import {mountSceneMedia} from './scene-media.js';
 
 export async function runPersonaWardrobeTests(){
-    const results=[],pause=()=>new Promise(r=>setTimeout(r,20));
+    const results=[],pause=async()=>{
+        await new Promise(r=>setTimeout(r,20));
+        for(let i=0;i<300;i++){
+            if(!host.querySelector('.gi-wardrobe-controls')?.inert)return;
+            await new Promise(r=>setTimeout(r,10));
+        }
+        throw new Error('Persona wardrobe loading timed out');
+    };
     const check=(name,ok)=>{results.push(`${ok?'PASS':'FAIL'} ${name}`);if(!ok)throw new Error(name);};
     const host=document.createElement('div');document.body.append(host);let wardrobe,painter,media;
     const a='aether-persona.png',l='lumine-persona.png',key='Aether.png';
@@ -71,7 +78,7 @@ export async function runPersonaWardrobeTests(){
         let categories=[];prefs.cgEnabled=true;prefs.characterCGs['Lumine.png']=[{id:'player-scene',label:'Traveler picnic',path:'/preview-art.png',display:'frame'}];
         media=mountSceneMedia({host,getContext:()=>ctx,adapter:{classifyCG:async(_ctx,_message,options)=>{categories=options;return null;}},sound:{stop(){},dispose(){},play:async()=>{},unlock:async()=>{}}});
         media.sync({on:true,id:1,page:0,generating:false});await pause();
-        check('persona scene CGs are available to the separate scene classifier',categories.some(c=>c.label==='Traveler picnic'));media.dispose();media=undefined;
+        check('persona scene CGs are available to the separate scene classifier',categories.some(c=>c.label.endsWith('Traveler picnic')));media.dispose();media=undefined;
         const fetchBefore=globalThis.fetch;let posted=false;
         try{
             globalThis.fetch=async(url,options)=>{if(url==='/api/avatars/upload'){posted=options.body.get('overwrite_name')===l&&options.body.get('avatar') instanceof File;return new Response(JSON.stringify({path:l}));}if(String(url).includes('kind=persona'))return new Response('');return fetchBefore(url,options);};
