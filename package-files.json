@@ -1,11 +1,6 @@
 {
  "files": [
-  "ASSET-GUIDELINES.md",
-  "CHARACTER-RESEARCH.md",
-  "COMBAT.md",
   "LICENSE",
-  "LOCATION-CATALOG.md",
-  "LOCATION-MUSIC.md",
   "README.md",
   "arrival-policy.js",
   "assets/avatar-icons/a-hollow-dream-beyond-form-9ca1a8.webp",
@@ -3851,6 +3846,7 @@
   "battle-weapons.js",
   "battle.css",
   "boss-kits.js",
+  "bundled-personas.js",
   "burst-audio.js",
   "card-art.js",
   "card-pools.js",
