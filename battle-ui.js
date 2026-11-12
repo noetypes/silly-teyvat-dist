@@ -1,3 +1,4 @@
+import {requestFrame,cancelFrame} from './frame-rate.js';
 // The battle board, laid out and played like Genius Invokation TCG: enemies across the top, your
 // party below with each side's active character stepped forward, summons on the right, dice down
 // the right edge, skills in the bottom-right corner, your hand along the bottom and the round
@@ -123,7 +124,8 @@ export function mountBattle({host,sound=createBattleSound(),onBurst=()=>{},onSto
     let autoPlay=false,autoBusy=false,state,round=null,pick=null,picked=null,tuning=false,opts={},speed=1,skipAll=false,disposed=false,closeTimer=0,turnDone=null,choose=null,finish=null,lastTurn='',token=0,introDone=null;
     const cards=new Map();
     const say=text=>{$('.tb-log').textContent=text;};
-    const reduced=()=>Boolean(opts.reducedMotion);
+    // instant: plays every animation at once, for the headless checks. Players always see the full playback.
+    const reduced=()=>Boolean(opts.instant);
     const effectsOn=()=>opts.effects!==false&&!reduced();
     const wait=ms=>new Promise(resolve=>{if(skipAll||ms<=0){resolve();return;}setTimeout(resolve,ms/speed);});
     const live=t=>!disposed&&t===token;
@@ -419,7 +421,7 @@ export function mountBattle({host,sound=createBattleSound(),onBurst=()=>{},onSto
         const cancel=e=>{if(e.pointerId!==id)return;const was=ghost;end();if(was)clearPick();};
         addEventListener('pointermove',move,{passive:false});addEventListener('pointerup',up);addEventListener('pointercancel',cancel);
     }
-    let suppressClick=false;
+    let suppressClick=false,landing=false;
     function select(next){
         pick=next;picked=null;tuning=false;hideTip();
         if(pick.type==='skill'){const u=activeOf(state,'party'),move=movesOf(u)[pick.move];pick.needsTarget=moveNeedsTarget(move)==='ally';if(pick.needsTarget&&!pick.target)pick.target=party().filter(alive).sort((a,b)=>a.hp/a.maxHp-b.hp/b.maxHp)[0]?.id;}
@@ -459,7 +461,8 @@ export function mountBattle({host,sound=createBattleSound(),onBurst=()=>{},onSto
         const at=token;go('busy');refresh();sound.unlock();
         const r=takeAction(round,action);
         if(!r.ok){go('turn');deny('.tb-drawer',r.reason);refresh();return;}
-        if(kind==='card')await playCardFx(item,action.target);
+        // The card leaves your hand as it flies; it joins the played cards once it lands.
+        if(kind==='card'){landing=true;paintHand();paintDice();try{await playCardFx(item,action.target);}finally{landing=false;}paintHand();}
         await playEvents(r.events);if(!live(at))return;
         if(round.pendingReroll){round.pendingReroll=false;await tossUp();if(!live(at))return;}
         if(round.pendingChoice){await offerCards();if(!live(at))return;}
@@ -535,7 +538,7 @@ export function mountBattle({host,sound=createBattleSound(),onBurst=()=>{},onSto
         $('.tb-hand').setAttribute('aria-label',`Your hand: ${ids.length} card${ids.length===1?'':'s'}`);
         $('.tb-deck b').textContent=String(round?round.deck.length:0);
         const played=$('.tb-played');played.replaceChildren();
-        (round?.played || []).forEach(use=>{
+        (round?.played || []).slice(0,landing?-1:undefined).forEach(use=>{
             const item=ITEMS[use.id],card=el('span','tb-played-card');card.innerHTML=`<img alt="">${use.target?'<i></i>':''}`;card.querySelector('img').src=itemArt(use.id);
             if(use.target){const t=unitById(state,use.target);if(t)card.querySelector('i').style.backgroundImage=`url("${artOf(t)}")`;}
             card.title=`${item?.name || use.id}${use.target?` on ${unitById(state,use.target)?.name}`:''}`;played.append(card);
@@ -747,8 +750,8 @@ export function mountBattle({host,sound=createBattleSound(),onBurst=()=>{},onSto
         const ms=Math.max(140,240/speed),turn=`rotate(${Math.atan2(b.y-a.y,b.x-a.x).toFixed(3)}rad)`;
         return new Promise(resolve=>{
             const anim=orb.animate([{transform:`translate(-50%,-50%) ${turn} scale(.6)`},{transform:`translate(calc(${b.x-a.x}px - 50%),calc(${b.y-a.y}px - 50%)) ${turn} scale(1.1)`}],{duration:ms,easing:'cubic-bezier(.5,0,.9,.6)'});
-            let raf=0;const tick=()=>{const t=anim.effect?.getComputedTiming().progress;if(t!=null)particles.trail(a.x+(b.x-a.x)*t,a.y+(b.y-a.y)*t,element);raf=requestAnimationFrame(tick);};raf=requestAnimationFrame(tick);
-            const done=()=>{cancelAnimationFrame(raf);orb.remove();resolve();};anim.onfinish=done;setTimeout(done,ms+80);
+            let raf=0;const tick=()=>{const t=anim.effect?.getComputedTiming().progress;if(t!=null)particles.trail(a.x+(b.x-a.x)*t,a.y+(b.y-a.y)*t,element);raf=requestFrame(tick);};raf=requestFrame(tick);
+            const done=()=>{cancelFrame(raf);orb.remove();resolve();};anim.onfinish=done;setTimeout(done,ms+80);
         });
     }
     // ---- Elemental Burst: the card switches to its Dynamic Skin, then the splash art, then the strike ----------
@@ -990,12 +993,12 @@ export function mountBattle({host,sound=createBattleSound(),onBurst=()=>{},onSto
         $('.tb-combo').textContent='';$('.tb-result').hidden=true;$('.tb-banner').className='tb-banner';$('.tb-played').replaceChildren();$('.tb-intro').hidden=true;
         dialog.classList.remove('tb-previewing','tb-won');
         paintUnits();refresh();
-        for(const u of party().filter(u=>u.card)){const img=new Image();img.src=splashUrl(u.card);}
+        for(const u of party().filter(u=>u.card||u.burstArt)){const img=new Image();img.src=u.burstArt || splashUrl(u.card);}
         void loadDynamicSkins();
     }
     async function run(snapshot,options={}){
         const at=++token;
-        opts={...options};sound.setVolume(opts.volume ?? .8);dialog.classList.toggle('gb-reduced',Boolean(opts.reducedMotion));speed=1;skipAll=false;
+        opts={...options};sound.setVolume(opts.volume ?? .8);dialog.classList.toggle('gb-reduced',Boolean(opts.instant));speed=1;skipAll=false;
         setup(snapshot,opts.player);go('intro');open();
         let hand=state.hand || [],deck=[...deckFrom(state.bag,hand),...(state.team?.party?.deckAdds || [])],first=opts.enemyFirst?'enemy':state.first || 'party';
         // A new fight: VS, the coin toss (an enemy that started the fight goes first), the starting hand, then your character.

@@ -1076,17 +1076,7 @@ body.gi-scene.gi-hidden.gi-generating #form_sheld :is(#qr--bar, #gi-choices) {
 
 }
 
-@media (prefers-reduced-motion: reduce) {
-    :is(#gi-launcher, #gi-toolbar button, #gi-navigation button, #gi-navigation svg) {
-        animation: none !important;
-        transition: none !important;
-    }
-}
 
-body.gi-reduced-motion :is(#gi-launcher, #gi-toolbar button, #gi-navigation button, #gi-navigation svg) {
-    animation: none !important;
-    transition: none !important;
-}
 
 /* Integrated choices share the dialogue-pill layout, with a small refresh
    control outside the list of replies. A 44px hit area keeps it usable. */
@@ -1607,11 +1597,6 @@ body.gi-enabled dialog.popup[open] { animation: ty-popup 260ms var(--ty-ease) bo
 @keyframes ty-popup { from { opacity: 0; scale: .96; } to { opacity: 1; scale: 1; } }
 :is(#gi-world-map, dialog[id^="gi-"]:not(#gi-elemental-roll):not(#gi-wardrobe))[open] { animation: ty-popup 300ms var(--ty-ease) both; }
 
-/* ---------- Reduced motion ---------- */
-@media (prefers-reduced-motion: reduce) {
-    #gi-root *, #gi-root *::before, #gi-root *::after, #gi-wardrobe *, #gi-elemental-roll *, #gi-elemental-roll::before { animation-duration: 1ms !important; animation-iteration-count: 1 !important; transition-duration: 1ms !important; }
-}
-body.gi-reduced-motion :is(#gi-toolbar, #gi-toolbar > *, #gi-menu-scrim, .gi-enemy-health, .gi-damage-pop, #chat .mes_block, #gi-wardrobe, #gi-wardrobe *, #gi-elemental-roll, #gi-elemental-roll *, #gi-elemental-roll::before) { animation-duration: 1ms !important; animation-iteration-count: 1 !important; transition-duration: 1ms !important; }
 #gi-toolbar .gi-pm-switch span { display: inline; }
 #gi-toolbar.gi-paimon .gi-pm-grid button:is(:hover, :focus-visible), #gi-toolbar.gi-paimon .gi-pm-switch:focus-visible { background-color: transparent; border-color: transparent; }
 #gi-toolbar.gi-paimon .gi-pm-switch:focus-visible { outline: 2px solid var(--ty-gold-hi); outline-offset: 2px; background: #ece5d81a; }
@@ -1630,7 +1615,7 @@ body.gi-reduced-motion :is(#gi-toolbar, #gi-toolbar > *, #gi-menu-scrim, .gi-ene
 #gi-settings .gi-set-tabs button { flex: 1 0 auto; min-width: 0; min-height: 34px; padding: 4px 12px; border: 0; border-radius: 18px; background: none; color: #ece5d8b3; font: 13px var(--ty-font); text-shadow: none; white-space: nowrap; }
 #gi-settings .gi-set-tabs button:hover { color: #fff; background: #ece5d814; border: 0; }
 #gi-settings .gi-set-tabs button[aria-selected="true"] { background: var(--ty-cream); color: var(--ty-ink); box-shadow: 0 2px 8px #0006; }
-#gi-settings .gi-set-page:not([hidden]) { animation: ty-panel 260ms var(--ty-ease) both; }
+#gi-settings .gi-set-page.gi-set-enter:not([hidden]) { animation: ty-panel 260ms var(--ty-ease) both; }
 #gi-settings h4 { margin: 16px 2px 6px; padding: 0 0 5px; font: 13px var(--ty-font); letter-spacing: .08em; color: var(--ty-gold-hi); border-bottom: 1px solid var(--ty-line); }
 #gi-settings h4:first-child { margin-top: 4px; }
 #gi-settings .gi-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 10px; min-height: 42px; margin: 3px 0; padding: 4px 6px 4px 14px; border-radius: 3px; background: linear-gradient(90deg, #ece5d80f, #ece5d806); font-size: 13.5px; color: var(--ty-cream); cursor: pointer; transition: background 160ms ease; }
@@ -2012,14 +1997,20 @@ dialog#gi-world-map#gi-world-map[open][data-enter="minimap"] { animation: gi-map
 #gi-world-map:not(.gi-map-near) .gi-waypoint .gi-waypoint-badges { opacity: 0; scale: .6; visibility: hidden; transition: opacity 180ms ease, scale 180ms ease, visibility 0s 180ms; }
 .gi-waypoint-badge { display: block; width: 17px; height: 17px; box-sizing: border-box; padding: 2px; object-fit: contain; border-radius: 50%; background: #1b2232e6; box-shadow: 0 0 0 1px #d3bc8ecc, 0 1px 3px #000a; }
 .gi-waypoint-badge[data-badge="wilderness"], .gi-waypoint-badge[data-badge="boss"] { padding: 0; }
-.gi-waypoint-badge[data-badge="boss"] { box-shadow: 0 0 0 1px #f0a36b, 0 0 5px #e0703acc; }
-/* A boss's own icon is a square portrait: it fills the round badge, a little larger than the emblems. */
-.gi-waypoint-badge[data-boss-icon] { width: 20px; height: 20px; object-fit: cover; background: #2a2030; }
+/* A boss badge stands on a glowing crimson diamond, unlike the round gold-rimmed wilderness and people badges. */
+.gi-waypoint-boss { position: relative; display: grid; place-items: center; width: 26px; height: 26px; margin: -2px -4px -1px 0; }
+.gi-waypoint-boss::before { content: ""; position: absolute; inset: 4px; rotate: 45deg; border-radius: 3px; background: linear-gradient(135deg, #ffb27a, #d8342e 55%, #7a0f22); box-shadow: 0 0 0 1px #2a0a10, 0 0 7px #ff4a3acc; animation: gi-boss-glow 2.4s ease-in-out infinite; }
+@keyframes gi-boss-glow { 50% { box-shadow: 0 0 0 1px #2a0a10, 0 0 11px #ff5a3aee; } }
+@media (prefers-reduced-motion: reduce) { .gi-waypoint-boss::before { animation: none; } }
+.gi-waypoint-boss .gi-waypoint-badge[data-badge="boss"] { position: relative; width: 15px; height: 15px; background: #2a1018; box-shadow: 0 0 0 1px #ffd7a8, 0 1px 3px #000c; }
+/* A boss's own icon is a square portrait: it fills the round badge. */
+.gi-waypoint-badge[data-boss-icon] { object-fit: cover; }
 .gi-waypoint-badge[data-enemy-icon] { object-fit: cover; background: #2a2a34; }
-#gi-world-map .gi-map-waypoint-list .gi-waypoint-badge[data-boss-icon] { width: 20px; height: 20px; }
 #gi-world-map .gi-map-waypoint-list button:has(.gi-map-list-badges) { grid-template-columns: 22px minmax(0, 1fr) auto; }
 #gi-world-map .gi-map-waypoint-list .gi-map-list-badges, #gi-world-map .gi-map-waypoint-list .gi-map-list-badges .gi-waypoint-badges { position: static; display: flex; flex-direction: row; gap: 3px; }
 #gi-world-map .gi-map-waypoint-list .gi-waypoint-badge { width: 18px; height: 18px; }
+#gi-world-map .gi-map-waypoint-list .gi-waypoint-boss .gi-waypoint-badge { width: 15px; height: 15px; }
+#gi-world-map .gi-map-waypoint-list .gi-waypoint-boss { margin: -4px -2px; }
 .gi-map-player { background: none !important; border: 0 !important; pointer-events: none !important; }
 .gi-map-player svg { position: absolute; inset: 5px; width: 20px; height: 20px; fill: #fff; stroke: #2a74b8; stroke-width: 1.4; stroke-linejoin: round; filter: drop-shadow(0 0 4px #4ecbff) drop-shadow(0 1px 2px #000a); }
 .gi-map-player-pulse { position: absolute; inset: 0; border-radius: 50%; border: 2px solid #7fd6ff; animation: gi-pulse 2.2s ease-out infinite; }
@@ -2109,12 +2100,6 @@ dialog#gi-world-map#gi-world-map[open][data-enter="minimap"] { animation: gi-map
     #gi-world-map[data-panel="open"] .gi-map-legal { left: calc(var(--gi-safe-l) + var(--gi-panel-w) + 22px); }
 }
 
-/* ---------- Reduced motion ---------- */
-@media (prefers-reduced-motion: reduce) {
-    :is(#gi-world-map, #gi-world-map *, #gi-minimap, #gi-minimap *, .gi-region-banner, .gi-region-banner *) { animation-duration: 1ms !important; animation-iteration-count: 1 !important; transition-duration: 1ms !important; }
-}
-body.gi-reduced-motion :is(#gi-world-map, #gi-world-map *, #gi-minimap, #gi-minimap *, .gi-region-banner, .gi-region-banner *) { animation-duration: 1ms !important; animation-iteration-count: 1 !important; transition-duration: 1ms !important; }
-
 /* ==========================================================================
    Silly Teyvat 1.21 — refinements. Appended after world-map-ui.css.
    ========================================================================== */
@@ -2151,6 +2136,8 @@ body.gi-card-art-on .avatar:is(.gi-card-art, .gi-card-frame, .gi-card-collage) {
     /* !important: the theme rings avatars with an ID-scoped box-shadow. */
     border: 0 !important; border-radius: 0 !important; background: none !important; box-shadow: none !important; outline: 0;
 }
+/* The group editor wraps its portrait in a bordered upload button; a card shows bare there too. */
+body.gi-card-art-on .add_avatar.avatar:has(> #group_avatar_preview .avatar:is(.gi-card-art, .gi-card-frame)) { border: 0 !important; border-radius: 0 !important; background: none !important; box-shadow: none !important; overflow: visible; }
 body.gi-card-art-on .avatar img:is(.gi-card-img, .gi-card-img-frame) {
     position: static; inset: auto; translate: none; flex: none; max-width: none; max-height: none; margin: 0;
     width: auto; border: 0; background: none;
@@ -2234,8 +2221,6 @@ body.gi-choices-enabled #rightNavHolder { order: 9; }
 #gi-attack-controls #gi-attack-toggle[aria-pressed="true"] .gi-attack-pip { background: #fff2c4; box-shadow: 0 0 8px #ffe08a; }
 @keyframes gi-attack-armed { 50% { box-shadow: inset 0 0 0 1.5px #ffe7bd, 0 0 28px #ef7a35d9, 0 3px 10px #0008; } }
 @media (max-width: 360px) { #gi-attack-controls #gi-attack-toggle .gi-attack-label { display: none; } #gi-attack-controls #gi-attack-toggle { padding-right: 9px; } }
-body.gi-reduced-motion #gi-attack-controls #gi-attack-toggle { animation: none; }
-@media (prefers-reduced-motion: reduce) { #gi-attack-controls #gi-attack-toggle { animation: none; } }
 
 /* ---------- Reroll Phase ---------- */
 #gi-elemental-roll .gi-roll-actions { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 12px; margin: 14px 0 max(18px, 3vh); }
@@ -2306,7 +2291,6 @@ body.gi-reduced-motion #gi-attack-controls #gi-attack-toggle { animation: none; 
 #gi-elemental-roll .gi-roll-confirm::before, #gi-elemental-roll .gi-roll-confirm::after { content: ""; position: absolute; top: 50%; width: 12px; height: 12px; translate: 0 -50%; rotate: 45deg; background: linear-gradient(135deg, #f0d79a, #9a7139); box-shadow: 0 0 0 1.5px #4b341e; }
 #gi-elemental-roll .gi-roll-confirm::before { left: -7px; } #gi-elemental-roll .gi-roll-confirm::after { right: -7px; }
 @media (max-width: 640px) { #gi-elemental-roll .gi-roll-confirm { min-width: 220px; } .gi-roll-frame::before, .gi-roll-frame::after { height: 22px; } }
-@media (prefers-reduced-motion: reduce) { .gi-roll-light { transition: none; } }
 
 /* ---------- Map: top-middle region selector (after Kongying Tavern's area switcher) ---------- */
 #gi-world-map .gi-map-regionbar { position: absolute; z-index: 22; top: calc(var(--gi-safe-t) + 14px); left: 50%; translate: -50% 0; display: flex; flex-direction: column; align-items: center; }
@@ -2752,9 +2736,7 @@ body:not(.gi-scene) #gi-party-health, body.gi-history #gi-party-health, body.gi-
 /* Reduced motion keeps the information and drops the movement */
 #gi-battle.gb-reduced *, #gi-battle.gb-reduced { animation-duration: 1ms !important; transition-duration: 1ms !important; }
 #gi-battle.gb-reduced .gb-float { animation: none !important; opacity: 1; }
-@media (prefers-reduced-motion: reduce) { #gi-battle *, #gi-battle { animation-duration: 1ms !important; transition-duration: 1ms !important; } }
 #gi-battle.gb-reduced .tb-card::before { display: none; }
-@media (prefers-reduced-motion: reduce) { #gi-battle .tb-card::before { display: none; } }
 
 /* Short landscape screens */
 @media (max-height: 560px) and (orientation: landscape) {
@@ -3315,7 +3297,6 @@ body.gi-enabled #chat > .mes.gi-combat-log { display: none !important; }
     .gi-inv-foot { padding: 10px 12px max(10px, env(safe-area-inset-bottom, 0px)); } .gi-inv-order { width: 42px; height: 42px; margin-top: -21px; right: calc(100% + 10px); } .gi-inv-sort-button { min-width: 200px; height: 42px; font-size: 15px; } .gi-inv-sort-menu { min-width: 200px; } .gi-inv-sort-menu li { height: 40px; font-size: 15px; }
     .gi-inv-empty { padding-bottom: 40px; } .gi-inv-empty-icon { width: 84px; height: 84px; } .gi-inv-empty-icon svg { width: 38px; height: 38px; } .gi-inv-empty p { font-size: 17px; }
 }
-@media (prefers-reduced-motion: reduce) { #gi-inventory, #gi-inventory * { animation-duration: 1ms !important; transition-duration: 1ms !important; } }
 
 /* Combat deck (1.75): a mark on each tile and − / + controls in the details. */
 .gi-inv-deck-mark { position: absolute; left: 7px; bottom: 22px; z-index: 1; padding: 0 6px; border-radius: 3px; font-size: 12px; font-style: normal; color: #e9f3ff; background: #2f5f8fcc; box-shadow: 0 0 0 1px #8fc1ee99; }
@@ -3397,7 +3378,6 @@ body.gi-enabled #chat > .mes.gi-combat-log { display: none !important; }
 .gi-trust-toast i { width: 20px; aspect-ratio: 1; background: #e77f9b; -webkit-mask: var(--gi-heart-mask) center / contain no-repeat; mask: var(--gi-heart-mask) center / contain no-repeat; }
 .gi-trust-down i { background: #7f8aa3; }
 @keyframes gi-trust-toast { 0% { opacity: 0; transform: translateY(-10px) scale(.94); } 8%, 86% { opacity: 1; transform: none; } 100% { opacity: 0; transform: translateY(-6px); } }
-body.gi-reduced-motion .gi-trust-toast { animation-name: ty-fade; }
 #gi-toolbar .gi-pm-grid button[data-gi-action="trust"] svg { fill: currentColor; }
 /* Gift, in the Inventory's detail panel. */
 .gi-inv-d-gift { position: sticky; bottom: 0; z-index: 1; display: grid; gap: 10px; padding: 12px 22px; background: #fdf3d6; box-shadow: inset 0 1px 0 #d3bc8e66; }
@@ -3841,8 +3821,6 @@ body.gi-scene #gi-party-health .gi-party-member.gi-downed strong::after { conten
    Open SillyTavern panels keep their place above it. */
 body.gi-loading-active :is(#gi-launcher,#gi-toolbar,#gi-minimap,.gi-region-banner,#gi-choices,#gi-cg-window){visibility:hidden !important}
 body.gi-loading-active #top-settings-holder>.drawer>.drawer-toggle,body.gi-loading-active #top-bar{visibility:hidden}
-@media (prefers-reduced-motion:reduce){#gi-loading,#gi-loading .gi-loading-tip,#gi-loading .gi-loading-emblem{transition:none}}
-body.gi-reduced-motion #gi-loading,body.gi-reduced-motion #gi-loading .gi-loading-tip{transition-duration:.01s}
 /* Phone keyboard open (keyboard-frame.js): the scene layers keep their pre-keyboard height, anchored
    to the bottom, so the background, sprites and CG rise together with the dialogue and reply box. */
 body.gi-keyboard :is(#gi-background-stage,#gi-sprite-stage,#gi-cg-stage,#gi-letterbox){top:auto !important;bottom:0 !important;height:var(--gi-scene-height,100%) !important}
@@ -4282,9 +4260,6 @@ body.gi-keyboard :is(#gi-background-stage,#gi-sprite-stage,#gi-cg-stage,#gi-lett
     #gi-wardrobe header { min-height: 46px; }
     #gi-wardrobe footer { min-height: 42px; padding-top: 2px; padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 2px); }
 }
-@media (prefers-reduced-motion: reduce) {
-    #gi-wardrobe, #gi-wardrobe *, #gi-wardrobe::backdrop { animation: none !important; transition: none !important; }
-}
 /* Keep portraits within the shorter header, including the selected portrait's rim. */
 #gi-wardrobe header .gi-roster { margin-block: 0; padding-block: 0; }
 @media (max-width: 600px) and (orientation: portrait) {
@@ -4295,9 +4270,6 @@ body.gi-keyboard :is(#gi-background-stage,#gi-sprite-stage,#gi-cg-stage,#gi-lett
 @media (max-width: 600px) and (max-height: 650px) and (orientation: portrait) {
     #gi-wardrobe .gi-wardrobe-body { grid-template-rows: auto minmax(80px, 20dvh) minmax(0, 1fr); }
 }
-/* With animations disabled, the arrival tint must not stay over the character. */
-body.gi-reduced-motion #gi-wardrobe .gi-cs-tint { display: none !important; }
-@media (prefers-reduced-motion: reduce) { #gi-wardrobe .gi-cs-tint { display: none !important; } }
 @media (min-width: 901px) and (min-height: 551px) {
     #gi-wardrobe header { grid-template-columns: minmax(300px, .9fr) 36px minmax(0, 2fr) 36px 48px; }
 }
@@ -4645,6 +4617,9 @@ body.gi-reduced-motion #gi-wardrobe .gi-cs-tint { display: none !important; }
 #gi-wardrobe .gi-card-portrait img { flex: none; width: 64px; height: 96px; object-fit: cover; border: 1px solid #d3bc8e55; border-radius: 6px; background: #0003; }
 #gi-wardrobe .gi-card-portrait label { flex: 1 1 auto; min-width: 0; }
 #gi-wardrobe .gi-card-portrait input[type="file"] { margin: 0; max-width: 100%; }
+/* A card-shaped portrait shows whole, its own frame as the border, as card views elsewhere do. */
+body.gi-card-art-on #gi-wardrobe .gi-card-portrait.gi-card-portrait-card img { width: auto; height: 96px; aspect-ratio: 208 / 248; object-fit: contain; border: 0; border-radius: 0; background: none; filter: drop-shadow(0 3px 5px #000a); }
+body.gi-card-art-on #gi-wardrobe .gi-card-portrait.gi-card-portrait-tcg img { aspect-ratio: 420 / 720; }
 /* A zoomed sprite is never cut off at the stage's edges: it passes under the panels around it. */
 #gi-wardrobe .gi-wardrobe-body > .gi-wardrobe-preview { overflow: visible; }
 /* Scenes sit in the middle of the stage, a little smaller than it, and zoom from their centre. */
@@ -5322,8 +5297,6 @@ body #gi-attack-controls #gi-attack-toggle[aria-pressed="true"]::after {
 @keyframes gi-armed-breathe { 50% { box-shadow: inset 0 0 0 1.5px #fff6d6, inset 0 0 16px #ffe08aaa, 0 0 22px #f7cf6bcc; } }
 @keyframes gi-armed-halo { 50% { opacity: .45; scale: 1.18; } }
 @keyframes gi-armed-spark { from { scale: .6; opacity: 1; background: radial-gradient(circle, #fff8dd 0%, #ffd77a99 40%, #ffd77a00 70%); } }
-body.gi-reduced-motion #gi-attack-controls #gi-attack-toggle[aria-pressed="true"], body.gi-reduced-motion #gi-attack-controls #gi-attack-toggle[aria-pressed="true"]::before, body.gi-reduced-motion #gi-attack-controls #gi-attack-toggle[aria-pressed="true"]::after { animation: none; }
-@media (prefers-reduced-motion: reduce) { body #gi-attack-controls #gi-attack-toggle[aria-pressed="true"], body #gi-attack-controls #gi-attack-toggle[aria-pressed="true"]::before, body #gi-attack-controls #gi-attack-toggle[aria-pressed="true"]::after { animation: none; } }
 
 /* ==========================================================================
    The coin toss: a coin with two faces, 1 and 2, that spins and lands on the
@@ -5528,7 +5501,7 @@ body.gi-reduced-motion #gi-attack-controls #gi-attack-toggle[aria-pressed="true"
 #gi-battle .tb-auto svg { transform: translateX(1px); }
 #gi-battle .tb-auto.tb-auto-on { color: #3a2a0c; background: radial-gradient(circle at 50% 35%, #ffe7a6, #d9a441); box-shadow: inset 0 0 0 2px #fff4d6, 0 0 0 2px #e9b84a, 0 0 14px #ffcf6acc, 0 4px 10px #0009; }
 #gi-battle .tb-auto.tb-auto-on .tb-tool-label { color: #ffe39a; }
-@media (prefers-reduced-motion: no-preference) { #gi-battle .tb-auto.tb-auto-on { animation: tb-auto-pulse 1.6s ease-in-out infinite; } }
+#gi-battle .tb-auto.tb-auto-on { animation: tb-auto-pulse 1.6s ease-in-out infinite; }
 @keyframes tb-auto-pulse { 50% { box-shadow: inset 0 0 0 2px #fff4d6, 0 0 0 2px #e9b84a, 0 0 22px #ffd77ae6, 0 4px 10px #0009; } }
 
 /* 1.66: the dice a card or skill will spend get a gold border. The die is clipped to its hexagon, so the
@@ -5624,6 +5597,51 @@ body.gi-reduced-motion #gi-attack-controls #gi-attack-toggle[aria-pressed="true"
 .gi-bg-teyvat .gi-bg-place:focus-visible { outline: 2px solid var(--ty-gold-hi, #f2dca0); outline-offset: 2px; }
 .gi-bg-teyvat .gi-bg-place.selected { border-color: var(--ty-gold-hi, #f2dca0); box-shadow: 0 0 0 2px var(--ty-gold-hi, #f2dca0); }
 .gi-bg-teyvat .gi-bg-empty { margin: 12px; opacity: .8; }
+
+/* ---- Statues of The Seven ------------------------------------------------------------------------------------ */
+/* The statue's own map icon stands in for the waypoint pin, in the list and on the card. */
+#gi-world-map .gi-waypoint-statue > img { filter: drop-shadow(0 2px 3px #000b); }
+#gi-world-map .gi-map-statue { --statue-el: #7fd6ff; }
+#gi-world-map .gi-map-statue[data-element="Anemo"] { --statue-el: #74e0c6; }
+#gi-world-map .gi-map-statue[data-element="Geo"] { --statue-el: #f2c35a; }
+#gi-world-map .gi-map-statue[data-element="Electro"] { --statue-el: #c49bff; }
+#gi-world-map .gi-map-statue[data-element="Dendro"] { --statue-el: #a5d64a; }
+#gi-world-map .gi-map-statue[data-element="Hydro"] { --statue-el: #4fc3ff; }
+#gi-world-map .gi-map-statue[data-element="Pyro"] { --statue-el: #ff9a5c; }
+#gi-world-map .gi-map-statue[data-element="Cryo"] { --statue-el: #a8e8f5; }
+#gi-world-map .gi-map-statue h4 { color: var(--statue-el); }
+#gi-world-map .gi-map-statue small { display: block; margin-top: 6px; color: #cfc6b0; font-size: 12px; }
+
+#gi-statue { --statue-el: #7fd6ff; box-sizing: border-box; width: min(440px, calc(100vw - 32px)); max-height: calc(100dvh - 32px); overflow: auto; padding: 20px 20px 16px; border: 1px solid #d3bc8e88; border-radius: 14px; color: #ece5d8; background: radial-gradient(120% 70% at 50% 0%, color-mix(in srgb, var(--statue-el) 22%, transparent), transparent 70%), #263044f5; box-shadow: 0 12px 48px #000a; font-family: var(--ty-font); text-align: center; }
+#gi-statue[data-element="Anemo"] { --statue-el: #74e0c6; }
+#gi-statue[data-element="Geo"] { --statue-el: #f2c35a; }
+#gi-statue[data-element="Electro"] { --statue-el: #c49bff; }
+#gi-statue[data-element="Dendro"] { --statue-el: #a5d64a; }
+#gi-statue[data-element="Hydro"] { --statue-el: #4fc3ff; }
+#gi-statue[data-element="Pyro"] { --statue-el: #ff9a5c; }
+#gi-statue[data-element="Cryo"] { --statue-el: #a8e8f5; }
+#gi-statue::backdrop { background: #101928b8; backdrop-filter: blur(4px); }
+#gi-statue > small { display: block; font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: #d7c59c; }
+#gi-statue .gi-statue-icon { display: block; width: 52px; height: 52px; margin: 12px auto 4px; object-fit: contain; filter: drop-shadow(0 0 10px var(--statue-el)); }
+#gi-statue h2 { margin: 4px 0 8px; font: 21px/1.2 var(--ty-font); color: #f2dca0; }
+#gi-statue p { margin: 0 0 14px; font-size: 14px; line-height: 1.45; color: #e3dccb; }
+#gi-statue .gi-statue-list { display: flex; flex-direction: column; gap: 6px; margin: 0 0 14px; text-align: left; }
+#gi-statue .gi-statue-row { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 6px 8px 6px 10px; border-radius: 10px; background: #1a2232b8; box-shadow: inset 0 0 0 1px #d3bc8e33; }
+#gi-statue .gi-circle-face { width: 40px; height: 40px; }
+#gi-statue .gi-statue-who { display: flex; flex-direction: column; min-width: 0; }
+#gi-statue .gi-statue-who strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: normal; font-size: 15px; }
+#gi-statue .gi-statue-who small { font-size: 12px; color: #cfc6b0; }
+#gi-statue button { box-sizing: border-box; min-height: 40px; padding: 8px 16px; border: 0; border-radius: 999px; color: #ece5d8; background: #262c38; box-shadow: inset 0 0 0 1.5px #ffffff30; font: 14px var(--ty-font); cursor: pointer; }
+#gi-statue button:hover:not(:disabled) { color: #3d4557; background: #ece5d8; }
+#gi-statue .gi-statue-primary { color: #2d2718; background: #e6cf98; box-shadow: 0 0 12px color-mix(in srgb, var(--statue-el) 55%, transparent); }
+#gi-statue .gi-statue-primary:hover:not(:disabled) { color: #2d2718; background: #f4e2b4; }
+#gi-statue button:disabled { opacity: .55; cursor: default; }
+#gi-statue :is(button):focus-visible { outline: 2px solid #f2dca0; outline-offset: 2px; }
+#gi-statue .gi-statue-actions { display: flex; justify-content: center; }
+@media (max-width: 420px) {
+    #gi-statue .gi-statue-row { grid-template-columns: 36px minmax(0, 1fr); }
+    #gi-statue .gi-statue-row button { grid-column: 1 / -1; }
+}
 
 /* ---------- Card Search (1.69): the Adventurers' Guild's search menu and the map's Quest markers ---------- */
 #gi-card-search {
@@ -5738,14 +5756,11 @@ body.gi-reduced-motion #gi-attack-controls #gi-attack-toggle[aria-pressed="true"
     .gi-cs-actions { width: 100%; } .gi-cs-actions button { flex: 1 1 0; min-width: 0; height: 40px; padding: 0 4px; font-size: 13px; white-space: nowrap; }
     .gi-cs-actions .gi-cs-clear { flex: .6 1 0; }
 }
-@media (prefers-reduced-motion: reduce) { #gi-card-search[open] { animation: none; } }
 
 /* The Quest marker: the game's blue world-quest diamond, beside the waypoint at every zoom, bobbing gently. */
 .gi-waypoint-quest { position: absolute; left: 20px; top: -4px; z-index: 3; display: block; width: 16px; pointer-events: none; filter: drop-shadow(0 0 4px #4fc3ffcc) drop-shadow(0 1px 2px #000a); animation: gi-quest-bob 1.8s ease-in-out infinite; }
 #gi-world-map .gi-waypoint-quest img, .gi-waypoint-quest img { display: block; width: 100% !important; height: auto !important; }
 @keyframes gi-quest-bob { 50% { translate: 0 -2px; } }
-body.gi-reduced-motion .gi-waypoint-quest { animation: none; }
-@media (prefers-reduced-motion: reduce) { .gi-waypoint-quest { animation: none; } }
 #gi-world-map .gi-map-waypoint-list .gi-map-list-badges .gi-waypoint-quest { position: static; width: 14px; animation: none; filter: drop-shadow(0 0 3px #4fc3ffaa); }
 #gi-world-map .gi-map-waypoint-list button[data-quest="true"] { box-shadow: inset 3px 0 0 #4fc3ff; }
 #gi-world-map .gi-map-quest h4 { display: flex; align-items: center; gap: 6px; }

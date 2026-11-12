@@ -318,9 +318,6 @@
     #gi-wardrobe header { min-height: 46px; }
     #gi-wardrobe footer { min-height: 42px; padding-top: 2px; padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 2px); }
 }
-@media (prefers-reduced-motion: reduce) {
-    #gi-wardrobe, #gi-wardrobe *, #gi-wardrobe::backdrop { animation: none !important; transition: none !important; }
-}
 /* Keep portraits within the shorter header, including the selected portrait's rim. */
 #gi-wardrobe header .gi-roster { margin-block: 0; padding-block: 0; }
 @media (max-width: 600px) and (orientation: portrait) {
@@ -331,9 +328,6 @@
 @media (max-width: 600px) and (max-height: 650px) and (orientation: portrait) {
     #gi-wardrobe .gi-wardrobe-body { grid-template-rows: auto minmax(80px, 20dvh) minmax(0, 1fr); }
 }
-/* With animations disabled, the arrival tint must not stay over the character. */
-body.gi-reduced-motion #gi-wardrobe .gi-cs-tint { display: none !important; }
-@media (prefers-reduced-motion: reduce) { #gi-wardrobe .gi-cs-tint { display: none !important; } }
 @media (min-width: 901px) and (min-height: 551px) {
     #gi-wardrobe header { grid-template-columns: minmax(300px, .9fr) 36px minmax(0, 2fr) 36px 48px; }
 }
@@ -681,6 +675,9 @@ body.gi-reduced-motion #gi-wardrobe .gi-cs-tint { display: none !important; }
 #gi-wardrobe .gi-card-portrait img { flex: none; width: 64px; height: 96px; object-fit: cover; border: 1px solid #d3bc8e55; border-radius: 6px; background: #0003; }
 #gi-wardrobe .gi-card-portrait label { flex: 1 1 auto; min-width: 0; }
 #gi-wardrobe .gi-card-portrait input[type="file"] { margin: 0; max-width: 100%; }
+/* A card-shaped portrait shows whole, its own frame as the border, as card views elsewhere do. */
+body.gi-card-art-on #gi-wardrobe .gi-card-portrait.gi-card-portrait-card img { width: auto; height: 96px; aspect-ratio: 208 / 248; object-fit: contain; border: 0; border-radius: 0; background: none; filter: drop-shadow(0 3px 5px #000a); }
+body.gi-card-art-on #gi-wardrobe .gi-card-portrait.gi-card-portrait-tcg img { aspect-ratio: 420 / 720; }
 /* A zoomed sprite is never cut off at the stage's edges: it passes under the panels around it. */
 #gi-wardrobe .gi-wardrobe-body > .gi-wardrobe-preview { overflow: visible; }
 /* Scenes sit in the middle of the stage, a little smaller than it, and zoom from their centre. */

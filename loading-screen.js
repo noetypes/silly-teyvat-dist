@@ -1,3 +1,4 @@
+import {requestFrame,cancelFrame} from './frame-rate.js';
 // A loading screen in the style of Genshin Impact's, shown over the stage while a chat opens or the
 // party travels, so half-loaded sprites and the previous place never show. The emblem is the
 // destination's region, the seven elements fill from left to right and a tip sits above them.
@@ -48,9 +49,9 @@ export function createLoadingScreen({random=Math.random,isReady=()=>true,onChang
         // Creep towards the last icon while work continues; sweep through the rest once it is done.
         progress+=(target-progress)*(target>=ELEMENTS.length?.16:.006);
         if(target-progress<.004)progress=target;
-        paint();frame=progress<target?requestAnimationFrame(step):0;
+        paint();frame=progress<target?requestFrame(step):0;
     }
-    const animate=()=>{cancelAnimationFrame(frame);frame=requestAnimationFrame(step);};
+    const animate=()=>{cancelFrame(frame);frame=requestFrame(step);};
     function setTip(){const [heading,body]=pickTip({location,random,last:lastTitle});lastTitle=heading;title.textContent=heading;text.textContent=body;}
     function rotateTip(){
         clearTimeout(swapTimer);tipBox.classList.add('gi-loading-swap');
@@ -75,7 +76,7 @@ export function createLoadingScreen({random=Math.random,isReady=()=>true,onChang
         root.classList.remove('gi-loading-out');root.classList.toggle('gi-loading-in',instant);root.style.transitionDuration=instant?'0s':'';
         root.hidden=false;document.body.classList.add('gi-loading-active');
         if(!instant){void root.offsetWidth;root.classList.add('gi-loading-in');}
-        requestAnimationFrame(()=>{root.style.transitionDuration='';});
+        requestFrame(()=>{root.style.transitionDuration='';});
         clearInterval(tipTimer);tipTimer=setInterval(rotateTip,TIP_INTERVAL);animate();
     }
     function finish(){
@@ -93,11 +94,19 @@ export function createLoadingScreen({random=Math.random,isReady=()=>true,onChang
                 leaving=true;root.classList.add('gi-loading-out');document.body.classList.remove('gi-loading-active');onChange();
                 fadeTimer=setTimeout(()=>{
                     if(token!==epoch||holds.size||!leaving)return;
-                    leaving=false;root.hidden=true;root.classList.remove('gi-loading-out','gi-loading-in');clearInterval(tipTimer);clearTimeout(swapTimer);tipBox.classList.remove('gi-loading-swap');cancelAnimationFrame(frame);frame=0;
+                    leaving=false;root.hidden=true;root.classList.remove('gi-loading-out','gi-loading-in');clearInterval(tipTimer);clearTimeout(swapTimer);tipBox.classList.remove('gi-loading-swap');cancelFrame(frame);frame=0;
                 },FADE_OUT);
             },Math.max(FILL_FINISH,MIN_VISIBLE-(performance.now()-shownAt)));
         };
         settleTimer=setTimeout(poll,SETTLE_STEP);
+    }
+    function dismiss(){
+        clearTimeout(settleTimer);const token=epoch;
+        settleTimer=setTimeout(()=>{
+            if(token!==epoch||holds.size)return;
+            leaving=false;root.hidden=true;root.classList.remove('gi-loading-out','gi-loading-in');document.body.classList.remove('gi-loading-active');
+            clearInterval(tipTimer);clearTimeout(swapTimer);tipBox.classList.remove('gi-loading-swap');cancelFrame(frame);frame=0;onChange();
+        },SETTLE_STEP);
     }
     const api={
         get visible(){return !root.hidden&&!leaving;},
@@ -107,13 +116,15 @@ export function createLoadingScreen({random=Math.random,isReady=()=>true,onChang
             const fresh=root.hidden;enter({instant});update(info);if(fresh)setTip();
             const token={};holds.add(token);
             const safety=setTimeout(()=>release(),MAX_HOLD);
-            function release(){clearTimeout(safety);if(!holds.delete(token))return;if(!holds.size)finish();}
+            // unneeded: the work turned out not to need the screen. If this hold raised it, it goes at
+            // once rather than after the usual minimum, unless other work starts in the next moment.
+            function release({unneeded=false}={}){clearTimeout(safety);if(!holds.delete(token))return;if(holds.size)return;if(unneeded&&fresh)dismiss();else finish();}
             return release;
         },
         update,
         // Drop every hold, e.g. when the extension is switched off.
         hide(){holds.clear();if(!root.hidden&&!leaving)finish();},
-        dispose(){epoch++;holds.clear();clearTimeout(settleTimer);clearTimeout(emblemTimer);clearTimeout(fadeTimer);clearTimeout(swapTimer);clearInterval(tipTimer);cancelAnimationFrame(frame);document.body.classList.remove('gi-loading-active');root.remove();},
+        dispose(){epoch++;holds.clear();clearTimeout(settleTimer);clearTimeout(emblemTimer);clearTimeout(fadeTimer);clearTimeout(swapTimer);clearInterval(tipTimer);cancelFrame(frame);document.body.classList.remove('gi-loading-active');root.remove();},
     };
     return api;
 }

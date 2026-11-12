@@ -2,10 +2,10 @@ import {regionEmblem} from './loading-screen.js';
 import {createMachine} from './machine.js';
 import {cue} from './ui-sound.js';
 import {mountWildernessMenu,wildernessSummary,wildernessPool} from './wilderness.js';
-import {clearedEnemies,restoreEnemies} from './combat-state.js';
+import {clearedEnemies,restoreEnemies,healParty} from './combat-state.js';
 import {localMediaPath,createMediaAdapter} from './media-store.js';
 import {backgroundRegions,travelState,saveTravel} from './backgrounds.js';
-import {REGION_NAMES,worldSettings,worldWaypoints,activeWorldLocation,worldScale,walkingSpeed,mapDistance,directionFrom,formatDistance,syncWorldPrompt,worldScalePrompt,saveWaypoint,unpinWaypoint,teleportTo,validMapPoint,setWaypointArtwork} from './world-data.js';
+import {REGION_NAMES,STATUE_KINDS,worldSettings,worldWaypoints,activeWorldLocation,worldScale,walkingSpeed,mapDistance,directionFrom,formatDistance,syncWorldPrompt,worldScalePrompt,saveWaypoint,unpinWaypoint,teleportTo,validMapPoint,setWaypointArtwork} from './world-data.js';
 import {L,makeMap,mapMarker,toLatLng,toMapPoint,waypointIcon,playerIcon,waypointGlyph} from './map-engine.js';
 import {locationResidents,locationResidentsIndex,encountersBypassed,toggleEncounterBypass} from './location-encounters.js';
 import {mountLocationRosterPicker} from './location-roster-picker.js';
@@ -16,6 +16,7 @@ import {mountCardPoolMenu,locationCardPool,cardPoolSummary} from './card-pools.j
 import {waypointBadges,waypointBoss,waypointEnemy,badgeLabels,badgeMarkup} from './waypoint-badges.js';
 import {iconsReady} from './battle-icons.js';
 import {searchedCards,questCardsAt,questLabel,questMarkup} from './card-search.js';
+import {isStatue,statueElement,statueIcon,resonanceTravelers} from './statue-resonance.js';
 
 const svg=path=>`<svg viewBox="0 0 24 24" aria-hidden="true">${path}</svg>`;
 const ICON={
@@ -46,9 +47,8 @@ const BADGE_ZOOM=-2;
 const cameraRamp=.1,cameraDecay=7,cameraTail=(1-cameraRamp)/cameraDecay;
 const cameraArea=cameraRamp/2-cameraTail*Math.expm1(-cameraDecay);
 const cameraEasing=t=>(t<cameraRamp?t*t/(2*cameraRamp):cameraRamp/2-cameraTail*Math.expm1(-cameraDecay*(t-cameraRamp)/(1-cameraRamp)))/cameraArea;
-const reducedMotion=()=>document.body.classList.contains('gi-reduced-motion') || Boolean(globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches);
 
-export function mountWorldMap({host,getContext,adapter=createMediaAdapter(getContext),onChange=()=>{},announce=()=>{},prepareTeleport=async()=>({decisions:[]}),commitTeleport=()=>true,onTeleport=()=>{},retryCast=()=>{},openMusic=()=>{},openMusicLibrary=()=>{},openCardSearch=()=>{},openJourney=id=>createJourneyLibraryAdapter().open(id)}){
+export function mountWorldMap({host,getContext,adapter=createMediaAdapter(getContext),onChange=()=>{},announce=()=>{},prepareTeleport=async()=>({decisions:[]}),commitTeleport=()=>true,onTeleport=()=>{},retryCast=()=>{},openMusic=()=>{},openMusicLibrary=()=>{},openCardSearch=()=>{},openStatue=()=>{},openJourney=id=>createJourneyLibraryAdapter().open(id)}){
     const mini=document.createElement('button');mini.id='gi-minimap';mini.type='button';mini.dataset.giSound='none';mini.hidden=true;mini.setAttribute('aria-label','Open world map');
     mini.innerHTML='<span class="gi-minimap-ring" aria-hidden="true"><span class="gi-minimap-glass"><span class="gi-minimap-canvas"></span><span class="gi-minimap-vignette"></span><span class="gi-minimap-player"><i class="gi-minimap-cone"></i><svg viewBox="0 0 24 24"><path d="M12 3 19 20l-7-4-7 4z"/></svg></span></span><span class="gi-minimap-north">N</span></span><span class="gi-minimap-label">World map</span>';
     const dialog=document.createElement('dialog');dialog.id='gi-world-map';dialog.setAttribute('aria-labelledby','gi-world-map-title');dialog.dataset.view='list';
@@ -124,12 +124,20 @@ export function mountWorldMap({host,getContext,adapter=createMediaAdapter(getCon
         const longFlight=regionChange||distance>=Math.max(size.x,size.y);
         const panel=dialog.dataset.panel==='open'&&!compact()?$('.gi-map-panel').offsetWidth/2:0;
         if(!sidebar.hidden||panel){const sheet=globalThis.matchMedia?.('(max-width: 600px) and (orientation: portrait)').matches,card=sidebar.hidden?[0,0]:sheet?[0,sidebar.offsetHeight/2]:[sidebar.offsetWidth/2,0];target=map.unproject(map.project(target,zoom).add([card[0]-panel,card[1]]),zoom);}
-        if(reducedMotion()||!dialog.open)map.setView(target,zoom,{animate:false});
+        if(!dialog.open){map.setView(target,zoom,{animate:false});return;}
+        cameraGoal={zoom:map._limitZoom(zoom)};
         // Nearby selections at the same zoom only translate the pane. flyTo
         // otherwise reprojects every marker at a fractional zoom on every frame.
-        else if(!longFlight&&Math.abs(map.getZoom()-zoom)<.01&&map.latLngToContainerPoint(target).distanceTo(size.divideBy(2))<Math.max(size.x,size.y))map.panTo(target,{animate:true,duration:.8,easing:cameraEasing});
+        // Mid-flight the zoom is between steps, and Leaflet turns a pan from there into an
+        // instant jump, so a flight that is still going is always continued with flyTo.
+        if(onZoomStep()&&!longFlight&&Math.abs(map.getZoom()-zoom)<.01&&map.latLngToContainerPoint(target).distanceTo(size.divideBy(2))<Math.max(size.x,size.y))map.panTo(target,{animate:true,duration:.8,easing:cameraEasing});
         else map.flyTo(target,zoom,{duration:longFlight?1.8:1.1,easing:cameraEasing});
     }
+    // Where the camera is headed while a waypoint flight plays (cleared once it stops), so a
+    // second choice mid-flight keeps the zoom the first one was going to rather than the zoom
+    // the flight happens to be passing through.
+    let cameraGoal=null;
+    const onZoomStep=()=>{const zoom=map.getZoom(),snap=map.options.zoomSnap;return !snap||Math.abs(zoom/snap-Math.round(zoom/snap))<1e-6;};
     // Top region selector: nations plus any custom regions that have waypoints.
     // The loading screen's region emblems; Teyvat itself and custom regions share its plain one.
     const emblemOf=name=>regionEmblem(NATIONS.some(n=>n.name===name)?name:'');
@@ -169,15 +177,16 @@ export function mountWorldMap({host,getContext,adapter=createMediaAdapter(getCon
     function flyToRegion(name){
         if(!map)return;const target=regionTargets().find(r=>r.name===name),panel=dialog.dataset.panel==='open'&&!compact()?$('.gi-map-panel').offsetWidth:0,card=sidebar.hidden||compact()?0:sidebar.offsetWidth+16;
         const options={paddingTopLeft:[panel+24,90],paddingBottomRight:[card+24,40],maxZoom:-1.5};
-        if(!target){if(reducedMotion())map.setView([1700,500],-3.5,{animate:false});else map.flyTo([1700,500],-3.5,{duration:1.8,easing:cameraEasing});return;}
-        if(reducedMotion())map.fitBounds(target.bounds,{...options,animate:false});else map.flyToBounds(target.bounds,{...options,duration:1.8,easing:cameraEasing});
+        if(!target){map.flyTo([1700,500],-3.5,{duration:1.8,easing:cameraEasing});return;}
+        map.flyToBounds(target.bounds,{...options,duration:1.8,easing:cameraEasing});
     }
     function ensureMap(){
-        if(map)return;map=makeMap($('.gi-map-canvas'),{zoomControl:false,animate:!reducedMotion()});markers=L.layerGroup().addTo(map);
+        if(map)return;map=makeMap($('.gi-map-canvas'),{zoomControl:false,animate:true});markers=L.layerGroup().addTo(map);
         const range=$('.gi-map-zoom-range');range.min=map.getMinZoom();range.max=map.getMaxZoom();
         map.setView([1700,500],-3);map.on('zoomend moveend',updateScale);map.on('move zoom',scheduleCull);map.on('zoomend moveend',()=>cullMarkers());map.on('moveend',paintRegionBar);
         map.on('movestart zoomstart',()=>dialog.classList.add('gi-map-moving'));
         map.on('moveend zoomend',()=>dialog.classList.remove('gi-map-moving'));
+        map.on('moveend',()=>{cameraGoal=null;});
         map.on('click',event=>{if(!placing()||busy())return;const point=toMapPoint(event.latlng);if(!validMapPoint(point)){status('Choose a point inside the drawn map.');return;}draft=point;paintDraft();if(!editing())showEditor();else $('#gi-map-coordinates').textContent=`x ${draft.x}, y ${draft.y}`;});
         updateScale();
     }
@@ -194,11 +203,11 @@ export function mountWorldMap({host,getContext,adapter=createMediaAdapter(getCon
             // Card Search: a Quest marker beside every Wilderness or Boss waypoint that drops a searched card.
             const {name,markup,quest}=presentations.get(id);
             const isCurrent=current?.location.id===id,isSelected=selecting&&selectedId===id;
-            const key=JSON.stringify([item.point.x,item.point.y,name,isCurrent,markup,quest]);
+            const statue=isStatue(item.location),key=JSON.stringify([item.point.x,item.point.y,name,isCurrent,markup,quest,statue]);
             const cached=markerCache.get(id);
             if(cached?.key===key){cached.item=item;highlight(id,isSelected);continue;}
             if(cached?.shown)markers.removeLayer(cached.marker);
-            const marker=mapMarker(toLatLng(item.point),{icon:waypointIcon({current:isCurrent,selected:isSelected,badges:markup}),title:name,alt:name,keyboard:true,zIndexOffset:quest?500:0});
+            const marker=mapMarker(toLatLng(item.point),{icon:waypointIcon({current:isCurrent,selected:isSelected,badges:markup,glyph:statue?statueIcon:''}),title:name,alt:name,keyboard:true,zIndexOffset:quest?500:0});
             marker.bindTooltip(element('span',item.location.label),{direction:'top',offset:[0,-30]});
             marker.on('click',event=>{L.DomEvent.stopPropagation(event);if(busy())return;cue('waypoint');select(markerCache.get(id).item);});
             markerCache.set(id,{key,marker,item,latlng:marker.getLatLng(),shown:false,selected:isSelected});
@@ -242,7 +251,7 @@ export function mountWorldMap({host,getContext,adapter=createMediaAdapter(getCon
         const viewedRegion=from?null:regionAtView();
         const regionChange=from?from.region.id!==item.region.id:Boolean(viewedRegion&&viewedRegion.name.toLowerCase()!==item.region.name.toLowerCase());
         showDetails(item);if(previous!==selectedId)highlight(previous,false);highlight(selectedId,true);
-        flyTo(item.point,Math.max(map.getZoom(),-1.5),regionChange);
+        flyTo(item.point,Math.max(cameraGoal?.zoom ?? map.getZoom(),-1.5),regionChange);
     }
     const listCache=new Map();
     // A closed panel (phones start with it closed) is not built; opening it builds the list then.
@@ -260,10 +269,10 @@ export function mountWorldMap({host,getContext,adapter=createMediaAdapter(getCon
         const wanted=new Set(),nodes=shown.map(item=>{
             const id=item.location.id;wanted.add(id);
             const {labels,markup,quest}=presentations.get(id),isCurrent=current?.location.id===id,isSelected=!view.is('list')&&selectedId===id;
-            const key=JSON.stringify([item.location.label,item.region.name,labels,markup,quest,isCurrent]);
+            const key=JSON.stringify([item.location.label,item.region.name,labels,markup,quest,isCurrent,item.location.statue || '']);
             const cached=listCache.get(id);if(cached?.key===key){cached.node.setAttribute('aria-current',String(isSelected));return cached.node;}
             const b=document.createElement('button');b.type='button';b.dataset.map='select';b.dataset.location=id;b.dataset.giSound='waypoint';
-            const img=document.createElement('img');img.src=waypointGlyph;img.alt='';img.loading='lazy';img.decoding='async';
+            const img=document.createElement('img');img.src=isStatue(item.location)?statueIcon:waypointGlyph;img.alt='';img.loading='lazy';img.decoding='async';if(isStatue(item.location))b.dataset.statue='true';
             const text=document.createElement('span');text.append(element('b',item.location.label),element('small',item.region.name));b.append(img,text);
             if(labels.length){const marks=document.createElement('span');marks.className='gi-map-list-badges';marks.title=labels.join('. ');marks.innerHTML=markup;b.append(marks);b.setAttribute('aria-label',`${item.location.label}, ${item.region.name}. ${labels.join('. ')}`);}
             if(quest)b.dataset.quest='true';
@@ -278,7 +287,7 @@ export function mountWorldMap({host,getContext,adapter=createMediaAdapter(getCon
     function listWaypoints(){const previous=selectedId;selectedId=null;sidebar.replaceChildren();go('LIST');highlight(previous,false);}
     function cardHead(title,subtitle,glyph=true){
         const head=document.createElement('header');head.className='gi-map-card-head';
-        if(glyph){const img=document.createElement('img');img.src=waypointGlyph;img.alt='';img.className='gi-map-card-glyph';head.append(img);}
+        if(glyph){const img=document.createElement('img');img.src=typeof glyph==='string'?glyph:waypointGlyph;img.alt='';img.className='gi-map-card-glyph';head.append(img);}
         const text=document.createElement('div');if(subtitle)text.append(element('small',subtitle));text.append(element('h3',title));
         const close=document.createElement('button');close.type='button';close.dataset.map='cancel';close.className='gi-map-card-close';close.setAttribute('aria-label','Close details');close.innerHTML=ICON.close;
         head.append(text,close);return head;
@@ -294,6 +303,20 @@ export function mountWorldMap({host,getContext,adapter=createMediaAdapter(getCon
         if(chips.children.length)section.append(chips);else section.append(element('small','No enemies can appear here.'));
         const restore=button(defeated.length?`Restore defeated enemies (${defeated.length})`:'No defeated enemies','restore-enemies');restore.disabled=!defeated.length;
         section.append(restore);return section;
+    }
+    // A Statue of The Seven: the element it grants, and who can resonate with it. Resonating needs the party there.
+    function statueSection(item){
+        const ctx=getContext(),el=statueElement(item.location),here=activeWorldLocation(ctx)?.location.id===item.location.id,travelers=resonanceTravelers(ctx);
+        const section=document.createElement('section');section.className='gi-map-music gi-map-statue';section.dataset.element=el || 'none';
+        section.append(element('h4',el?`Statue of The Seven · ${el}`:'Statue of the New Moon'));
+        // As in the game, the statue mends the party: on arrival, and again whenever you touch it while you are here.
+        const heal=button('Restore party HP','statue-heal');heal.disabled=!here;if(!here)heal.title='Travel here first';
+        section.append(element('p','Arriving here restores your party’s HP.'),heal);
+        if(!el){section.append(element('p','The Traveler cannot resonate with any element here.'));return section;}
+        section.append(element('p',travelers.length?travelers.map(t=>`${t.card.name}: ${t.element==='None'?'no element':t.element}`).join(' · '):'Bring Aether or Lumine, or play as one, to resonate here.'));
+        const go=button(`Resonate with ${el}`,'statue');go.disabled=!here||!travelers.length;if(!here)go.title='Travel here first';
+        section.append(go);if(!here)section.append(element('small','Teleport here to resonate.'));
+        return section;
     }
     // The picture is its own control: choosing a file replaces this waypoint's background straight away.
     function artworkPicker(item){
@@ -318,6 +341,7 @@ export function mountWorldMap({host,getContext,adapter=createMediaAdapter(getCon
         body.append(artworkPicker(item));
         if(item.location.description)body.append(element('p',item.location.description));
         const distance=element('p',distances(item));distance.className='gi-waypoint-distance';body.append(distance);
+        if(isStatue(item.location))body.append(statueSection(item));
         const section=document.createElement('section');section.className='gi-map-residents';section.append(element('h4','Residents'));
         const present=locationResidents(getContext(),item.location.id),roster=document.createElement('div');roster.className='gi-map-chips';
         roster.append(...present.map(c=>element('span',c.name)));if(present.length)section.append(roster);
@@ -338,7 +362,7 @@ export function mountWorldMap({host,getContext,adapter=createMediaAdapter(getCon
         const teleport=button('','teleport');teleport.className='gi-map-teleport';teleport.dataset.giSound='none';const glyph=document.createElement('img');glyph.src=waypointGlyph;glyph.alt='';teleport.append(glyph,element('span','Teleport'));
         const bypass=button('Bypass Encounters','bypass');bypass.className='gi-map-bypass';bypass.setAttribute('aria-pressed',String(encountersBypassed(getContext(),item.location.id)));bypass.title='Arrive here without meeting any characters or enemies';
         actions.append(bypass,edit,teleport);
-        sidebar.replaceChildren(cardHead(item.location.label,item.region.name),body,actions);go('SELECT');
+        sidebar.replaceChildren(cardHead(item.location.label,item.region.name,isStatue(item.location)?statueIcon:true),body,actions);go('SELECT');
     }
     function regionChoices(select,selected){
         const regions=backgroundRegions(getContext());select.append(...regions.map(r=>new Option(r.name,r.id)));
@@ -362,8 +386,12 @@ export function mountWorldMap({host,getContext,adapter=createMediaAdapter(getCon
         const link=document.createElement('select');link.id='gi-map-link';
         const files=input('gi-map-picture');files.type='file';files.accept='image/png,image/webp,image/jpeg,image/gif,image/avif';
         const aliases=input('gi-map-aliases',(item?.location.classifications || []).join('\n'),'textarea');aliases.rows=2;aliases.maxLength=1200;
+        // Any waypoint can be a Statue of The Seven: the Traveler resonates there and the party is healed on arrival.
+        const statue=document.createElement('select');statue.id='gi-map-statue';
+        statue.append(new Option('Not a statue',''),...STATUE_KINDS.map(k=>new Option(k==='New Moon'?'Statue of the New Moon (no element)':`Statue of The Seven · ${k}`,k)));
+        statue.value=STATUE_KINDS.includes(item?.location.statue)?item.location.statue:'';
         const coordinates=element('small',`x ${draft.x}, y ${draft.y}`);coordinates.id='gi-map-coordinates';
-        body.append(field('Name',name),field('Description',description),field('Region',region),custom,field('Background',link),field('Picture',files),field('Classifications (one per line)',aliases),coordinates);
+        body.append(field('Name',name),field('Description',description),field('Region',region),custom,field('Background',link),field('Picture',files),field('Classifications (one per line)',aliases),field('Statue',statue),coordinates);
         if(item){link.disabled=true;body.append(button('Unpin (keep background)','unpin'));}
         const actions=document.createElement('div');actions.className='gi-map-card-actions';const save=button('Save waypoint','save');save.className='gi-map-teleport gi-map-save';actions.append(button('Cancel','cancel'),save);
         sidebar.replaceChildren(cardHead(item?'Edit waypoint':'New waypoint','',false),body,actions);go('EDIT');
@@ -408,7 +436,7 @@ export function mountWorldMap({host,getContext,adapter=createMediaAdapter(getCon
     }
     // Genshin teleport: the screen washes to light, the scene swaps underneath, then it clears.
     function playTeleport(){
-        cue('teleport');if(reducedMotion())return;veil?.remove();clearTimeout(veilTimer);
+        cue('teleport');veil?.remove();clearTimeout(veilTimer);
         veil=document.createElement('div');veil.className='gi-teleport-veil';veil.setAttribute('aria-hidden','true');veil.innerHTML=`<i class="gi-teleport-ring"></i><i class="gi-teleport-ring"></i><img src="${waypointGlyph}" alt="">`;
         host.append(veil);veilTimer=setTimeout(()=>{veil?.remove();veil=null;},1500);
     }
@@ -437,7 +465,7 @@ export function mountWorldMap({host,getContext,adapter=createMediaAdapter(getCon
             const item=worldWaypoints(getContext()).find(w=>w.location.id===options.locationId),current=activeWorldLocation(getContext());
             if(item){showDetails(item);paintMarkers();renderList();map.setView(toLatLng(item.point),-1.5);flyTo(item.point,-1.5);}
             else if(options.locationId){if(current)map.setView(toLatLng(current.point),-1.5);startPlacement(options.locationId);}
-            else {listWaypoints();status('');if(current){map.setView(toLatLng(current.point),from?-1.5:-2);if(from&&!reducedMotion())setTimeout(()=>{if(dialog.open&&view.is('list'))map.flyTo(toLatLng(current.point),-2.5,{duration:.7});},180);}}
+            else {listWaypoints();status('');if(current){map.setView(toLatLng(current.point),from?-1.5:-2);if(from)setTimeout(()=>{if(dialog.open&&view.is('list'))map.flyTo(toLatLng(current.point),-2.5,{duration:.7});},180);}}
             updateScale();
         },
         sync({on,show=true,location,loading=false}={}){
@@ -471,7 +499,8 @@ export function mountWorldMap({host,getContext,adapter=createMediaAdapter(getCon
             if(!plan||disposed||token!==revision||startChat!==identity(getContext()))return false;
             if(!worldWaypoints(ctx).some(w=>w.location.id===item.location.id))throw new Error('This waypoint was removed while choosing companions.');
             if(!commitTeleport(plan))return false;
-            playTeleport();teleportTo(ctx,item.location.id,{avatars:plan.travellers,encounter:plan.encounter});onTeleport();onChange();announce(`Teleported to ${item.location.label}, ${item.region.name}.`);
+            playTeleport();teleportTo(ctx,item.location.id,{avatars:plan.travellers,encounter:plan.encounter});onTeleport();onChange();announce(`Teleported to ${item.location.label}, ${item.region.name}.${isStatue(item.location)?' The statue restores your party’s HP.':''}`);
+            if(isStatue(item.location))globalThis.toastr?.success?.('The statue restores your party’s HP.',item.location.label);
             if(dialog.open)close();return true;
         }finally{task.send('DONE');}
     }
@@ -507,6 +536,8 @@ export function mountWorldMap({host,getContext,adapter=createMediaAdapter(getCon
             if(name==='restore-enemies'&&item){const n=restoreEnemies(getContext(),item.location.id);showDetails(item);status(n?`${n} defeated ${n===1?'enemy':'enemies'} can appear at ${item.location.label} again.`:'No defeated enemies here.');return;}
             if(name==='bypass'&&item){const on=toggleEncounterBypass(ctx,item.location.id);saveTravel(ctx);showDetails(item);status(on?`Encounters bypassed at ${item.location.label}. Applies on your next arrival.`:`Encounters restored at ${item.location.label}. Applies on your next arrival.`);return;}
             if(name==='music'&&item){openMusic(item.location.id);return;}
+            if(name==='statue-heal'&&item){if(activeWorldLocation(ctx)?.location.id===item.location.id){healParty(ctx);saveTravel(ctx);onChange();showDetails(item);status('The statue restores your party’s HP.');}return;}
+            if(name==='statue'&&item){if(activeWorldLocation(ctx)?.location.id===item.location.id){close();openStatue(item.location);}return;}
             if(name==='wilderness'&&item){wildLocation=item.location;wildMenu.open();return;}
             if(name==='card-drops'&&item){wildLocation=item.location;cardPoolMenu.open();return;}
             if(name==='music-library'){openMusicLibrary();return;}
@@ -518,7 +549,7 @@ export function mountWorldMap({host,getContext,adapter=createMediaAdapter(getCon
                 Object.assign(worldSettings(ctx),{metresPerUnit:metres,walkingKph:speed});ctx.saveSettingsDebounced();api.syncPrompt();refresh({sidebarRefresh:true});onChange();status('World scale and all waypoint distances updated.');return;
             }
             if(name==='save'){
-                const args={id:selectedId,...regionValue(),label:$('#gi-map-name').value,description:$('#gi-map-description').value,classifications:$('#gi-map-aliases').value.split('\n'),point:structuredClone(draft),linkId:$('#gi-map-link').value};
+                const args={id:selectedId,...regionValue(),label:$('#gi-map-name').value,description:$('#gi-map-description').value,classifications:$('#gi-map-aliases').value.split('\n'),point:structuredClone(draft),linkId:$('#gi-map-link').value,statue:$('#gi-map-statue').value};
                 if(!args.label.trim())throw new Error('Give this waypoint a name.');
                 const file=$('#gi-map-picture').files[0],token=++revision,startChat=identity(ctx);
                 const controls=[...sidebar.querySelectorAll('button,input,select,textarea')].map(e=>[e,e.disabled]);

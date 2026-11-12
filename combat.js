@@ -24,6 +24,7 @@ import {locationCardPool} from './card-pools.js';
 import {npcKit} from './npc-kits.js';
 import {defeatGuildStaff} from './guild.js';
 import {hostileEnemy,playingEnemy} from './enemy-persona.js';
+import {volumeLevel} from './audio-levels.js';
 
 export async function appendCombatMessage(ctx,{name='Narrator',text,avatar,event}){
     const message={name,is_user:false,is_system:false,send_date:new Date().toISOString(),mes:text,extra:{silly_teyvat_combat:event,silly_teyvat_combat_scene:structuredClone(activeEnemies(ctx))}};
@@ -71,7 +72,8 @@ export function createCombatAdapter({loadScript=()=>import('/script.js')}={}){
 // Round summaries stay in the chat for the model but are never shown as dialogue, so a fight that
 // ends on one (a flee, or a reaction that failed) is still looking at the latest page.
 const latestShown=ctx=>{let id=ctx.chat.length-1;while(id>0&&ctx.chat[id]?.extra?.silly_teyvat_combat?.kind==='round')id--;return id;};
-export function mountCombat({host,getContext,onChange=()=>{},announce=()=>{},adapter=createCombatAdapter(),diceAdapter,battleAdapter}){
+// instant: plays the dice and the battle without animation, for the headless checks only.
+export function mountCombat({host,getContext,onChange=()=>{},announce=()=>{},adapter=createCombatAdapter(),diceAdapter,battleAdapter,instant=false}){
     // Enemy health sits at the top like a Genshin boss bar; the party's portraits stand along the right edge.
     const panel=document.createElement('aside');panel.id='gi-combat';panel.setAttribute('aria-label','Hostile encounters');panel.hidden=true;host.append(panel);
     const partyPanel=document.createElement('aside');partyPanel.id='gi-party-health';partyPanel.setAttribute('aria-label','Party health');partyPanel.hidden=true;host.append(partyPanel);let partyPaint='';const partyShown=new Map();
@@ -161,7 +163,7 @@ export function mountCombat({host,getContext,onChange=()=>{},announce=()=>{},ada
         announce(armed?(duelOnly?'Attack is on. When you send your next message you choose who to battle, or no one.':'Attack is on. Your next messages will also start a battle round.'):'Attack is off. Your messages will only speak.');return armed;
     }
     const current=(identity,token)=>!disposed&&enabled&&token===revision&&combatIdentity(getContext())===identity;
-    const prefs=ctx=>mediaSettings(ctx),volumeOf=(ctx,key)=>prefs(ctx)[key]===false?0:(prefs(ctx).spriteVolume ?? .8);
+    const prefs=ctx=>mediaSettings(ctx),volumeOf=(ctx,key)=>prefs(ctx)[key]===false?0:volumeLevel(prefs(ctx),'effects');
     // One full round in the manner of Genius Invokation: Roll Phase, then turns in alternation on the board, then the End Phase.
     // The finished round is saved and narrated, then the board shows Victory or the round's summary.
     // enemyFirst: the enemy started this fight, so it strikes before the party. duel: party members fought on your own.
@@ -173,18 +175,18 @@ export function mountCombat({host,getContext,onChange=()=>{},announce=()=>{},ada
         const stillThere=ctx=>duel?duel.every(a=>duelCandidates(ctx).includes(a)):activeEnemies(ctx).some(e=>e.key===visitKey&&e.avatar===avatar);
         const valid=()=>current(identity,token)&&stillThere(getContext());
         try{
-            const snapshot=battleSnapshot(ctx,{portrait:fullPortrait,duel,includeEnemies:Boolean(duel&&playingEnemy(ctx)&&duel.some(a=>!isEnemy(ctx,a)))}),motion=reduced(ctx);
+            const snapshot=battleSnapshot(ctx,{portrait:fullPortrait,duel,includeEnemies:Boolean(duel&&playingEnemy(ctx)&&duel.some(a=>!isEnemy(ctx,a)))});
             if(enemyFirst)snapshot.enemyFirst=true;
             // A new fight brings the enemy you confronted to the front.
             if(!snapshot.active?.enemy&&snapshot.units.some(u=>u.id===avatar&&u.side==='enemy'&&u.hp>0))snapshot.active={...snapshot.active,enemy:avatar};
             if(!snapshot.units.some(u=>u.side==='party'&&u.hp>0))throw new Error('Nobody in your party can fight. Rest at a town or the Adventurers\' Guild to recover.');
             const describe=state=>({allies:state.units.filter(u=>u.side==='party'&&u.hp>0).map(u=>({avatar:u.id,name:u.name,img:u.circle || u.img,element:u.element,active:state.active?.party===u.id})),enemy:{avatar,name:snapshot.units.find(u=>u.id===avatar)?.name || 'Enemy',img:portrait(ctx,avatar),maxHp:snapshot.units.find(u=>u.id===avatar)?.maxHp}});
-            const options={reducedMotion:motion,effects:prefs(ctx).battleEffects!==false,volume:volumeOf(ctx,'battleSound'),isCurrent:valid};
+            const options={instant,effects:prefs(ctx).battleEffects!==false,volume:volumeOf(ctx,'battleSound'),isCurrent:valid};
             const player={name:ctx.name1 || 'You',img:portrait(ctx,USER_KEY)};
             // Roll Phase: eight dice (nine with Electro Resonance), one reroll, thrown onto the table.
             const roll=async state=>{
                 let r=rollFuel(state);
-                const ok=await dice.roll(r,{describe:describe(state),reroll:indices=>(r=rerollFuel(state,r,indices)),volume:volumeOf(ctx,'diceSound'),reducedMotion:motion,isCurrent:valid});
+                const ok=await dice.roll(r,{describe:describe(state),reroll:indices=>(r=rerollFuel(state,r,indices)),volume:volumeOf(ctx,'diceSound'),instant,isCurrent:valid});
                 return ok&&valid()?r.dice.map(d=>({face:d.face})):null;
             };
             // Toss-Up returns to the Roll Phase with the dice you have left.
@@ -192,7 +194,7 @@ export function mountCombat({host,getContext,onChange=()=>{},announce=()=>{},ada
             const onReroll=async(current,live)=>{
                 const state=live?.units?live:snapshot,elements=partyElements(state);
                 let sub={kind:'fuel',dice:current.map(d=>({face:d.face,match:d.face==='Omni'||elements.has(d.face)})),allies:[],rerolls:0};
-                const ok=await dice.roll(sub,{describe:describe(state),heading:'Toss-Up',pickAll:true,reroll:picked=>(sub=rerollFuel(state,sub,picked)),volume:volumeOf(ctx,'diceSound'),reducedMotion:motion,isCurrent:valid});
+                const ok=await dice.roll(sub,{describe:describe(state),heading:'Toss-Up',pickAll:true,reroll:picked=>(sub=rerollFuel(state,sub,picked)),volume:volumeOf(ctx,'diceSound'),instant,isCurrent:valid});
                 return ok&&valid()?sub.dice.map(d=>({face:d.face})):null;
             };
             // The round is played live on the board, turn by turn, and saved once both sides have ended it.
@@ -246,7 +248,6 @@ export function mountCombat({host,getContext,onChange=()=>{},announce=()=>{},ada
     const activeEnemiesAll=(ctx,avatar)=>Object.values(ctx.chatMetadata?.silly_teyvat_combat?.visits || {}).map(v=>v.enemies?.[avatar]).find(Boolean);
     // Battle cards are larger than SillyTavern's thumbnails, so they use the full portrait.
     const fullPortrait=(ctx,avatar)=>{const url=portrait(ctx,avatar),m=/\/thumbnail\?type=(avatar|persona)&file=([^&]+)/.exec(url);return m?(m[1]==='avatar'?`/characters/${m[2]}`:`/User%20Avatars/${m[2]}`):url;};
-    const reduced=ctx=>Boolean(mediaSettings(ctx).reducedMotion||ctx.powerUserSettings?.reduced_motion||globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches);
     // The circular icon the Sprite wardrobe shows for a character, for every round cutout.
     const circle=(ctx,avatar)=>circularCharacterAvatar(ctx,avatar===USER_KEY?personaCard(ctx):ctx.characters?.find(c=>c.avatar===avatar)) || portrait(ctx,avatar);
     characterAvatarsReady.then(()=>{partyPaint='';paint='';});

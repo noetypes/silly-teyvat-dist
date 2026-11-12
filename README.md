@@ -32,7 +32,7 @@ Expressions use SillyTavern's **Character Expressions** classifier settings. Cha
 - One reply can voice everyone in the scene. The model writes speaker parts (`Klee:`, `Narrator:`), and each part becomes its own message, so the name plate, sprite and expression follow whoever is talking.
 - Narration is shown apart from dialogue, and a hidden **Narrator** sets the scene whenever you are travelling alone.
 - **Teyvat Choices** suggests three replies after each character message. Click one to send it.
-- **Auto** reads for you, **History** opens the full transcript for editing and swiping, and **Hide UI** clears the screen for screenshots. Regenerate and Stop sit beside the dialogue box.
+- **Auto** reads for you, **History** opens the full transcript for editing and swiping, and **Hide UI** clears the screen for screenshots, and **Full Screen** hides the browser around the game on PC and Android (on iPhone, add SillyTavern to the Home Screen and open it from there). Regenerate and Stop sit beside the dialogue box.
 - The HUD icons and the Paimon menu open SillyTavern's own panels, restyled to match the game.
 
 ### Characters, sprites and scenes
@@ -51,10 +51,11 @@ Expressions use SillyTavern's **Character Expressions** classifier settings. Cha
 
 ### The world map
 
-- A full interactive map of Teyvat with **260 waypoints in eight regions**: Mondstadt, Liyue, Inazuma, Sumeru, Fontaine, Natlan, Nod-Krai and Snezhnaya. Each has its own background and music.
+- A full interactive map of Teyvat with **268 waypoints in eight regions**: Mondstadt, Liyue, Inazuma, Sumeru, Fontaine, Natlan, Nod-Krai and Snezhnaya. Each has its own background and music.
 - **Teleport** to any waypoint, from the map or from the **Teyvat** tab of SillyTavern's Backgrounds menu, which shows every location picture. Travel is recorded in the chat with real distances, and a classifier follows the party when the story moves somewhere within the current region.
 - Characters live at the places they belong to, and you meet some of them when you arrive. When you leave, you choose who travels with you. Favourites are always there, and anyone left behind waits for you.
 - Wilderness waypoints have regional enemy pools, and **20 boss arenas** each hold one boss with its own music.
+- Every region has a **Statue of The Seven**, marked with the statue's own map icon (Nod-Krai's is a Statue of the New Moon). Arriving at one restores your party's HP. Arrive with Aether or Lumine in your party, or while playing one of them, to resonate with the region's element. Starfell Lake is a statue too, and the waypoint editor can make any waypoint one.
 - You can add, move and edit waypoints, set exploration and battle playlists per place, and adjust encounter chances.
 - The model is told the current location and the distances and directions to other places, so travel times stay believable.
 
@@ -71,6 +72,7 @@ Expressions use SillyTavern's **Character Expressions** classifier settings. Cha
 - Arm **Attack** before you send a message to fight the enemies in the scene, or a friendly character in a duel. Some characters and enemies start fights themselves.
 - Battles follow the Genius Invokation TCG: elemental dice and rerolls, active characters, switching, Elemental Tuning, Energy and Bursts, elemental reactions, summons, supports, weapons, artifacts and statuses. Newer mechanics such as Nightsoul, Techniques and Lunar reactions are included.
 - Over a hundred playable characters use their TCG card's kit, and every enemy and NPC has a moveset. You can edit any kit and replace the card art.
+- Aether and Lumine have a kit for each of their seven elements, based on the game's Skills and Bursts, with Burst splash art for every element. Change it at a Statue of The Seven or in Character Customization → Combat.
 - Every fight has full card animations, weapon-shaped attacks, Burst cinematics, battle sounds and a Victory screen. **Auto** can play your turns for you.
 - Victories drop cards based on where you fought and how hard the fight was. Build a combat deck of up to 30 cards in the **Inventory**, and use **Card Search** to mark the places that drop a card you want.
 - If the whole party falls, you are carried to the nearest Adventurers' Guild, where Katheryne is always waiting.
@@ -79,6 +81,7 @@ Expressions use SillyTavern's **Character Expressions** classifier settings. Cha
 
 - The **Silly Teyvat** switch unloads the whole extension. Below it, feature sets (story view, choices, sprites, CGs, sounds, encounters, battles, Trust, prompts and card art) turn on and off separately.
 - Settings are searchable, every section has a Reset, and fine-tuning is folded under **Advanced**.
+- **CG & Audio** has a Main volume and separate volumes for music, voices, CG audio, sound effects and interface sounds.
 - Every prompt the extension sends, including its roleplay writing guides, is editable under **Settings → Prompts**.
 - Scene, location and choice requests can use the main API, a saved Connection Manager profile or WebLLM.
 - **Share** exports the extension or the game data as ZIP files for other players. API keys and connection profiles are never exported.

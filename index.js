@@ -6,6 +6,7 @@ import {registerOfficialArt} from './official-art.js';
 import {mountCombat} from './combat.js';
 import {syncCombatPrompt,activeEnemies,defeatedHere} from './combat-state.js';
 import {mountLocationMusic} from './location-music.js';
+import {migrateVolumes,volumeLevel} from './audio-levels.js';
 /* Silly Teyvat, integrated suggested replies and native drawer presentation. */
 import { createTextReveal } from './text-reveal.js';
 import { mountPageSprites } from './page-sprites.js';
@@ -26,6 +27,7 @@ import { mountBackgrounds, backgroundRegions, travelState } from './backgrounds.
 import {mountBackgroundMenu} from './background-menu.js';
 import {worldWaypoints} from './world-data.js';
 import { mountWorldMap } from './world-map.js';
+import { mountStatueResonance } from './statue-resonance.js';
 import {beginOpeningScene} from './opening-scene.js';
 import {enemySpeaker} from './enemy-actions.js';
 import {hostileSpeaker,syncEnemyPersonaPrompt,enemyPersonaPrompt} from './enemy-persona.js';
@@ -60,11 +62,13 @@ import {nameTagNames,cleanMessageNameTags} from './name-tags.js';
 import {createKeyboardFrame} from './keyboard-frame.js';
 import {applyPackagedSettings} from './share-package.js';
 import {mountShare} from './share-ui.js';
+import * as fullscreen from './fullscreen.js';
+import {FRAME_CAP_OPTIONS,FRAME_CAP_MIN,FRAME_CAP_MAX,frameCapFps,setFrameCap} from './frame-rate.js';
 const KEY = 'genshin_dialogue_ui';
 // A GitHub install takes the repository's name, so the folder is read from where this file is served.
 const FOLDER = `third-party/${decodeURIComponent(new URL('./', import.meta.url).pathname.split('/').filter(Boolean).at(-1))}`;
-const defaults = Object.freeze({ ...stagingDefaults, enabled: false, choices: true, composer: true, reducedMotion: false, textScale: 1, scrim: 0.8, revealSpeed: 45, tapAdvance: true, pageExpressions: true, narration: false, narrationMode: 'quotes', narrationKeyword: 'Narrator:', hideDialogueQuotes:false, nameTagFilter:true, nameTagScope:'all', nameTagExtra:'', wardrobe: true, locationEncounters:true, locationCharacterLimit:5, randomEncounters:true, encounterRate:40, allowMainDeparture:false, worldPromptAllRegions:false, roleplayPromptsEnabled:true, wildernessEncounters:true, maxEnemies:3, combatDamageMin:1, combatDamageMax:6, enemyStrikeBack:true,combatTriggerPhrase:'[start_combat]', enemyDamageMin:2, enemyDamageMax:6, enemyDice:4, userMaxHp:30, combatDifficulty:'normal', battleEffects:true, battleSound:true,uiSound:true,uiSoundVolume:.7, personaSpriteClassify:false, soloGreeting:'standard', personaIcon: 'Aether', personaIconMode:'auto', hudTopIcons:'auto', namecard:'', signature:'', trimSprites:true, cgEnabled:true, cgClassifier:'main', cgProfile:'', choicesProfile:'', cgBypassReasoning:true, choicesBypassReasoning:true, cgPrompt:defaultCGPrompt, cgDisplayMode:'each', cgCooldown:10, cgAudio:true, spriteAudio:true, burstAudio:true, spriteVolume:.8, diceSound:true, trustSystem:false, travelerTwin:'Aether', master:true, cardArt:true, paimonLinks:PAIMON_LINKS, paimonRestore:{} });
-const bodyClasses = ['gi-menu-open', 'gi-enabled', 'gi-scene', 'gi-history', 'gi-hidden', 'gi-compose', 'gi-generating', 'gi-reduced-motion', 'gi-reading', 'gi-choices-enabled', 'gi-native-staging', 'gi-sprite-idle', 'gi-hud-top-off', 'gi-welcome'];
+const defaults = Object.freeze({ ...stagingDefaults, enabled: false, choices: true, composer: true, frameCap: 'unlimited', frameCapCustom: 90, textScale: 1, scrim: 0.8, revealSpeed: 45, tapAdvance: true, pageExpressions: true, narration: false, narrationMode: 'quotes', narrationKeyword: 'Narrator:', hideDialogueQuotes:false, nameTagFilter:true, nameTagScope:'all', nameTagExtra:'', wardrobe: true, locationEncounters:true, locationCharacterLimit:5, randomEncounters:true, encounterRate:40, allowMainDeparture:false, worldPromptAllRegions:false, roleplayPromptsEnabled:true, wildernessEncounters:true, maxEnemies:3, combatDamageMin:1, combatDamageMax:6, enemyStrikeBack:true,combatTriggerPhrase:'[start_combat]', enemyDamageMin:2, enemyDamageMax:6, enemyDice:4, userMaxHp:30, combatDifficulty:'normal', battleEffects:true, battleSound:true,uiSound:true,uiSoundVolume:.7,masterVolume:1,locationMusicEnabled:true,locationMusicVolume:.45,voiceVolume:.8,cgVolume:.8,effectsVolume:.8, personaSpriteClassify:false, soloGreeting:'standard', personaIcon: 'Aether', personaIconMode:'auto', hudTopIcons:'auto', namecard:'', signature:'', trimSprites:true, cgEnabled:true, cgClassifier:'main', cgProfile:'', choicesProfile:'', cgBypassReasoning:true, choicesBypassReasoning:true, cgPrompt:defaultCGPrompt, cgDisplayMode:'each', cgCooldown:10, cgAudio:true, spriteAudio:true, burstAudio:true, diceSound:true, trustSystem:false, travelerTwin:'Aether', master:true, cardArt:true, paimonLinks:PAIMON_LINKS, paimonRestore:{} });
+const bodyClasses = ['gi-menu-open', 'gi-enabled', 'gi-scene', 'gi-history', 'gi-hidden', 'gi-compose', 'gi-generating', 'gi-reading', 'gi-choices-enabled', 'gi-native-staging', 'gi-sprite-idle', 'gi-hud-top-off', 'gi-welcome'];
 const icons = {
     compass: '<path d="m12 2 3 7 7 3-7 3-3 7-3-7-7-3 7-3Z"/><path d="m12 8 4 4-4 4-4-4Z"/>',
     back: '<path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/>',
@@ -95,13 +99,18 @@ const menuButton = (action, label, icon = action) => MENU_ICONS.has(icon)
     : button(action, label, icon, false);
 // Trust has no icon in the game, so its heart is drawn to match them: their white, their outline.
 const TRUST_ICON = `data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 21.2 3.6 12.8a5.4 5.4 0 0 1 7.6-7.6l.8.8.8-.8a5.4 5.4 0 0 1 7.6 7.6Z" fill="#fff" stroke="#1c1c1c" stroke-width="1" stroke-linejoin="round"/></svg>')}`;
+// Full Screen has no icon in the game either: corner brackets in the same white and outline,
+// pointing out to enter and in to leave.
+const cornerIcon = path => `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="${path}" stroke="#1c1c1c" stroke-width="4.2"/><path d="${path}" stroke="#fff" stroke-width="2.4"/></svg>`)}`;
+const FULLSCREEN_ICONS = { enter: cornerIcon('M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5'), exit: cornerIcon('M9 4v5H4M20 9h-5V4M15 20v-5h5M4 15h5v5') };
+const fullscreenButton = () => `<button type="button" data-gi-action="fullscreen" aria-label="Full Screen" aria-pressed="false"><img class="gi-pm-icon" src="${FULLSCREEN_ICONS.enter}" alt="" aria-hidden="true" draggable="false"><span>Full Screen</span></button>`;
 // Card Search is available throughout a chat, with the game's Quests icon.
 const questButton = () => `<button type="button" data-gi-action="card-search" aria-label="Card Search" hidden><img class="gi-pm-icon" src="${QUEST_MENU_ICON}" alt="" aria-hidden="true" draggable="false"><span>Card Search</span></button>`;
 const trustButton = () => `<button type="button" data-gi-action="trust" aria-label="Trust"><img class="gi-pm-icon" src="${TRUST_ICON}" alt="" aria-hidden="true" draggable="false"><span>Trust</span></button>`;
 let mounted = false;
 let removeJourneyFilter;
 let backgroundUI;
-let worldMapUI,cardArtUI;
+let worldMapUI,cardArtUI,statueUI;
 let locationCastUI;
 let groupGenerating=false;
 let openingHome=true,homeOpenRevision=0;
@@ -216,6 +225,7 @@ function preferences() {
     // 1.43: "Recent speakers only" became one of the Crowded scenes choices.
     if (store[KEY].spriteCrowd === undefined && store[KEY].autoHideSprites) store[KEY].spriteCrowd = 'recent';
     if (!['auto', 'recent', 'all'].includes(store[KEY].spriteCrowd ?? 'auto')) store[KEY].spriteCrowd = 'auto';
+    migrateVolumes(store[KEY]);
     for (const [key, value] of Object.entries(defaults)) {
         if (typeof store[KEY][key] !== typeof value) store[KEY][key] = value;
     }
@@ -223,8 +233,9 @@ function preferences() {
     if (!['main','profile','webllm'].includes(store[KEY].cgClassifier)) store[KEY].cgClassifier = 'main';
     if (!CG_DISPLAY_MODES.includes(store[KEY].cgDisplayMode)) store[KEY].cgDisplayMode = 'each';
     if (!['auto','on','off'].includes(store[KEY].hudTopIcons)) store[KEY].hudTopIcons = 'auto';
-    store[KEY].spriteVolume = Math.max(0,Math.min(1,Number(store[KEY].spriteVolume) || 0));
-    store[KEY].uiSoundVolume = Math.max(0,Math.min(1,Number(store[KEY].uiSoundVolume) || 0));
+    if (!FRAME_CAP_OPTIONS.includes(store[KEY].frameCap)) store[KEY].frameCap = 'unlimited';
+    store[KEY].frameCapCustom = Math.max(FRAME_CAP_MIN,Math.min(FRAME_CAP_MAX,Math.round(Number(store[KEY].frameCapCustom) || 90)));
+    setFrameCap(frameCapFps(store[KEY]));
     store[KEY].textScale = Math.min(1.4, Math.max(0.85, Number(store[KEY].textScale) || 1));
     store[KEY].revealSpeed = Math.min(150, Math.max(0, Number(store[KEY].revealSpeed) || 0));
     store[KEY].scrim = Math.min(0.95, Math.max(0.4, Number(store[KEY].scrim) || 0.8));
@@ -296,11 +307,15 @@ function holdTravelLoad(place){
     if(release)setTimeout(release,50);
 }
 // Held from the moment SillyTavern clears the chat until CHAT_CHANGED takes its own hold.
-let bridgeRelease=null;
+// SillyTavern also clears and redraws the same chat in place, for example when it saves a card
+// while the chat holds only the greeting (as it does after the open chat is deleted). The messages
+// then return under the same chat id with no CHAT_CHANGED, so their return ends the hold.
+let bridgeRelease=null,bridgeChatId=null;
 function bridgeChatSwitch(){
     if(bridgeRelease||!loadingUI)return;
+    bridgeChatId=context().getCurrentChatId?.() ?? null;
     const release=loadingUI.hold(loadingPlace(context()),{instant:true}),timer=setTimeout(()=>bridgeRelease?.(),3000);
-    bridgeRelease=()=>{clearTimeout(timer);bridgeRelease=null;release();};
+    bridgeRelease=(options)=>{clearTimeout(timer);bridgeRelease=null;release(options);};
 }
 function schedule() {
     if (!mounted || frame) return;
@@ -316,9 +331,10 @@ function conflictText() {
     return issues.join(' ');
 }
 // A closed settings drawer is not worth painting. checkVisibility() also covers a collapsed SillyTavern drawer around it.
+// The panel's drawer is open and on screen, not just its header.
 function settingsShown() {
-    const panel = document.querySelector('#gi-settings');
-    return Boolean(panel) && (panel.checkVisibility ? panel.checkVisibility() : panel.getClientRects().length > 0);
+    const content = document.querySelector('#gi-settings .inline-drawer-content');
+    return Boolean(content) && (content.checkVisibility ? content.checkVisibility() : content.getClientRects().length > 0);
 }
 function syncSettings(force=true) {
     const prefs = preferences();
@@ -347,14 +363,14 @@ function syncSettings(force=true) {
     document.querySelector('#gi-cg-reasoning-row')?.toggleAttribute('hidden', prefs.cgClassifier !== 'main');
     document.querySelector('#gi-choices-reasoning-row')?.toggleAttribute('hidden', Boolean(prefs.choicesProfile));
     document.querySelector('#gi-crowd-max-row')?.toggleAttribute('hidden', prefs.spriteCrowd !== 'recent');
+    document.querySelector('#gi-frame-cap-custom-row')?.toggleAttribute('hidden', prefs.frameCap !== 'custom');
     const scale = document.querySelector('#gi-text-scale-value');
     const scrim = document.querySelector('#gi-scrim-value');
     if (scale) scale.value = `${Math.round(prefs.textScale * 100)}%`;
     const speed = document.querySelector('#gi-reveal-speed-value');
     if (speed) speed.value = prefs.revealSpeed ? `${prefs.revealSpeed}/s` : 'Instant';
     if (scrim) scrim.value = `${Math.round(prefs.scrim * 100)}%`;
-    const volume=document.querySelector('#gi-sprite-volume-value');if(volume)volume.value=`${Math.round(prefs.spriteVolume*100)}%`;
-    const uiVolume=document.querySelector('#gi-ui-sound-volume-value');if(uiVolume)uiVolume.value=`${Math.round(prefs.uiSoundVolume*100)}%`;
+    for(const key of ['masterVolume','locationMusicVolume','voiceVolume','cgVolume','effectsVolume','uiSoundVolume']){const output=document.querySelector(`#gi-settings output[data-gi-volume="${key}"]`);if(output)output.value=`${Math.round(prefs[key]*100)}%`;}
     paintResets(document.querySelector('#gi-settings'),defaults);
 }
 // Event narration (attacks, reactions, travel and teleports) is appended moments
@@ -401,7 +417,7 @@ function refresh({passive=false}={}) {
     for (const el of Array.from(chatWith('gi-current'))) if (el.parentElement?.id === 'chat' && (el !== selected || !active)) el.classList.remove('gi-current');
     if (active && selected) selected.classList.add('gi-current');
     // The welcome page is styled by this class rather than by #chat:has(> .welcomePanel): a :has() on #chat is re-checked on every text change in it, and re-styles every message with it.
-    const flags = { 'gi-welcome': Boolean(document.querySelector('#chat > .welcomePanel')), 'gi-native-staging': prefs.enabled && prefs.nativeStaging, 'gi-sprite-idle': prefs.enabled && prefs.spriteIdle !== false, 'gi-hud-top-off': prefs.enabled && prefs.choices && topIconsHidden(prefs), 'gi-enabled': prefs.enabled, 'gi-scene': sceneActive, 'gi-history': active && history, 'gi-hidden': active && hidden, 'gi-compose': active && (composing || history), 'gi-generating': active && generating, 'gi-reading': active && (morePages || index < list.length - 1 || generating || reveal.revealing), 'gi-reduced-motion': prefs.enabled && (prefs.reducedMotion || Boolean(ctx.powerUserSettings?.reduced_motion)) };
+    const flags = { 'gi-welcome': Boolean(document.querySelector('#chat > .welcomePanel')), 'gi-native-staging': prefs.enabled && prefs.nativeStaging, 'gi-sprite-idle': prefs.enabled && prefs.spriteIdle !== false, 'gi-hud-top-off': prefs.enabled && prefs.choices && topIconsHidden(prefs), 'gi-enabled': prefs.enabled, 'gi-scene': sceneActive, 'gi-history': active && history, 'gi-hidden': active && hidden, 'gi-compose': active && (composing || history), 'gi-generating': active && generating, 'gi-reading': active && (morePages || index < list.length - 1 || generating || reveal.revealing) };
     for (const [name, value] of Object.entries(flags)) document.body.classList.toggle(name, Boolean(value));
     spriteUI?.sync({ on: Boolean(sceneActive && !history && (prefs.nativeStaging || prefs.pageExpressions || prefs.narration)), id: selected ? Number(current) : -1, page: page.index, text: page.pages[page.index]?.textContent || '', narration: narrated, classifyPages: prefs.pageExpressions, enemyAction:page.pages[page.index]?.giEnemyAction || 'neutral', complete: !generating || index < list.length - 1 || morePages, generating });
     stageEffects?.sync(Boolean(sceneActive&&!history&&!hidden),Boolean(reveal.revealing||generating));
@@ -411,6 +427,8 @@ function refresh({passive=false}={}) {
     if(placeNow?.location?.id){if(prefs.enabled&&lastPlaceId&&placeNow.location.id!==lastPlaceId)holdTravelLoad(placeNow);if(placeNow.location.id!==lastPlaceId)backgroundMenuUI?.sync();lastPlaceId=placeNow.location.id;}
     locationCastUI?.sync({on:Boolean(prefs.enabled&&inChat&&!openingHome),generating:generating||groupGenerating||combatUI?.busy||personaSession?.busy});
     worldMapUI?.sync({on:Boolean(prefs.enabled&&inChat),show:Boolean(sceneActive&&!history&&!hidden&&!menuOpen),location:backgroundUI?.current,loading:Boolean(loadingUI?.visible)});
+    // Arriving at a Statue of The Seven offers the Traveler its element once the new place is on screen and nothing is busy.
+    statueUI?.sync({on:Boolean(prefs.enabled&&inChat),ready:Boolean(active&&!history&&!hidden&&!menuOpen&&!generating&&!groupGenerating&&!loadingUI?.visible&&!combatUI?.busy&&!combatUI?.engaged&&!locationCastUI?.busy&&!personaSession?.busy&&!worldMapUI?.busy&&!document.querySelector('dialog[open]:not(#gi-statue)'))});
     for (const el of uiActions('wardrobe')) el.hidden = !prefs.wardrobe;
     for (const el of uiActions('trust')) el.hidden = !prefs.trustSystem;
     const canSearch = Boolean(prefs.enabled && inChat);
@@ -478,6 +496,7 @@ function refresh({passive=false}={}) {
     const hideLabel = hidden ? 'Show UI' : 'Hide UI';
     hide.setAttribute('aria-label', hideLabel);
     hide.querySelector('span').textContent = hideLabel; hide.setAttribute('aria-pressed', String(hidden));
+    paintFullscreen();
     const notice = document.querySelector('#gi-notice');
     const conflict = conflictText();
     notice.hidden = !prefs.enabled || !conflict || conflict === dismissedNotice || hidden;
@@ -641,6 +660,25 @@ function toggleHistory() {
         document.querySelector('#gi-review-heading button')?.focus();
     } else document.querySelector('#gi-toolbar [data-gi-action="history"]')?.focus();
 }
+// The Paimon menu's Full Screen tile follows the page's state, including Esc or the browser's own exit.
+function paintFullscreen() {
+    const tile = document.querySelector('#gi-toolbar [data-gi-action="fullscreen"]');
+    if (!tile) return;
+    // The tile keeps its short name (the longer one would wrap) and shows the state with its icon.
+    // Opened from the Home Screen, the game already fills it and there is nothing to leave.
+    tile.hidden = fullscreen.standalone();
+    const on = fullscreen.active(), label = on ? 'Exit Full Screen' : 'Full Screen';
+    tile.setAttribute('aria-pressed', String(on)); tile.setAttribute('aria-label', label);
+    tile.title = fullscreen.supported() ? label : fullscreen.hint();
+    const icon = tile.querySelector('img'), src = FULLSCREEN_ICONS[on ? 'exit' : 'enter'];
+    if (icon.getAttribute('src') !== src) icon.src = src;
+}
+function toggleFullscreen() {
+    if (!fullscreen.supported()) { const text = fullscreen.hint(); announce(text); globalThis.toastr?.info?.(text, 'Silly Teyvat'); return; }
+    // The menu closes first so the game is what fills the screen.
+    menu.send('CLOSE'); refresh();
+    void fullscreen.toggle();
+}
 function handleAction(event) {
     if (menuIsOpen() && !event.target.closest('#gi-launcher, #gi-toolbar')) { menu.send('CLOSE'); schedule(); }
     const target = event.target.closest('[data-gi-action]');
@@ -674,6 +712,7 @@ function handleAction(event) {
             break;
         }
         case 'history': toggleHistory(); break;
+        case 'fullscreen': toggleFullscreen(); break;
         case 'hide': view.send('HIDE'); if (uiHidden()) menu.send('CLOSE'); stopAuto(); refresh(); break;
         case 'compose':
             composing = !composing; preferences().composer = composing; context().saveSettingsDebounced(); view.send('SHOW'); stopAuto(); refresh();
@@ -693,7 +732,12 @@ function handleAction(event) {
             const tab = target.dataset.tab;
             clearSettingsSearch(document.querySelector('#gi-settings'));
             document.querySelectorAll('#gi-settings .gi-set-tabs [data-tab]').forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === tab)));
-            document.querySelectorAll('#gi-settings .gi-set-page').forEach(page => { page.hidden = page.dataset.page !== tab; });
+            document.querySelectorAll('#gi-settings .gi-set-page').forEach(page => {
+                page.hidden = page.dataset.page !== tab;
+                // Only a tab change slides the page in, not the drawer opening (which would run both at once).
+                page.classList.remove('gi-set-enter');
+                if (!page.hidden) { void page.offsetWidth; page.classList.add('gi-set-enter'); }
+            });
             break;
         }
         case 'settings-reset': {
@@ -845,7 +889,7 @@ export async function initialize(options = {}) {
                 <button type="button" class="gi-pm-switch" data-gi-action="toggle" aria-pressed="false" aria-label="Silly Teyvat"><span>Silly Teyvat</span><i aria-hidden="true"></i></button>
                 <button type="button" class="gi-pm-switch gi-pm-solo" data-gi-action="solo-journey" hidden><span>Start solo journey</span></button>
                 <section id="gi-pm-namecards" class="gi-pm-namecards" aria-label="Namecards" hidden><header><h3>Namecard</h3>${menuButton('namecards', 'Done', 'close')}</header><div class="gi-pm-nc-list" role="radiogroup" aria-label="Choose a namecard"></div></section>
-                <div class="gi-pm-grid">${menuButton('auto', 'Auto')}${menuButton('history', 'Review', 'book')}${menuButton('wardrobe', 'Characters')}${menuButton('inventory', 'Inventory', 'bag')}${questButton()}${trustButton()}${menuButton('map', 'Map')}${menuButton('gallery', 'Gallery', 'cg')}${menuButton('compose', 'Chat Box')}${menuButton('hide', 'Hide UI')}${menuButton('namecards', 'Namecard', 'namecard')}</div>
+                <div class="gi-pm-grid">${menuButton('auto', 'Auto')}${menuButton('history', 'Review', 'book')}${menuButton('wardrobe', 'Characters')}${menuButton('inventory', 'Inventory', 'bag')}${questButton()}${trustButton()}${menuButton('map', 'Map')}${menuButton('gallery', 'Gallery', 'cg')}${menuButton('compose', 'Chat Box')}${menuButton('hide', 'Hide UI')}${fullscreenButton()}${menuButton('namecards', 'Namecard', 'namecard')}</div>
                 <section class="gi-pm-tavern" aria-label="SillyTavern"><h3>SillyTavern</h3><div class="gi-pm-grid">${ST_DRAWERS.map(([id, label]) => `<button type="button" data-gi-action="st-drawer" data-drawer="${id}" aria-label="${label}"><img src="${drawerIcon(id)}" alt="" aria-hidden="true" draggable="false"${id === 'persona-management-button' ? ' data-persona' : ''}><span>${label}</span></button>`).join('')}</div></section>
             </div>
         </nav>
@@ -877,7 +921,9 @@ export async function initialize(options = {}) {
         openMusic:id=>locationMusicUI.openLocation(id),openMusicLibrary:()=>locationMusicUI.openLibrary(),openCardSearch:()=>cardSearchUI?.open(),
         openJourney:id=>journeyAdapter.open(id),
         prepareTeleport:location=>locationCastUI.prepareTeleport(location),commitTeleport:plan=>locationCastUI.commitTeleport(plan),onTeleport:jumpToArrival,retryCast:()=>locationCastUI.retry(),
+        openStatue:location=>statueUI?.open(location),
         onChange:()=>{backgroundUI.refresh();schedule();}});
+    statueUI=mountStatueResonance({host,getContext:context,announce,onChange:schedule});
     // SillyTavern's Backgrounds menu lists every location; choosing one in a journey teleports there.
     backgroundMenuUI=mountBackgroundMenu({getContext:context,announce,
         inJourney:()=>{const ctx=context();return Boolean(preferences().enabled&&(ctx.characterId!=null||ctx.groupId));},
@@ -902,8 +948,13 @@ export async function initialize(options = {}) {
         document.querySelector('#extensions_settings2').insertAdjacentHTML('beforeend', html);
         renderFeatureSwitches(document.querySelector('#gi-settings'));
         structureSettings(document.querySelector('#gi-settings'));bindSettingsSearch(document.querySelector('#gi-settings'),abort.signal);
-        // The panel is painted only while it is on screen (syncSettings), so opening its drawer asks for a refresh.
-        if(typeof ResizeObserver!=='undefined'){settingsObserver=new ResizeObserver(()=>schedule());settingsObserver.observe(document.querySelector('#gi-settings'));}
+        // The panel is painted only while it is on screen (syncSettings). Its inputs are painted once, just before
+        // SillyTavern slides the drawer open, so the slide animates finished content. The observer only notices the
+        // drawer appearing some other way (the Extensions panel opening around it); it does not refresh the whole
+        // extension on every frame of the slide.
+        const settingsPanel=document.querySelector('#gi-settings');
+        settingsPanel.querySelector('.inline-drawer-toggle')?.addEventListener('click',()=>{if(!settingsShown())syncSettings();},{capture:true,signal:abort.signal});
+        if(typeof ResizeObserver!=='undefined'){let shown=settingsShown();settingsObserver=new ResizeObserver(()=>{const now=settingsShown();if(now&&!shown)syncSettings();shown=now;});settingsObserver.observe(settingsPanel.querySelector('.inline-drawer-content') || settingsPanel);}
         manifest.then(m => { const footer = document.querySelector('#gi-settings .gi-set-footer span'); if (footer) footer.textContent = m.version || ''; }).catch(() => {});
     } catch (error) {
         console.warn('[Silly Teyvat] Settings panel unavailable. Alt+G and the compass still work.', error);
@@ -917,8 +968,9 @@ export async function initialize(options = {}) {
         if(gameDataChecked||version!==mountVersion)return;gameDataChecked=true;
         void shareUI?.checkGameData({startup:true}).catch(error=>console.warn('[Silly Teyvat] Game data check',error));
     });
-    uiSound=createUiSound({getVolume:()=>preferences().uiSound?preferences().uiSoundVolume:0});mountUiSound({sound:uiSound,signal:abort.signal});
+    uiSound=createUiSound({getVolume:()=>preferences().uiSound?volumeLevel(preferences(),'ui'):0});mountUiSound({sound:uiSound,signal:abort.signal});
     document.addEventListener('click', handleAction, { signal: abort.signal });
+    fullscreen.onChange(() => { paintFullscreen(); announce(fullscreen.active() ? 'Full screen on.' : 'Full screen off.'); }, abort.signal);
     document.addEventListener('keydown', handleKey, { signal: abort.signal });
     renderPromptLibrary();
     bindRoleplayPrompts(context, abort.signal);
@@ -944,6 +996,9 @@ export async function initialize(options = {}) {
             }else if(key==='cgCooldown'){
                 if(!Number.isInteger(value)||value<0||value>200){input.value=preferences().cgCooldown;announce('Choose from 0 to 200 messages.');return;}
                 preferences()[key]=value;
+            }else if(key==='frameCapCustom'){
+                if(!Number.isInteger(value)||value<FRAME_CAP_MIN||value>FRAME_CAP_MAX){input.value=preferences().frameCapCustom;announce(`Choose a cap from ${FRAME_CAP_MIN} to ${FRAME_CAP_MAX} frames a second.`);return;}
+                preferences()[key]=value;
             }else if(key==='maxEnemies'){
                 if(!Number.isInteger(value)||value<1||value>3){input.value=preferences().maxEnemies;announce('Choose from 1 to 3 enemies.');return;}
                 preferences()[key]=value;
@@ -968,7 +1023,9 @@ export async function initialize(options = {}) {
     observer = new MutationObserver(records => {
         // SillyTavern empties #chat before it announces the next chat (New Chat, another character).
         // Cover the stage in this same task, before a frame of the bare interface can paint.
-        if(preferences().enabled&&records.some(record=>record.target.id==='chat'&&[...record.removedNodes].some(node=>node.classList?.contains('mes')))&&!document.querySelector('#chat > .mes'))bridgeChatSwitch();
+        const shown=Boolean(document.querySelector('#chat > .mes'));
+        if(preferences().enabled&&!shown&&records.some(record=>record.target.id==='chat'&&[...record.removedNodes].some(node=>node.classList?.contains('mes'))))bridgeChatSwitch();
+        else if(bridgeRelease&&shown&&(context().getCurrentChatId?.() ?? null)===bridgeChatId)bridgeRelease({unneeded:true});
         // Ignore our own presentation copy; native streaming and edit mutations
         // still schedule a refresh. This avoids an observer/render feedback loop.
         if (records.some(record => !(record.target.nodeType === Node.ELEMENT_NODE ? record.target : record.target.parentElement)?.closest('.gi-page') &&
@@ -1090,7 +1147,7 @@ export function dispose() {
     mediaUI?.dispose(); mediaUI=undefined;
     backgroundUI?.dispose();backgroundUI=undefined;
     backgroundMenuUI?.dispose();backgroundMenuUI=undefined;
-    worldMapUI?.dispose();worldMapUI=undefined;
+    worldMapUI?.dispose();worldMapUI=undefined;statueUI?.dispose();statueUI=undefined;
     locationCastUI?.dispose();locationCastUI=undefined;
     removeJourneyFilter?.();removeJourneyFilter=undefined;
     combatUI?.dispose();combatUI=undefined;
