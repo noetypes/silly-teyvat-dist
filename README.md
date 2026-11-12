@@ -30,6 +30,7 @@ Expressions use SillyTavern's **Character Expressions** classifier settings. Cha
 
 - Replies play as visual novel pages over the scene: gold speaker names, text that reveals at your chosen speed, and arrows, tap or keyboard to move between pages and messages.
 - One reply can voice everyone in the scene. The model writes speaker parts (`Klee:`, `Narrator:`), and each part becomes its own message, so the name plate, sprite and expression follow whoever is talking.
+- **Guest speakers** (Settings → Dialogue) lets a character voice someone without a card, such as Fischl speaking for Oz (`Oz:`) or Kinich for Ajaw (`Ajaw:`). Those lines show the guest's name, and the character's sprite stays unlit until their own name comes back.
 - Narration is shown apart from dialogue, and a hidden **Narrator** sets the scene whenever you are travelling alone.
 - **Teyvat Choices** suggests three replies after each character message. Click one to send it.
 - **Auto** reads for you, **History** opens the full transcript for editing and swiping, and **Hide UI** clears the screen for screenshots, and **Full Screen** hides the browser around the game on PC and Android (on iPhone, add SillyTavern to the Home Screen and open it from there). Regenerate and Stop sit beside the dialogue box.
@@ -63,7 +64,7 @@ Expressions use SillyTavern's **Character Expressions** classifier settings. Cha
 
 - Each character has up to five hearts of Trust with you in each chat. They gain or lose it through the roleplay, and higher Trust makes them more willing to go along with you.
 - Characters who already know the one you play start with suitable Trust.
-- Give cards from your Inventory as gifts. Everyone has favourite and least favourite cards, based on the game.
+- Give cards from your Inventory as gifts. Everyone has favourite and least favourite cards, based on the game. The **Gifts** menu in a character's profile sets how much each card raises or lowers their Trust.
 - **What do they think of you?** in the Trust menu shows a character's private opinion of you.
 - Some sprites and scenes unlock only at a minimum Trust, set in half hearts.
 
