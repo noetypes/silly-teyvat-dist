@@ -42,6 +42,7 @@ Expressions use SillyTavern's **Character Expressions** classifier settings. Cha
 - Expressions are chosen for each page or message and remembered, so revisiting old dialogue shows the same scene without asking the model again.
 - **Scene CGs**: hundreds of official artworks, including every character birthday illustration, are offered to a classifier that picks one when a reply fits. CGs can replace the background or open in a frame, and can be images, GIFs or videos with their own sound. Scenes can require certain characters or a location. The **Gallery** collects every scene a chat has shown.
 - **Character Customization** (the Paimon menu's Characters screen) edits each card's name, card details and portrait, profile, outfits, expressions, scenes, staging, combat kit and starting Trust. You can upload your own sprite sets, expressions, voice clips and CGs.
+- Every card carries a **Silly Teyvat** tag and SillyTavern tags for its role (playable, NPC, enemy or boss), rarity, element, region, weapon, build, titles and nicknames, occupation, affiliation and personality, so the Character List's tag filter can show, say, every Pyro character, every Fatui or every 5★.
 - Sprites can have voice clips, and Elemental Bursts play Japanese Burst voice lines. An outfit without its own clip for an expression speaks with that expression's clip from the character's other sprite sets, unless you turn that off for the sprite.
 
 ### Playing as anyone
@@ -74,7 +75,7 @@ Expressions use SillyTavern's **Character Expressions** classifier settings. Cha
 - Battles follow the Genius Invokation TCG: elemental dice and rerolls, active characters, switching, Elemental Tuning, Energy and Bursts, elemental reactions, summons, supports, weapons, artifacts and statuses. Newer mechanics such as Nightsoul, Techniques and Lunar reactions are included.
 - Over a hundred playable characters use their TCG card's kit, and every enemy and NPC has a moveset. You can edit any kit and replace the card art.
 - Aether and Lumine have a kit for each of their seven elements, based on the game's Skills and Bursts, with Burst splash art for every element. Change it at a Statue of The Seven or in Character Customization → Combat.
-- Every fight has full card animations, weapon-shaped attacks, Burst cinematics, battle sounds and a Victory screen. **Auto** can play your turns for you.
+- Every character, enemy and NPC has icons for their combat moves. Every fight has full card animations, weapon-shaped attacks, Burst cinematics, battle sounds and a Victory screen. **Auto** can play your turns for you.
 - Victories drop cards based on where you fought and how hard the fight was. Build a combat deck of up to 30 cards in the **Inventory**, and use **Card Search** to mark the places that drop a card you want.
 - If the whole party falls, you are carried to the nearest Adventurers' Guild, where Katheryne is always waiting.
 
