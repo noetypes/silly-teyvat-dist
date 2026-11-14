@@ -14,11 +14,11 @@ Requires **SillyTavern 1.19.0 or later**, Git, and about **7 GB of free disk spa
    ```text
    https://github.com/noetypes/silly-teyvat-dist
    ```
-2. Reload SillyTavern. Accept **Download** when Silly Teyvat offers its game data (**2.29 GB**). Keep the page open while it downloads and installs, then choose **Reload** when finished.
+2. Reload SillyTavern. Accept **Download** when Silly Teyvat offers its game data (**2.14 GB**). Keep the page open while it downloads and installs, then choose **Reload** when finished.
 3. Connect your own **Chat Completion API** in SillyTavern. No model subscription or API credentials are included.
 4. Choose a persona (Aether and Lumine are included), open a Genshin character card, and start chatting. The Paimon menu opens **Characters**, **Map**, **Inventory** and the other game screens. If dialogue view is off, switch **Silly Teyvat** on in that menu or press **Alt+G**.
 
-The download includes **275 character cards, 2,490 sprites, 928 uploaded files, the Aether and Lumine personas, two lorebooks, the Teyvat Slate theme and Teyvat Choices**. Map backgrounds, portraits, TCG artwork, dice, fonts and interface assets are included with the extension. Your existing SillyTavern content is kept.
+The download includes **275 character cards, 2,484 sprites, 959 uploaded files, the Aether and Lumine personas, two lorebooks, the Teyvat Slate theme and Teyvat Choices**. Map backgrounds, portraits, TCG artwork, dice, fonts and interface assets are included with the extension. Your existing SillyTavern content is kept.
 
 If you chose **Not now**, open **Extensions → Silly Teyvat → Share → Check for game data**. Interrupted downloads can be retried; files already installed are skipped. Update the extension through SillyTavern's extension manager; newer game data is offered automatically when available.
 
@@ -42,7 +42,7 @@ Expressions use SillyTavern's **Character Expressions** classifier settings. Cha
 - Expressions are chosen for each page or message and remembered, so revisiting old dialogue shows the same scene without asking the model again.
 - **Scene CGs**: hundreds of official artworks, including every character birthday illustration, are offered to a classifier that picks one when a reply fits. CGs can replace the background or open in a frame, and can be images, GIFs or videos with their own sound. Scenes can require certain characters or a location. The **Gallery** collects every scene a chat has shown.
 - **Character Customization** (the Paimon menu's Characters screen) edits each card's name, card details and portrait, profile, outfits, expressions, scenes, staging, combat kit and starting Trust. You can upload your own sprite sets, expressions, voice clips and CGs.
-- Sprites can have voice clips, and Elemental Bursts play Japanese Burst voice lines.
+- Sprites can have voice clips, and Elemental Bursts play Japanese Burst voice lines. An outfit without its own clip for an expression speaks with that expression's clip from the character's other sprite sets, unless you turn that off for the sprite.
 
 ### Playing as anyone
 
