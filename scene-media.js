@@ -111,6 +111,29 @@ export function fittedFrame({width,height,extraWidth,extraHeight,ratio,maxWidth,
     const scale=Math.min(Math.max(1,(180-extraWidth)/mediaWidth,(120-extraHeight)/mediaHeight),(maxWidth-extraWidth)/mediaWidth,(maxHeight-extraHeight)/mediaHeight);
     return {width:mediaWidth*scale+extraWidth,height:mediaHeight*scale+extraHeight};
 }
+// The top of the dialogue box (name and text) as it stands with its longest page, or the bottom of the screen
+// when no dialogue is shown. A page shorter than the longest still leaves the same room above it.
+export function dialogueTop(doc=document){
+    const view=doc.defaultView,H=view.innerHeight,state=doc.body.classList;
+    if(!state.contains('gi-scene')||state.contains('gi-history')||state.contains('gi-hidden'))return H;
+    const shown=node=>Boolean(node?.getClientRects().length)&&view.getComputedStyle(node).display!=='none';
+    const box=[...doc.querySelectorAll('#chat > .mes.gi-current')].find(shown);
+    if(!shown(box)){const chat=doc.querySelector('#chat');return shown(chat)?chat.getBoundingClientRect().top:H;}
+    const text=[...box.querySelectorAll('.gi-page, .mes_text')].find(shown);
+    const longest=text?Number.parseFloat(view.getComputedStyle(text).maxHeight):NaN;
+    const spare=Number.isFinite(longest)?Math.max(0,longest-text.getBoundingClientRect().height):0;
+    return Math.max(0,box.getBoundingClientRect().top-spare);
+}
+// The highest a framed CG may stand. SillyTavern's top bar (a clear strip with its drawer buttons on the right)
+// lies above the frame, so a header under it would take no clicks and its × would open a drawer instead.
+export function frameCeiling(doc=document){
+    const view=doc.defaultView;let bottom=0;
+    for(const bar of doc.querySelectorAll('#top-bar, #top-settings-holder')){
+        if(!bar.getClientRects().length||view.getComputedStyle(bar).visibility==='hidden')continue;
+        const r=bar.getBoundingClientRect();if(r.height&&r.top<view.innerHeight/3)bottom=Math.max(bottom,r.bottom);
+    }
+    return Math.max(6,Math.min(bottom+6,view.innerHeight*.3));
+}
 // One place to show a CG: an image (GIFs animate on their own) or a video with its sound.
 function createCGMedia(image){
     const video=document.createElement('video');video.hidden=true;video.playsInline=true;video.preload='auto';image.after(video);
@@ -332,13 +355,29 @@ export function mountSceneMedia({host,getContext,adapter=createMediaAdapter(getC
     gallery.querySelector('header button').addEventListener('click',()=>gallery.close(),{signal:abort.signal});
     preview.addEventListener('close',()=>{previewMedia.stop();if(audioKind==='preview')stopSound();stageMedia.resume();frameMedia.resume();},{signal:abort.signal});
     globalThis.matchMedia?.('(max-width: 768px), (max-height: 500px)').addEventListener('change',()=>{if(activeCG)paint(activeCG,selection);},{signal:abort.signal});
-    const frameLimits = () => ({maxWidth:innerWidth-12,maxHeight:innerHeight-12});
+    const screenLimits = () => ({maxWidth:innerWidth-12,maxHeight:innerHeight-12});
+    const frameLimits = () => ({maxWidth:innerWidth-12,maxHeight:innerHeight-frameCeiling()-6});
     const frameExtras = (box,bar) => {const extraWidth=box.offsetWidth-box.clientWidth;return {extraWidth,extraHeight:extraWidth+bar.offsetHeight};};
-    // Each surface sizes itself as its image or video reports its shape, including a cached one.
+    // The size and place the player chose by moving or resizing the frame. Until they do, the frame opens at its
+    // default place, sized once so it ends above the dialogue box with its longest page and never covers the text.
+    // Neither changes on its own afterwards: paging, the reply box opening or the keyboard leave the frame as it is.
+    let preferred = null, initial = null;
+    const remembered = mediaSettings(getContext()).cgFrame;
+    if (remembered && ['left','top','width','height'].every(k=>Number.isFinite(remembered[k]))) preferred = {...remembered};
+    function initialFrame() {
+        if (initial?.screen === innerWidth) return initial;
+        for (const k of ['left','top','width','height']) frame.style[k] = '';
+        const r = frame.getBoundingClientRect(), bottom = Math.max(r.top+120, Math.min(innerHeight-6, dialogueTop()-6));
+        return initial = {left:r.left, top:r.top, width:r.width, height:Math.min(r.height,bottom-r.top), maxHeight:bottom-r.top, screen:innerWidth};
+    }
+    // Each surface takes its image or video's shape, at the same area, as it reports its shape (a cached one too).
     function fitFrame() {
+        const base = preferred || initialFrame();
+        Object.assign(frame.style,{left:`${base.left}px`,top:`${base.top}px`,width:`${base.width}px`,height:`${base.height}px`});
         const ratio=frameMedia.ratio();
         if(ratio){
-            const r=frame.getBoundingClientRect(),size=fittedFrame({width:r.width,height:r.height,ratio,...frameExtras(frame,frame.querySelector('header')),...frameLimits()});
+            const limits=preferred?frameLimits():{maxWidth:innerWidth-12,maxHeight:base.maxHeight};
+            const size=fittedFrame({width:base.width,height:base.height,ratio,...frameExtras(frame,frame.querySelector('header')),...limits});
             frame.style.width=`${size.width}px`;frame.style.height=`${size.height}px`;
         }
         clampFrame();
@@ -346,19 +385,19 @@ export function mountSceneMedia({host,getContext,adapter=createMediaAdapter(getC
     function fitPreview() {
         preview.style.width=preview.style.height='';
         const ratio=previewMedia.ratio();if(!ratio||preview.dataset.display!=='frame')return;
-        const saved=mediaSettings(getContext()).cgFrame,r=preview.getBoundingClientRect();
-        const size=fittedFrame({width:saved?.width || r.width,height:saved?.height || r.height,ratio,...frameExtras(preview,preview.querySelector('header')),...frameLimits()});
+        const r=preview.getBoundingClientRect();
+        const size=fittedFrame({width:preferred?.width || r.width,height:preferred?.height || r.height,ratio,...frameExtras(preview,preview.querySelector('header')),...screenLimits()});
         preview.style.width=`${size.width}px`;preview.style.height=`${size.height}px`;
     }
+    // The frame stays on screen and below the top bar, so its title bar and × are always where they look.
     function clampFrame() {
-        const r = frame.getBoundingClientRect();
-        frame.style.width = `${Math.min(Math.max(180,r.width),innerWidth-12)}px`;
-        frame.style.height = `${Math.min(Math.max(120,r.height),innerHeight-12)}px`;
-        frame.style.left = `${Math.max(6,Math.min(r.left,innerWidth-Math.min(r.width,innerWidth-12)-6))}px`;
-        frame.style.top = `${Math.max(6,Math.min(r.top,innerHeight-Math.min(r.height,innerHeight-12)-6))}px`;
+        const r = frame.getBoundingClientRect(), ceiling = frameCeiling();
+        const width = Math.min(Math.max(180,r.width),innerWidth-12), height = Math.min(Math.max(120,r.height),innerHeight-ceiling-6);
+        frame.style.width = `${width}px`;
+        frame.style.height = `${height}px`;
+        frame.style.left = `${Math.max(6,Math.min(r.left,innerWidth-width-6))}px`;
+        frame.style.top = `${Math.max(ceiling,Math.min(r.top,innerHeight-height-6))}px`;
     }
-    const remembered = mediaSettings(getContext()).cgFrame;
-    if (remembered) for (const k of ['left','top','width','height']) if(Number.isFinite(remembered[k]))frame.style[k]=`${remembered[k]}px`;
     function resizeFrame(width,ratio) {
         const extras=frameExtras(frame,frame.querySelector('header')),next=Math.max(180,width),size=fittedFrame({width:next,height:(next-extras.extraWidth)/ratio+extras.extraHeight,ratio,...extras,...frameLimits()});
         frame.style.width=`${size.width}px`;frame.style.height=`${size.height}px`;
@@ -378,7 +417,7 @@ export function mountSceneMedia({host,getContext,adapter=createMediaAdapter(getC
         else Object.assign(frame.style,drag.resize?{width:`${drag.width+dx}px`,height:`${drag.height+dy}px`}:{left:`${drag.left+dx}px`,top:`${drag.top+dy}px`});
         clampFrame();
     },{signal:abort.signal});
-    function saveFrame(){const r=frame.getBoundingClientRect();mediaSettings(getContext()).cgFrame={left:r.left,top:r.top,width:r.width,height:r.height};getContext().saveSettingsDebounced();}
+    function saveFrame(){const r=frame.getBoundingClientRect();preferred={left:r.left,top:r.top,width:r.width,height:r.height};mediaSettings(getContext()).cgFrame={...preferred};getContext().saveSettingsDebounced();}
     function rememberFrame() { if(!drag)return;drag=null;saveFrame(); }
     frame.addEventListener('pointerup',rememberFrame,{signal:abort.signal}); frame.addEventListener('pointercancel',rememberFrame,{signal:abort.signal});
     frame.querySelector('.gi-cg-resize').addEventListener('keydown',event=>{
@@ -387,7 +426,10 @@ export function mountSceneMedia({host,getContext,adapter=createMediaAdapter(getC
         else{frame.style.width=`${r.width+({ArrowLeft:-20,ArrowRight:20}[event.key]||0)}px`;frame.style.height=`${r.height+({ArrowUp:-20,ArrowDown:20}[event.key]||0)}px`;}
         clampFrame();saveFrame();
     },{signal:abort.signal});
-    window.addEventListener('resize',()=>{if(!frame.hidden)fitFrame();if(preview.open)fitPreview();},{signal:abort.signal});
+    // Only a change of screen width (a phone turned, a window resized) fits the frame again. The on-screen
+    // keyboard changes only the height, and leaves the frame as it is.
+    let screenWidth = innerWidth;
+    window.addEventListener('resize',()=>{if(innerWidth!==screenWidth){screenWidth=innerWidth;if(!frame.hidden)fitFrame();}if(preview.open)fitPreview();},{signal:abort.signal});
     frameMedia.onResize(()=>{if(!frame.hidden)fitFrame();},abort.signal);
     previewMedia.onResize(()=>{if(preview.open)fitPreview();},abort.signal);
     return api;

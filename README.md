@@ -14,11 +14,11 @@ Requires **SillyTavern 1.19.0 or later**, Git, and about **7 GB of free disk spa
    ```text
    https://github.com/noetypes/silly-teyvat-dist
    ```
-2. Reload SillyTavern. Accept **Download** when Silly Teyvat offers its game data (**2.09 GB**). Keep the page open while it downloads and installs, then choose **Reload** when finished.
+2. Reload SillyTavern. Accept **Download** when Silly Teyvat offers its game data (**2.29 GB**). Keep the page open while it downloads and installs, then choose **Reload** when finished.
 3. Connect your own **Chat Completion API** in SillyTavern. No model subscription or API credentials are included.
 4. Choose a persona (Aether and Lumine are included), open a Genshin character card, and start chatting. The Paimon menu opens **Characters**, **Map**, **Inventory** and the other game screens. If dialogue view is off, switch **Silly Teyvat** on in that menu or press **Alt+G**.
 
-The download includes **273 character cards, 2,424 sprites, 928 uploaded files, the Aether and Lumine personas, two lorebooks, the Teyvat Slate theme and Teyvat Choices**. Map backgrounds, portraits, TCG artwork, dice, fonts and interface assets are included with the extension. Your existing SillyTavern content is kept.
+The download includes **275 character cards, 2,490 sprites, 928 uploaded files, the Aether and Lumine personas, two lorebooks, the Teyvat Slate theme and Teyvat Choices**. Map backgrounds, portraits, TCG artwork, dice, fonts and interface assets are included with the extension. Your existing SillyTavern content is kept.
 
 If you chose **Not now**, open **Extensions → Silly Teyvat → Share → Check for game data**. Interrupted downloads can be retried; files already installed are skipped. Update the extension through SillyTavern's extension manager; newer game data is offered automatically when available.
 
@@ -52,7 +52,7 @@ Expressions use SillyTavern's **Character Expressions** classifier settings. Cha
 
 ### The world map
 
-- A full interactive map of Teyvat with **269 waypoints in eight regions**: Mondstadt, Liyue, Inazuma, Sumeru, Fontaine, Natlan, Nod-Krai and Snezhnaya. Each has its own background and music.
+- A full interactive map of Teyvat with **270 waypoints in eight regions**: Mondstadt, Liyue, Inazuma, Sumeru, Fontaine, Natlan, Nod-Krai and Snezhnaya. Each has its own background and music.
 - **Teleport** to any waypoint, from the map or from the **Teyvat** tab of SillyTavern's Backgrounds menu, which shows every location picture. Travel is recorded in the chat with real distances, and a classifier follows the party when the story moves somewhere within the current region.
 - Characters live at the places they belong to, and you meet some of them when you arrive. When you leave, you choose who travels with you. Favourites are always there, and anyone left behind waits for you.
 - Wilderness waypoints have regional enemy pools, and **20 boss arenas** each hold one boss with its own music.
@@ -64,7 +64,7 @@ Expressions use SillyTavern's **Character Expressions** classifier settings. Cha
 
 - Each character has up to five hearts of Trust with you in each chat. They gain or lose it through the roleplay, and higher Trust makes them more willing to go along with you.
 - Characters who already know the one you play start with suitable Trust.
-- Give cards from your Inventory as gifts. Everyone has favourite and least favourite cards, based on the game. The **Gifts** menu in a character's profile sets how much each card raises or lowers their Trust.
+- Give cards from your Inventory as gifts. Everyone has favourite and least favourite cards, based on the game, including their own summons, weapons and haunts. A favourite gives the most Trust, up to +1 for a 5★ card and +0.5 for any other. The **Gifts** menu in a character's profile sets how much each card raises or lowers their Trust.
 - **What do they think of you?** in the Trust menu shows a character's private opinion of you.
 - Some sprites and scenes unlock only at a minimum Trust, set in half hearts.
 
