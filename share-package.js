@@ -213,6 +213,69 @@ export async function existingFiles(ctx,paths,{signal,post=api(ctx,signal)}={}){
     for(const {name} of await listSprites(ctx,[...folders],signal))present.add(name);
     return present;
 }
+// The player's own characters among the game's. Every game card carries data.extensions.silly_teyvat.
+// A card without it that has a game card's file name, or a game character's name (SillyTavern keeps
+// sprites in a folder named after the character), would share that card or sprite folder with the
+// game's version. Grouped by game card: [{avatar:'Klee.png',cards:[the player's Klee cards]}].
+// Characters SillyTavern loaded "shallow" (without their extensions) are read in full.
+export async function foreignCards(ctx,avatars,{signal,post=api(ctx,signal)}={}){
+    const byName=new Map(avatars.map(avatar=>[NameSet.key(stem(avatar)),avatar])),groups=new Map();
+    for(const card of ctx.characters || []){
+        if(card.isPersona)continue;
+        const avatar=byName.get(NameSet.key(stem(String(card.avatar))))??byName.get(NameSet.key(diskFolder(String(card.name ?? '').trim())));
+        if(!avatar)continue;
+        let data=card.data;
+        if(card.shallow||!data){
+            try{data=(await post('/api/characters/get',{avatar_url:card.avatar})).data;}
+            catch(error){if(signal?.aborted)throw error;console.warn('[Silly Teyvat] Card check',card.avatar,error);continue;}
+        }
+        if(data?.extensions?.silly_teyvat)continue;
+        if(!groups.has(avatar))groups.set(avatar,[]);
+        groups.get(avatar).push(card);
+    }
+    return [...groups].map(([avatar,cards])=>({avatar,cards}));
+}
+// Saves those cards, and every sprite in the folders the game's versions use, into a ZIP the
+// player keeps. Then the sprites are removed so the game's install into empty folders. A card with
+// the game card's file name is replaced by the import (the player's chats with it are kept); one
+// with another file name stays, and now shows the game's sprites.
+export async function setAsideCards(ctx,groups,{sink,folders,signal,report=()=>{}}){
+    const cards=groups.flatMap(group=>group.cards),zip=createZipWriter(sink),sprites=await listSprites(ctx,folders,signal),total=cards.length+sprites.length;let done=0;
+    const save=async(name,url,what)=>{
+        signal?.throwIfAborted();
+        const response=await fetch(url,{cache:'no-store',signal});
+        if(!response.ok)throw new Error(`Could not back up ${what} (${response.status}). Nothing was changed.`);
+        await zip.add(name,await response.blob());report(++done,total);
+    };
+    for(const card of cards)await save(`cards/${card.avatar}`,`/characters/${encodeURIComponent(card.avatar)}`,`${card.name}'s card`);
+    for(const sprite of sprites)await save(sprite.name,sprite.url,sprite.name.slice(8));
+    // The backup is saved before anything is removed.
+    await zip.close();await sink.close();
+    for(const sprite of sprites){
+        signal?.throwIfAborted();
+        const {folder,spriteName,label}=spriteUpload(sprite.name.slice(8));
+        await ok(await fetch('/api/sprites/delete',{method:'POST',headers:ctx.getRequestHeaders(),body:JSON.stringify({name:folder,label,spriteName}),signal}),`Removing ${sprite.name}`);
+    }
+    return {cards:cards.length,sprites:sprites.length};
+}
+function withoutKeys(value,drop){
+    if(Array.isArray(value))return value.map(item=>withoutKeys(item,drop));
+    if(!isRecord(value))return value;
+    return Object.fromEntries(Object.entries(value).filter(([key])=>!drop(key)).map(([key,item])=>[key,withoutKeys(item,drop)]));
+}
+// Characters the player chose to keep as their own (card file names): none of the game's files, tags,
+// expression folders or settings for them are installed. Strips them from the manifest and returns
+// a test for the archive's paths.
+export function leaveCharacters(manifest,avatars){
+    const cards=new NameSet(avatars),roots=[...new Set(avatars.map(avatar=>NameSet.key(`sprites/${stem(avatar)}/`)))],avatar=name=>cards.has(name);
+    if(avatars.length){
+        manifest.settings=withoutKeys(manifest.settings,avatar);
+        manifest.tagMap=withoutKeys(manifest.tagMap || {},avatar);
+        manifest.overrides=(manifest.overrides || []).filter(item=>!avatar(`${item.name}.png`));
+        manifest.characterLore=(manifest.characterLore || []).filter(item=>!avatar(item.name));
+    }
+    return path=>(path.startsWith('cards/')&&cards.has(path.slice(6)))||roots.some(root=>NameSet.key(path).startsWith(root));
+}
 function mergeTags(ctx,manifest){
     const ids=new Map();
     for(const tag of manifest.tags || []){
@@ -316,15 +379,17 @@ const KINDS=['cards','sprites','files','backgrounds','avatars'];
 export async function importGameData({file,...options}){return importArchive({...options,zip:await readZip(file)});}
 // zip is readZip's result or anything shaped like it. Paths in overwrite (and lorebooks/<name>,
 // theme and quick-replies) replace the player's copies even when replace is off: a published update
-// uses it for what changed since the release this player has.
-export async function importArchive({ctx,zip,replace=false,overwrite=new Set(),useSettings=false,report=()=>{},signal}){
+// uses it for what changed since the release this player has. Characters in leave (card file names)
+// are the player's own and are not touched.
+export async function importArchive({ctx,zip,replace=false,overwrite=new Set(),leave=[],useSettings=false,report=()=>{},signal}){
     const manifestEntry=[...zip.entries.values()].find(entry=>entry.name.split('/').at(-1)===GAME_MANIFEST);
     if(!manifestEntry)throw new Error('This file is not a Silly Teyvat game data export.');
     const root=manifestEntry.name.slice(0,-GAME_MANIFEST.length),manifest=JSON.parse(await (await zip.read(manifestEntry)).text());
     if(manifest.format!==FORMAT)throw new Error('This game data was made by a different version of Silly Teyvat.');
     manifest.settings=relocateSettings(withBundledPersonas(manifest.settings));
+    const kept=leaveCharacters(manifest,leave);
     const post=api(ctx,signal),send=uploaders(ctx,signal),entries=[...zip.entries.values()].filter(entry=>entry!==manifestEntry).map(entry=>({entry,path:entry.name.slice(root.length)}));
-    const usable=entries.filter(({path})=>isSafeEntry(path)&&KINDS.includes(path.split('/')[0])&&shippedEntry(path)),present=replace?new Set():await existingFiles(ctx,usable.map(item=>item.path),{signal,post});
+    const usable=entries.filter(({path})=>isSafeEntry(path)&&KINDS.includes(path.split('/')[0])&&shippedEntry(path)&&!kept(path)),present=replace?new Set():await existingFiles(ctx,usable.map(item=>item.path),{signal,post});
     for(const {entry} of usable)if(overwrite.has(entry.name))present.delete(entry.name.slice(root.length));
     const failed=[];let added=0,skipped=0,done=0;
     for(const {entry,path} of usable){

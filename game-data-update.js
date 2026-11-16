@@ -41,15 +41,54 @@ export async function loadRelease(fetcher=fetch){
 }
 // Settings remember the installed release; lorebooks, the theme and quick replies are tracked as
 // named parts of the export's manifest file so that a change to one replaces only that one.
-export function updatePlan(release,installed){
+// A complete plan also covers files deleted since they were installed: Check for game data, or a
+// library that lost most of the game's characters, offers them again. A repair is a complete plan
+// for the release this player already has.
+export function updatePlan(release,installed,{complete=false}={}){
     if(!release)return {kind:'none',paths:[],bytes:0};
-    if(!installed)return {kind:'install',paths:Object.keys(release.files).filter(shippedEntry),bytes:release.bytes};
-    if(compareVersions(installed,release.version)>=0)return {kind:'none',paths:[],bytes:0};
+    const shipped=Object.keys(release.files).filter(shippedEntry);
+    if(!installed)return {kind:'install',paths:shipped,bytes:release.bytes};
+    if(compareVersions(installed,release.version)>=0)return complete?{kind:'repair',paths:shipped,bytes:release.bytes}:{kind:'none',paths:[],bytes:0};
     const changed=name=>compareVersions(release.files[name]?.since ?? release.parts?.[name]?.since,installed)>0;
-    const paths=Object.keys(release.files).filter(name=>name!==release.manifest&&shippedEntry(name)&&changed(name));
+    const paths=shipped.filter(name=>name!==release.manifest&&changed(name));
     const parts=Object.keys(release.parts || {}).filter(changed);
     const bytes=[...paths,release.manifest].reduce((sum,name)=>sum+release.files[name].size,0);
-    return {kind:'update',paths:[...paths,release.manifest],parts,bytes};
+    const plan={kind:'update',paths:[...paths,release.manifest],parts,bytes};
+    if(complete){const listed=new Set(plan.paths);plan.restore=shipped.filter(name=>!listed.has(name));}
+    return plan;
+}
+// The share of the release's characters missing from this server, from the character list alone.
+// Characters the player kept as their own are not the game's to miss.
+export function missingCards(ctx,release,kept=[]){
+    const key=name=>String(name).normalize('NFC').toLowerCase(),have=new Set((ctx.characters || []).map(card=>key(card.avatar))),own=new Set(kept.map(key));
+    const cards=Object.keys(release?.files || {}).filter(name=>name.startsWith('cards/')&&!own.has(key(name.slice(6))));
+    return cards.length?cards.filter(name=>!have.has(key(name.slice(6)))).length/cards.length:0;
+}
+const stem=name=>name.replace(/\.[^.]+$/,'');
+// A character's files in the release: its card and every sprite in the folder named after it.
+export function characterPaths(release,avatar){
+    const card=`cards/${avatar}`.toLowerCase(),root=`sprites/${stem(avatar)}/`.toLowerCase();
+    return Object.keys(release.files).filter(name=>{const lower=name.toLowerCase();return lower===card||lower.startsWith(root);});
+}
+// The sprite folders a game character uses: the one named after it and the release's sets inside it.
+export function characterFolders(release,avatar){
+    const sets=characterPaths(release,avatar).filter(name=>name.startsWith('sprites/')).map(name=>name.slice(8).split('/').slice(0,-1).join('/'));
+    return [...new Set([stem(avatar),...sets])];
+}
+function finishPlan(release,plan,need,have){
+    const manifest=plan.kind==='install'||need.length||plan.parts?.length?[release.manifest]:[];
+    const paths=[...need,...manifest];
+    return {...plan,paths,need,have,files:need.length+have.length,bytes:paths.reduce((sum,name)=>sum+release.files[name].size,0)};
+}
+// Characters the player kept as their own ('keep') are left out of the game data, and their
+// files are never compared or downloaded. Characters set aside for the game's ('replace') have
+// every file of theirs downloaded again, over whatever is left.
+export function adjustPlan(release,plan,avatars,mode){
+    if(plan.kind==='none'||!avatars?.length)return plan;
+    const owned=new Set(avatars.flatMap(avatar=>characterPaths(release,avatar))),other=name=>!owned.has(name);
+    const need=plan.need.filter(other),have=plan.have.filter(other);
+    if(mode==='replace')need.push(...owned);
+    return {...finishPlan(release,plan,need,have),overwrite:mode==='replace'?[...new Set([...(plan.overwrite || []),...owned])]:plan.overwrite};
 }
 export function formatBytes(bytes){
     const units=['bytes','KB','MB','GB'];let value=bytes,unit=0;
@@ -168,27 +207,27 @@ async function sameFile(release,path,{fetcher,signal}){
     if(!response?.ok||Number(response.headers?.get?.('content-length') ?? release.files[path].size)!==release.files[path].size){await response?.body?.cancel?.();return false;}
     try{await verified(release,path,await response.blob());return true;}catch{return false;}
 }
-// Narrows a plan to what this server lacks. A first install keeps whatever is already here; an
-// update skips a changed file when this player's copy already matches the new one.
+// Narrows a plan to what this server lacks. A first install or a repair keeps whatever is already
+// here; an update skips a changed file when this player's copy already matches the new one, and
+// a complete update adds back unchanged files that are missing.
 export async function localPlan(release,plan,{present,fetcher=fetch,signal,report=()=>{}}={}){
     if(plan.kind==='none')return {...plan,files:0,have:[]};
-    const media=plan.paths.filter(name=>name!==release.manifest),need=[],have=[];let done=0;
+    const media=plan.paths.filter(name=>name!==release.manifest),restore=plan.restore || [],total=media.length+restore.length,need=[],have=[];let done=0;
     for(const path of media){
         signal?.throwIfAborted();
         if(!present.has(path))need.push(path);
-        else if(plan.kind==='install'||await sameFile(release,path,{fetcher,signal}))have.push(path);
+        else if(plan.kind!=='update'||await sameFile(release,path,{fetcher,signal}))have.push(path);
         else need.push(path);
-        report(++done,media.length,{have:have.length});
+        report(++done,total,{have:have.length});
     }
+    for(const path of restore){(present.has(path)?have:need).push(path);report(++done,total,{have:have.length});}
     // The export's own manifest carries settings, lorebooks, the theme and quick replies.
-    const manifest=plan.kind==='install'||need.length||plan.parts?.length?[release.manifest]:[];
-    const paths=[...need,...manifest];
-    return {...plan,paths,need,have,files:media.length,bytes:paths.reduce((sum,name)=>sum+release.files[name].size,0)};
+    return finishPlan(release,plan,need,have);
 }
 export async function checkLocal(ctx,release,plan,options={}){
     if(plan.kind==='none')return localPlan(release,plan,options);
-    const present=await existingFiles(ctx,plan.paths.filter(name=>name!==release.manifest),{signal:options.signal});
+    const present=await existingFiles(ctx,[...plan.paths,...(plan.restore || [])].filter(name=>name!==release.manifest),{signal:options.signal});
     return localPlan(release,plan,{...options,present});
 }
 // A first install that needs most of the export is faster as one download than as many ranges.
-export const wholeDownload=(release,plan)=>plan.kind==='install'&&plan.bytes>release.bytes*.6;
+export const wholeDownload=(release,plan)=>plan.kind!=='update'&&plan.bytes>release.bytes*.6;
