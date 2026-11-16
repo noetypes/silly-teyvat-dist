@@ -34361,11 +34361,7 @@
   },
   "spriteTrust": {},
   "guestSpeakers": true,
-  "giftTrust": {
-   "Fischl.png": {
-    "sweet-madame": 2
-   }
-  },
+  "giftTrust": {},
   "hud": true,
   "paimonLinksVersion": 2,
   "shell": true,
