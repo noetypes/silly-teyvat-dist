@@ -1,6 +1,6 @@
 import {mountWorldMap} from './world-map.js';
 import {mountBackgrounds,travelState,selectRegion,visitLocation} from './backgrounds.js';
-import {saveWaypoint,setWaypointArtwork,teleportTo,worldWaypoints,WORLD_PROMPT_KEY,mapDistance,TEYVAT_MAP} from './world-data.js';
+import {saveWaypoint,setWaypointArtwork,worldWaypoints,WORLD_PROMPT_KEY,mapDistance,TEYVAT_MAP} from './world-data.js';
 import {mapCRS,toMapPoint,toLatLng} from './map-engine.js';
 import {waypointEnemy} from './waypoint-badges.js';
 import {iconsReady} from './battle-icons.js';
@@ -10,7 +10,7 @@ export async function runWorldMapTests(){
     const host=document.createElement('div');document.body.append(host);
     const path=new URL('preview-landscape.svg',location.href).pathname;
     const ctx={characterId:0,chatId:'world-fixture',chatMetadata:{},chat:[{name:'Klee',mes:'Windrise.'}],extensionSettings:{},extensionPrompts:{},saveChat(){},saveMetadataDebounced(){},saveSettingsDebounced(){},setExtensionPrompt(key,value,position,depth,scan,role){this.extensionPrompts[key]={value,position,depth,scan,role};}};
-    const point=(x,y)=>({mapId:'teyvat',x,y});let runtime,mapUI,calls=0,answer,changes=0;
+    const point=(x,y)=>({mapId:'teyvat',x,y});let runtime,mapUI,calls=0;
     const $=selector=>host.querySelector(selector),$$=selector=>[...host.querySelectorAll(selector)],click=async name=>{$(`[data-map="${name}"]`).click();await pause();};
     const sync=()=>mapUI?.sync({on:true,show:true,location:runtime?.current});
     const adapter={upload:async file=>({name:file.name,path})};
@@ -23,7 +23,7 @@ export async function runWorldMapTests(){
         const tree=saveWaypoint(ctx,{regionName:'Mondstadt',label:'Windrise',point:point(0,0),path,description:'The great tree.'});
         const lake=saveWaypoint(ctx,{regionId:tree.region.id,label:'Cider Lake',point:point(300,400),path});
         const port=saveWaypoint(ctx,{regionName:'Liyue',label:'Harbor',point:point(-1500,1000),path,description:'The port.'});
-        mapUI=mountWorldMap({host,getContext:()=>ctx,adapter,onChange(){changes++;runtime?.refresh();sync();}});
+        mapUI=mountWorldMap({host,getContext:()=>ctx,adapter,onChange:()=>sync()});
         runtime=mountBackgrounds({host,getContext:()=>ctx,adapter,onChange:sync});
         sync();check('minimap is available before a current background is mapped',!$('#gi-minimap').hidden&&$('#gi-minimap').classList.contains('gi-minimap-unlocated'));
         $('#gi-minimap').click();await pause();check('clicking the minimap opens the full interactive map', $('#gi-world-map').open&&!!$('[data-map="zoom-in"]')&&!!$('.gi-map-zoom-range')&&$('#gi-world-map').dataset.enter==='minimap');

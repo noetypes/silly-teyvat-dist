@@ -12,6 +12,7 @@ import {giftTastes} from './gift-tastes.js';
 import {trustChange,stripTrustTags} from './trust-tags.js';
 import {TRUST_MAX,startingTrust} from './relationship-trust.js';
 import {defaultPrompt,promptText,renderPrompt} from './prompt-templates.js';
+import {cardByAvatar} from './card-index.js';
 
 export {TRUST_MAX};
 export const TRUST_BANDS=[
@@ -32,7 +33,7 @@ function bandMeaning(ctx,band){
 const tenth=n=>Math.round(n*10)/10;
 const clamp=n=>Math.max(0,Math.min(TRUST_MAX,tenth(n)));
 export function speakerCard(ctx,message){
-    return (message?.original_avatar&&ctx.characters?.find(c=>c.avatar===message.original_avatar)) || ctx.characters?.find(c=>c.name===message?.name) || null;
+    return (message?.original_avatar&&cardByAvatar(ctx,message.original_avatar)) || ctx.characters?.find(c=>c.name===message?.name) || null;
 }
 // The change a chat message makes, if any. A gift's change lives on its narration, and the reply to a
 // gift never counts on its own, so regenerating that reply cannot change the result of the gift.
@@ -60,12 +61,12 @@ export function trustRoster(ctx){
         if(message.is_user||message.is_system||message.extra?.type==='narrator')continue;
         const card=speakerCard(ctx,message);if(card&&!isEnemy(ctx,card))seen.add(card.avatar);
     }
-    return [...seen].filter(a=>!played.has(a)).map(avatar=>({avatar,card:ctx.characters?.find(c=>c.avatar===avatar),level:levels[avatar] ?? startingTrust(ctx,avatar),present:present.has(avatar)})).filter(entry=>entry.card)
+    return [...seen].filter(a=>!played.has(a)).map(avatar=>({avatar,card:cardByAvatar(ctx,avatar),level:levels[avatar] ?? startingTrust(ctx,avatar),present:present.has(avatar)})).filter(entry=>entry.card)
         .sort((a,b)=>Number(b.present)-Number(a.present) || b.level-a.level || a.card.name.localeCompare(b.card.name));
 }
 const itemNames=ids=>(ids || []).map(id=>ITEMS[id]?.name).filter(Boolean).join(', ');
 function characterLine(ctx,avatar,levels){
-    const card=ctx.characters?.find(c=>c.avatar===avatar);if(!card)return '';
+    const card=cardByAvatar(ctx,avatar);if(!card)return '';
     const level=levels[avatar] ?? startingTrust(ctx,avatar),tastes=giftTastes(ctx,card);
     return [`${card.name}: ${level} of ${TRUST_MAX} (${trustBand(level).name}).`,tastes?`Likes ${itemNames(tastes.likes)}. Dislikes ${itemNames(tastes.dislikes)}. ${tastes.note}`:''].filter(Boolean).join(' ');
 }
@@ -101,7 +102,7 @@ export async function askThoughts(getContext,avatar,{loadScript=()=>import('/scr
     const script=await loadScript();let ctx=getContext();
     if(script.isGenerating()||script.isChatSaving)throw new Error('Wait for the current reply to finish, then ask again.');
     if(ctx.onlineStatus==='no_connection')throw new Error('Connect your main API to hear what they think.');
-    const card=ctx.characters?.find(c=>c.avatar===avatar);if(!card)throw new Error('This character card is no longer installed.');
+    const card=cardByAvatar(ctx,avatar);if(!card)throw new Error('This character card is no longer installed.');
     const index=ctx.characters.indexOf(card),chat=ctx.getCurrentChatId?.();
     await script.unshallowCharacter?.(index);
     ctx=getContext();const level=trustOf(ctx,avatar);

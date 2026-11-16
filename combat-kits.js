@@ -209,7 +209,7 @@ const ENEMIES=[
     ['Cryo Hilichurl Shooter','Cryo',21,['Ice Arrow',[D(3)]],['Multishot',[D(6)]],3,{}],
     ['Cryo Slime','Cryo',26,['Ram',[D(3)]],['Jumping Slam',[D(6)]],3,{}],
     ['Dendro Samachurl','Dendro',26,['Staff Strike',[D(3)],'Physical'],['Dendro Field',[D(7)]],3,{},['Venomous Vines',[D(3),SM('Vines',2,2)]]],
-    ['Electro Abyss Mage','Electro',26,['Thunderbolt',[D(3)]],['Rite of Rolling Thunder',[D(6),SM('Tanglebolt Ring',3,2)]],3,{shield:12,weakTo:'Cryo'},['Lingering Light',[D(4),SM('Tanglebolt Ring',3,2)]]],
+    ['Electro Abyss Mage','Electro',26,['Thunderbolt',[D(3)]],['Rite of Rolling Thunder',[D(4),SM('Tanglebolt Ring',2,2)]],3,{shield:12,weakTo:'Cryo'},['Lingering Light',[D(2),SM('Tanglebolt Ring',2,2)]]],
     ['Electro Hilichurl Shooter','Electro',21,['Thunder Arrow',[D(3)]],['Multishot',[D(6)]],3,{}],
     ['Electro Samachurl','Electro',26,['Striking Staff',[D(3)],'Physical'],['Thunderstrike Hex',[D(7)]],3,{},['Thunderclap Totem',[D(4),SM('Thundercall Staff',2,2)]]],
     ['Electro Slime','Electro',26,['Bounce',[D(3)]],['Slam',[D(6)]],3,{}],
@@ -383,11 +383,12 @@ function cleanEffect(effect){
     if(effect.decoy)out.decoy=true;if(effect.piercing)out.piercing=true;
     // Genius Invokation conditions on an ordinary effect (a Charged Attack bonus, damage per point spent…).
     keep('when',pick(effect.when,WHEN));keep('unless',pick(effect.unless,WHEN));keep('per',pick(effect.per,['spent','bond','cardsInHand']));
+    if(Array.isArray(effect.elements)){const els=effect.elements.filter(e=>ELEMENTS.includes(e));if(els.length)out.elements=[...new Set(els)];}
     keep('whenReaction',pick(effect.whenReaction,['Lunar-Charged','Lunar-Bloom','Lunar-Crystallize']));keep('summon',text(effect.summon));
     if(effect.plus&&typeof effect.plus==='object'){const plus={};for(const key of ['charged','plunge']){const n=whole(effect.plus[key],0,100);if(n!==undefined)plus[key]=n;}if(Object.keys(plus).length)out.plus=plus;}
     return out;
 }
-const WHEN=['charged','notCharged','plunge','nightsoul','noNightsoul','cheaperInHand','summonPresent','spentAtLeast','spentBelow','nightsoulFull','nightsoulNotFull','firstUse','repeatUse','energyAtLeast'];
+const WHEN=['charged','notCharged','plunge','nightsoul','noNightsoul','cheaperInHand','summonPresent','spentAtLeast','spentBelow','nightsoulFull','nightsoulNotFull','firstUse','repeatUse','energyAtLeast','pureTeam'];
 // Effects the Moveset editor cannot edit (Nightsoul, Techniques, created cards, listeners…) are never read
 // from saved settings: a saved one stands for the bundled kit's own effect of that kind, which is used instead.
 function cleanMove(move,base){
@@ -408,7 +409,10 @@ function cleanMove(move,base){
 export function mergeKit(base,saved){
     if(!saved)return base;
     const kit={...base,...Object.fromEntries(Object.entries(KIT_FIELDS).map(([key,clean])=>[key,clean(saved[key])]).filter(([,value])=>value!==undefined))};
-    kit.moves=base.moves.map((move,i)=>saved.moves?.[i]?{...move,...cleanMove(saved.moves[i],move),kind:move.kind}:move);
+    // A character's move always costs dice. Before 1.61 a Normal Attack was free (cost 0), and a moveset saved
+    // then still says so; a free move could be used every turn without end, so such a cost keeps the kit's own.
+    const priced=clean=>{if(!base.enemy&&clean.cost===0)delete clean.cost;return clean;};
+    kit.moves=base.moves.map((move,i)=>saved.moves?.[i]?{...move,...priced(cleanMove(saved.moves[i],move)),kind:move.kind}:move);
     kit.custom=true;return kit;
 }
 export const kitOverrides=ctx=>mediaSettings(ctx).combatKits ??= {};
@@ -452,7 +456,6 @@ function describeOne(effect,{t,el,elText,element}){
         case 'switchPrev':return 'Switches to your previous character.';
         case 'bite':return `Puts ${effect.amount} Bite Target on the opposing active character.`;
         case 'convertDice':return `Turns ${effect.amount} dice into ${effect.face==='self'?'its element':effect.face || 'Omni'}.`;
-        case 'heal':return `Heals ${t} for ${effect.amount} HP.`;
         case 'heal':return `Heals ${t} for ${effect.amount} HP.`;
         case 'shield':return `Shields ${t} for ${effect.amount}.`;
         case 'buff':

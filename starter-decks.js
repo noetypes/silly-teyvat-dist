@@ -10,6 +10,7 @@ import {activeGroup} from './party.js';
 import {escapeHtml,defaultKit,kitOverrides} from './combat-kits.js';
 import {characterProperties,isEnemy} from './character-properties.js';
 import {baseName} from './card-name.js';
+import {cardByAvatar,hasCard} from './card-index.js';
 
 export const STARTER_SIZE=20;
 // No more than this many copies of one card, in a chosen or a random deck.
@@ -56,7 +57,7 @@ const swap=(deck,from,to)=>{if(!to||!ITEMS[to]||!deck[from]||to===from)return;de
 // The default deck for one character: twenty cards of every kind, with their element's Woven die,
 // Artifact and Resonance, a Weapon of their weapon type and a summon of their own (or of their element).
 export function characterDeck(ctx,avatar){
-    const deck={...STARTER_BAG},card=avatar?ctx?.characters?.find(c=>c.avatar===avatar):null;
+    const deck={...STARTER_BAG},card=avatar?cardByAvatar(ctx,avatar):null;
     if(!card)return deck;
     const props=characterProperties(ctx,card),element=props.element;
     let weapon='';try{weapon=kitOverrides(ctx)[avatar]?.weapon || defaultKit(baseName(card),{element}).weapon || '';}catch{weapon='';}
@@ -91,13 +92,12 @@ export function saveStarterDeck(ctx,avatar,{cards,random=false}){
     ctx.saveSettingsDebounced?.();
     return starterDeckOf(ctx,avatar);
 }
-export function resetStarterDeck(ctx,avatar){delete store(ctx)[avatar];ctx.saveSettingsDebounced?.();return starterDeckOf(ctx,avatar);}
 // The character a journey was started with: the open card, the card a travel journey was made from,
 // or the first companion in the scene.
 export function journeyCharacter(ctx){
     const cast=ctx.chatMetadata?.silly_teyvat_cast,members=activeGroup(ctx)?.members || [];
     const candidates=[ctx.characters?.[ctx.characterId]?.avatar,cast?.source?.avatar,...(cast?.core || []),...members];
-    return candidates.find(a=>a&&ctx.characters?.some(c=>c.avatar===a)&&!isEnemy(ctx,a)) || '';
+    return candidates.find(a=>a&&hasCard(ctx,a)&&!isEnemy(ctx,a)) || '';
 }
 // The bag a new journey starts with: its character's deck, or twenty random cards.
 export function newJourneyBag(ctx,random=Math.random){

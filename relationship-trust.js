@@ -9,6 +9,7 @@ import {mediaSettings} from './media-store.js';
 import {linkedCard} from './persona-link.js';
 import {isEnemy} from './character-properties.js';
 import {baseName} from './card-name.js';
+import {cardByAvatar} from './card-index.js';
 
 export const TRUST_MAX=5;
 export const RELATIONSHIP_TRUST={
@@ -191,7 +192,7 @@ function playerNames(ctx){
 }
 // Where a character's trust begins in a new chat with the current persona.
 export function startingTrust(ctx,avatar){
-    const card=ctx.characters?.find(c=>c.avatar===avatar);if(!card||isEnemy(ctx,card))return 0;
+    const card=cardByAvatar(ctx,avatar);if(!card||isEnemy(ctx,card))return 0;
     const names=playerNames(ctx);
     return Math.max(0,...startingTrustList(ctx,card).filter(entry=>names.has(entry.name.toLocaleLowerCase())).map(entry=>entry.value));
 }

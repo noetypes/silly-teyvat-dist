@@ -1,6 +1,7 @@
 import {locationResidents} from './location-encounters.js';
 import {isTcgBoss} from './boss-kits.js';
 import {characterIcon} from './battle-icons.js';
+import {cardByAvatar} from './card-index.js';
 
 // The small icons beside a map waypoint. They are worked out from the live roster and wilderness settings
 // every time the map paints, so moving a character, toggling Wilderness or changing the enemy pool updates them.
@@ -12,7 +13,7 @@ export const WAYPOINT_BADGES=Object.freeze({
     wilderness:{label:'Wilderness',icon:icon('wilderness')},
     boss:{label:'Boss',icon:icon('boss')},
 });
-const avatarName=(ctx,avatar)=>ctx.characters?.find(c=>c.avatar===avatar)?.name ?? String(avatar || '').replace(/\.[^.]+$/,'');
+const avatarName=(ctx,avatar)=>cardByAvatar(ctx,avatar)?.name ?? String(avatar || '').replace(/\.[^.]+$/,'');
 export function waypointBadges(ctx,location,residents){
     if(!location)return [];
     const badges=[];

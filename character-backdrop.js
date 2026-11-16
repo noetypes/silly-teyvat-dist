@@ -128,7 +128,7 @@ function nebulaCanvas(seed){
 }
 export function mountCharacterBackdrop({sky,behind,front,stage}){
     const urls=[],layers=[],contexts=[behind.getContext('2d'),front.getContext('2d')];
-    let raf=0,last=0,time=0,width=0,height=0,dpr=1,quality=1,slowFrames=0,frames=0,dust=[],stars=[],beams=[],beamX=0,current,running=false,nebulae=false;
+    let raf=0,last=0,time=0,width=0,height=0,dpr=1,quality=1,slowFrames=0,frames=0,dust=[],stars=[],beams=[],beamX=0,current,running=false,nebulae=false,disposed=false;
     const density=()=>Math.max(.45,Math.min(1.4,width*height/REFERENCE_AREA))*quality;
     function seedStars(){
         const star=(shape,size,rate)=>({image:stamp(shape,pick(STAR_COLORS)),x:Math.random(),y:Math.random(),size:rand(...size),rate:rand(...rate),twinkle:rand(.5,1.9),phase:rand(0,TAU),turn:shape==='sparkle'?rand(-.2,.2):0});
@@ -194,10 +194,13 @@ export function mountCharacterBackdrop({sky,behind,front,stage}){
     async function paintNebulae(){
         if(nebulae)return;nebulae=true;
         for(const [name,seed] of [['--cs-nebula-a',20261101],['--cs-nebula-b',77141]]){
-            const canvas=nebulaCanvas(seed),blob=await new Promise(done=>canvas.toBlob(done));if(!blob)continue;
+            const canvas=nebulaCanvas(seed),blob=await new Promise(done=>canvas.toBlob(done));if(!blob||disposed)continue;
             const url=URL.createObjectURL(blob);urls.push(url);sky.style.setProperty(name,`url("${url}")`);
         }
     }
+    // The two nebulae are a quarter of a million pixels of noise. They are made while the page is idle, so
+    // opening the screen for the first time does not wait for them; start() still makes them if it comes first.
+    const idle=typeof requestIdleCallback==='function',warm=idle?requestIdleCallback(()=>void paintNebulae(),{timeout:8000}):setTimeout(()=>void paintNebulae(),3000);
     return {
         setElement(element){
             element=ELEMENTS[element]?element:'None';if(element===current)return;current=element;
@@ -215,6 +218,6 @@ export function mountCharacterBackdrop({sky,behind,front,stage}){
             if(running)return;running=true;last=performance.now();raf=requestFrame(frame);
         },
         stop(){running=false;beams=[];cancelFrame(raf);},
-        dispose(){this.stop();observer?.disconnect();for(const url of urls)URL.revokeObjectURL(url);urls.length=0;},
+        dispose(){disposed=true;if(idle)cancelIdleCallback(warm);else clearTimeout(warm);this.stop();observer?.disconnect();for(const url of urls)URL.revokeObjectURL(url);urls.length=0;},
     };
 }

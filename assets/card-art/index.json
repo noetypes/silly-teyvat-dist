@@ -1,0 +1,1101 @@
+{
+ "version": 1,
+ "art": {
+  "Abyss Herald: Wicked Torrents": {
+   "file": "abyss-herald-wicked-torrents-59d1ad.webp",
+   "kind": "tcg"
+  },
+  "Abyss Lector: Fathomless Flames": {
+   "file": "abyss-lector-fathomless-flames-50f58f.webp",
+   "kind": "tcg"
+  },
+  "Abyss Lector: Violet Lightning": {
+   "file": "abyss-lector-violet-lightning-10373a.webp",
+   "kind": "tcg"
+  },
+  "Adel": {
+   "file": "adel-9b25c7.webp",
+   "kind": "tcg"
+  },
+  "Aether": {
+   "file": "aether-9e9f15.webp",
+   "kind": "art"
+  },
+  "Aino": {
+   "file": "aino-568e7c.webp",
+   "kind": "art"
+  },
+  "Albedo": {
+   "file": "albedo-1e0ea5.webp",
+   "kind": "art"
+  },
+  "Alhaitham": {
+   "file": "alhaitham-b24b01.webp",
+   "kind": "art"
+  },
+  "All-Devouring Narwhal": {
+   "file": "all-devouring-narwhal-38fd07.webp",
+   "kind": "tcg"
+  },
+  "Aloha": {
+   "file": "aloha-36baf5.webp",
+   "kind": "tcg"
+  },
+  "Aloy": {
+   "file": "aloy-bfec31.webp",
+   "kind": "art"
+  },
+  "Alyosha": {
+   "file": "alyosha-7d70bf.webp",
+   "kind": "art"
+  },
+  "Amber": {
+   "file": "amber-5e6e2d.webp",
+   "kind": "art"
+  },
+  "Anemo Samachurl": {
+   "file": "anemo-samachurl-fecb2a.webp",
+   "kind": "tcg"
+  },
+  "Annihilation Specialist Mek - Ousia": {
+   "file": "annihilation-specialist-mek-ousia-ff4afb.webp",
+   "kind": "tcg"
+  },
+  "Annihilation Specialist Mek - Pneuma": {
+   "file": "annihilation-specialist-mek-pneuma-f271d9.webp",
+   "kind": "tcg"
+  },
+  "Anselm": {
+   "file": "anselm-068dc6.webp",
+   "kind": "tcg"
+  },
+  "Araja": {
+   "file": "araja-492747.webp",
+   "kind": "tcg"
+  },
+  "Arama": {
+   "file": "arama-21a0b1.webp",
+   "kind": "tcg"
+  },
+  "Aranakula": {
+   "file": "aranakula-ea62cf.webp",
+   "kind": "tcg"
+  },
+  "Arataki Itto": {
+   "file": "arataki-itto-33550b.webp",
+   "kind": "art"
+  },
+  "Areta": {
+   "file": "areta-134aa0.webp",
+   "kind": "tcg"
+  },
+  "Arithmetic Enhancer Mek - Ousia": {
+   "file": "arithmetic-enhancer-mek-ousia-f706eb.webp",
+   "kind": "tcg"
+  },
+  "Arithmetic Enhancer Mek - Pneuma": {
+   "file": "arithmetic-enhancer-mek-pneuma-6f3864.webp",
+   "kind": "tcg"
+  },
+  "Arlecchino": {
+   "file": "arlecchino-697146.webp",
+   "kind": "art"
+  },
+  "Assault Specialist Mek - Ousia": {
+   "file": "assault-specialist-mek-ousia-1a5f84.webp",
+   "kind": "tcg"
+  },
+  "Assault Specialist Mek - Pneuma": {
+   "file": "assault-specialist-mek-pneuma-70d19f.webp",
+   "kind": "tcg"
+  },
+  "Aurelius": {
+   "file": "aurelius-ef2cd8.webp",
+   "kind": "tcg"
+  },
+  "Aybak": {
+   "file": "aybak-5f44dc.webp",
+   "kind": "tcg"
+  },
+  "Azhdaha": {
+   "file": "azhdaha-78dfc6.webp",
+   "kind": "tcg"
+  },
+  "Babel": {
+   "file": "babel-c476c7.webp",
+   "kind": "tcg"
+  },
+  "Baizhu": {
+   "file": "baizhu-0e7961.webp",
+   "kind": "art"
+  },
+  "Barbara": {
+   "file": "barbara-6f06a4.webp",
+   "kind": "art"
+  },
+  "Beidou": {
+   "file": "beidou-7815d9.webp",
+   "kind": "art"
+  },
+  "Bennett": {
+   "file": "bennett-640a14.webp",
+   "kind": "art"
+  },
+  "Black Serpent Knight: Rockbreaker Ax": {
+   "file": "black-serpent-knight-rockbreaker-ax-daf2f7.webp",
+   "kind": "tcg"
+  },
+  "Black Serpent Knight: Windcutter": {
+   "file": "black-serpent-knight-windcutter-8253f4.webp",
+   "kind": "tcg"
+  },
+  "Blazing Axe Mitachurl": {
+   "file": "blazing-axe-mitachurl-23877e.webp",
+   "kind": "tcg"
+  },
+  "Candace": {
+   "file": "candace-5d071c.webp",
+   "kind": "art"
+  },
+  "Charlotte": {
+   "file": "charlotte-9254ac.webp",
+   "kind": "art"
+  },
+  "Chasca": {
+   "file": "chasca-fc6442.webp",
+   "kind": "art"
+  },
+  "Chevreuse": {
+   "file": "chevreuse-99889c.webp",
+   "kind": "art"
+  },
+  "Chiori": {
+   "file": "chiori-6d6c2b.webp",
+   "kind": "art"
+  },
+  "Chongyun": {
+   "file": "chongyun-f31be0.webp",
+   "kind": "art"
+  },
+  "Citlali": {
+   "file": "citlali-05e960.webp",
+   "kind": "art"
+  },
+  "Clorinde": {
+   "file": "clorinde-9ae8aa.webp",
+   "kind": "art"
+  },
+  "Collei": {
+   "file": "collei-1c8317.webp",
+   "kind": "art"
+  },
+  "Columbina": {
+   "file": "columbina-0da0aa.webp",
+   "kind": "art"
+  },
+  "Consecrated Fanged Beast": {
+   "file": "consecrated-fanged-beast-456e27.webp",
+   "kind": "tcg"
+  },
+  "Consecrated Flying Serpent": {
+   "file": "consecrated-flying-serpent-8690af.webp",
+   "kind": "tcg"
+  },
+  "Consecrated Horned Crocodile": {
+   "file": "consecrated-horned-crocodile-cc4dc4.webp",
+   "kind": "tcg"
+  },
+  "Consecrated Scorpion": {
+   "file": "consecrated-scorpion-02b66c.webp",
+   "kind": "tcg"
+  },
+  "Crackling Axe Mitachurl": {
+   "file": "crackling-axe-mitachurl-aebb20.webp",
+   "kind": "tcg"
+  },
+  "Cryo Abyss Mage": {
+   "file": "cryo-abyss-mage-8e9f56.webp",
+   "kind": "tcg"
+  },
+  "Cryo Hilichurl Shooter": {
+   "file": "cryo-hilichurl-shooter-f08710.webp",
+   "kind": "tcg"
+  },
+  "Cryo Hypostasis": {
+   "file": "cryo-hypostasis-aac3fd.webp",
+   "kind": "tcg"
+  },
+  "Cryo Slime": {
+   "file": "cryo-slime-9aad91.webp",
+   "kind": "tcg"
+  },
+  "Cryo Whopperflower": {
+   "file": "cryo-whopperflower-36201a.webp",
+   "kind": "tcg"
+  },
+  "Cyno": {
+   "file": "cyno-2c1dd0.webp",
+   "kind": "art"
+  },
+  "Dahlia": {
+   "file": "dahlia-d24d0d.webp",
+   "kind": "art"
+  },
+  "Dehya": {
+   "file": "dehya-05d4bd.webp",
+   "kind": "art"
+  },
+  "Dendro Samachurl": {
+   "file": "dendro-samachurl-a4c6df.webp",
+   "kind": "tcg"
+  },
+  "Diluc": {
+   "file": "diluc-52a53b.webp",
+   "kind": "art"
+  },
+  "Diona": {
+   "file": "diona-3b3959.webp",
+   "kind": "art"
+  },
+  "Dori": {
+   "file": "dori-a17783.webp",
+   "kind": "art"
+  },
+  "Durin": {
+   "file": "durin-c35484.webp",
+   "kind": "art"
+  },
+  "Dvalin": {
+   "file": "dvalin-36f43b.webp",
+   "kind": "tcg"
+  },
+  "Egle": {
+   "file": "egle-97db96.webp",
+   "kind": "tcg"
+  },
+  "Electro Abyss Mage": {
+   "file": "electro-abyss-mage-d583ef.webp",
+   "kind": "tcg"
+  },
+  "Electro Hilichurl Shooter": {
+   "file": "electro-hilichurl-shooter-dfa7c8.webp",
+   "kind": "tcg"
+  },
+  "Electro Hypostasis": {
+   "file": "electro-hypostasis-f3a36c.webp",
+   "kind": "tcg"
+  },
+  "Electro Samachurl": {
+   "file": "electro-samachurl-6b6d65.webp",
+   "kind": "tcg"
+  },
+  "Electro Slime": {
+   "file": "electro-slime-aa1ac9.webp",
+   "kind": "tcg"
+  },
+  "Emilie": {
+   "file": "emilie-4fbb5a.webp",
+   "kind": "art"
+  },
+  "Emperor of Fire and Iron": {
+   "file": "emperor-of-fire-and-iron-43fa56.webp",
+   "kind": "tcg"
+  },
+  "Eremite Daythunder": {
+   "file": "eremite-daythunder-c6051b.webp",
+   "kind": "tcg"
+  },
+  "Eremite Desert Clearwater": {
+   "file": "eremite-desert-clearwater-565d11.webp",
+   "kind": "tcg"
+  },
+  "Eremite Floral Ring-Dancer": {
+   "file": "eremite-floral-ring-dancer-ccecc9.webp",
+   "kind": "tcg"
+  },
+  "Eremite Scorching Loremaster": {
+   "file": "eremite-scorching-loremaster-2a7fcc.webp",
+   "kind": "tcg"
+  },
+  "Eremite Stone Enchanter": {
+   "file": "eremite-stone-enchanter-140a3c.webp",
+   "kind": "tcg"
+  },
+  "Eremite Sunfrost": {
+   "file": "eremite-sunfrost-b635eb.webp",
+   "kind": "tcg"
+  },
+  "Escoffier": {
+   "file": "escoffier-2fced1.webp",
+   "kind": "art"
+  },
+  "Eula": {
+   "file": "eula-21ff3d.webp",
+   "kind": "art"
+  },
+  "Eveliina": {
+   "file": "eveliina-973f82.webp",
+   "kind": "tcg"
+  },
+  "Experimental Field Generator": {
+   "file": "experimental-field-generator-6fcae9.webp",
+   "kind": "tcg"
+  },
+  "Faruzan": {
+   "file": "faruzan-ffb5ba.webp",
+   "kind": "art"
+  },
+  "Fatui Cryo Cicin Mage": {
+   "file": "fatui-cryo-cicin-mage-cf46f6.webp",
+   "kind": "tcg"
+  },
+  "Fatui Electro Cicin Mage": {
+   "file": "fatui-electro-cicin-mage-99930d.webp",
+   "kind": "tcg"
+  },
+  "Fatui Pyro Agent": {
+   "file": "fatui-pyro-agent-cca3a6.webp",
+   "kind": "tcg"
+  },
+  "Fatui Skirmisher - Anemoboxer Vanguard": {
+   "file": "fatui-skirmisher-anemoboxer-vanguard-a0b448.webp",
+   "kind": "tcg"
+  },
+  "Fatui Skirmisher - Cryogunner Legionnaire": {
+   "file": "fatui-skirmisher-cryogunner-legionnaire-5993b8.webp",
+   "kind": "tcg"
+  },
+  "Fatui Skirmisher - Electrohammer Vanguard": {
+   "file": "fatui-skirmisher-electrohammer-vanguard-0b4f1d.webp",
+   "kind": "tcg"
+  },
+  "Fatui Skirmisher - Geochanter Bracer": {
+   "file": "fatui-skirmisher-geochanter-bracer-516948.webp",
+   "kind": "tcg"
+  },
+  "Fatui Skirmisher - Hydrogunner Legionnaire": {
+   "file": "fatui-skirmisher-hydrogunner-legionnaire-d91bfe.webp",
+   "kind": "tcg"
+  },
+  "Fatui Skirmisher - Pyroslinger Bracer": {
+   "file": "fatui-skirmisher-pyroslinger-bracer-41510b.webp",
+   "kind": "tcg"
+  },
+  "Fischl": {
+   "file": "fischl-1fc8c0.webp",
+   "kind": "art"
+  },
+  "Flins": {
+   "file": "flins-361f52.webp",
+   "kind": "art"
+  },
+  "Freminet": {
+   "file": "freminet-fa9998.webp",
+   "kind": "art"
+  },
+  "Frost Operative": {
+   "file": "frost-operative-80da34.webp",
+   "kind": "tcg"
+  },
+  "Furina": {
+   "file": "furina-8f82a9.webp",
+   "kind": "art"
+  },
+  "Gaming": {
+   "file": "gaming-1a5fa2.webp",
+   "kind": "art"
+  },
+  "Ganyu": {
+   "file": "ganyu-8fba1c.webp",
+   "kind": "art"
+  },
+  "Geo Samachurl": {
+   "file": "geo-samachurl-5416d8.webp",
+   "kind": "tcg"
+  },
+  "Geo Slime": {
+   "file": "geo-slime-bd76ce.webp",
+   "kind": "tcg"
+  },
+  "Gluttonous Yumkasaur Mountain King": {
+   "file": "gluttonous-yumkasaur-mountain-king-131de2.webp",
+   "kind": "tcg"
+  },
+  "Golden Wolflord": {
+   "file": "golden-wolflord-89fef0.webp",
+   "kind": "tcg"
+  },
+  "Goldflame Qucusaur Tyrant": {
+   "file": "goldflame-qucusaur-tyrant-3888f8.webp",
+   "kind": "tcg"
+  },
+  "Gorou": {
+   "file": "gorou-3cd7cb.webp",
+   "kind": "art"
+  },
+  "Granny Ruoxin": {
+   "file": "granny-ruoxin-b3565f.webp",
+   "kind": "tcg"
+  },
+  "Grounded Geoshroom": {
+   "file": "grounded-geoshroom-1673d0.webp",
+   "kind": "tcg"
+  },
+  "Grounded Hydroshroom": {
+   "file": "grounded-hydroshroom-802534.webp",
+   "kind": "tcg"
+  },
+  "Guardian of Apep's Oasis": {
+   "file": "guardian-of-apep-s-oasis-feceed.webp",
+   "kind": "tcg"
+  },
+  "Hilichurl Berserker": {
+   "file": "hilichurl-berserker-cd1ead.webp",
+   "kind": "tcg"
+  },
+  "Hilichurl Fighter": {
+   "file": "hilichurl-fighter-f34556.webp",
+   "kind": "tcg"
+  },
+  "Hilichurl Shooter": {
+   "file": "hilichurl-shooter-908b22.webp",
+   "kind": "tcg"
+  },
+  "Hu Tao": {
+   "file": "hu-tao-0ea043.webp",
+   "kind": "art"
+  },
+  "Hydro Abyss Mage": {
+   "file": "hydro-abyss-mage-5b063d.webp",
+   "kind": "tcg"
+  },
+  "Hydro Hilichurl Rogue": {
+   "file": "hydro-hilichurl-rogue-4499d6.webp",
+   "kind": "tcg"
+  },
+  "Hydro Hypostasis": {
+   "file": "hydro-hypostasis-cb5795.webp",
+   "kind": "tcg"
+  },
+  "Hydro Samachurl": {
+   "file": "hydro-samachurl-84f37c.webp",
+   "kind": "tcg"
+  },
+  "Hydro Slime": {
+   "file": "hydro-slime-1c97f2.webp",
+   "kind": "tcg"
+  },
+  "Hydro Tulpa": {
+   "file": "hydro-tulpa-564022.webp",
+   "kind": "tcg"
+  },
+  "Iansan": {
+   "file": "iansan-1b78d5.webp",
+   "kind": "art"
+  },
+  "Ice Shieldwall Mitachurl": {
+   "file": "ice-shieldwall-mitachurl-2d9d9e.webp",
+   "kind": "tcg"
+  },
+  "Ifa": {
+   "file": "ifa-2a5a42.webp",
+   "kind": "art"
+  },
+  "Illuga": {
+   "file": "illuga-1bc070.webp",
+   "kind": "art"
+  },
+  "Ineffa": {
+   "file": "ineffa-d72c14.webp",
+   "kind": "art"
+  },
+  "Jadeplume Terrorshroom": {
+   "file": "jadeplume-terrorshroom-9cbc8e.webp",
+   "kind": "tcg"
+  },
+  "Jahoda": {
+   "file": "jahoda-d97bda.webp",
+   "kind": "art"
+  },
+  "Jakob": {
+   "file": "jakob-27cae1.webp",
+   "kind": "tcg"
+  },
+  "Jean": {
+   "file": "jean-1deb4b.webp",
+   "kind": "art"
+  },
+  "Jeht": {
+   "file": "jeht-95e62f.webp",
+   "kind": "tcg"
+  },
+  "Kachina": {
+   "file": "kachina-a0a38a.webp",
+   "kind": "art"
+  },
+  "Kaedehara Kazuha": {
+   "file": "kaedehara-kazuha-b2782a.webp",
+   "kind": "art"
+  },
+  "Kaeya": {
+   "file": "kaeya-7af582.webp",
+   "kind": "art"
+  },
+  "Kairagi: Dancing Thunder": {
+   "file": "kairagi-dancing-thunder-c8e44c.webp",
+   "kind": "tcg"
+  },
+  "Kairagi: Fiery Might": {
+   "file": "kairagi-fiery-might-0d60e3.webp",
+   "kind": "tcg"
+  },
+  "Kamisato Ayaka": {
+   "file": "kamisato-ayaka-30f908.webp",
+   "kind": "art"
+  },
+  "Kamisato Ayato": {
+   "file": "kamisato-ayato-ed4206.webp",
+   "kind": "art"
+  },
+  "Katheryne": {
+   "file": "katheryne-43b1a6.webp",
+   "kind": "tcg"
+  },
+  "Kaveh": {
+   "file": "kaveh-9ed4e5.webp",
+   "kind": "art"
+  },
+  "Keqing": {
+   "file": "keqing-85b527.webp",
+   "kind": "art"
+  },
+  "Kinich": {
+   "file": "kinich-bc44a0.webp",
+   "kind": "art"
+  },
+  "Kirara": {
+   "file": "kirara-b88f49.webp",
+   "kind": "art"
+  },
+  "Klee": {
+   "file": "klee-9131a3.webp",
+   "kind": "art"
+  },
+  "Knyazev": {
+   "file": "knyazev-66efc3.webp",
+   "kind": "tcg"
+  },
+  "Komaki": {
+   "file": "komaki-c1f5be.webp",
+   "kind": "tcg"
+  },
+  "Kujou Masahito": {
+   "file": "kujou-masahito-0086f8.webp",
+   "kind": "tcg"
+  },
+  "Kujou Sara": {
+   "file": "kujou-sara-b1a198.webp",
+   "kind": "art"
+  },
+  "Kuki Shinobu": {
+   "file": "kuki-shinobu-65db14.webp",
+   "kind": "art"
+  },
+  "Kukkia": {
+   "file": "kukkia-e9441e.webp",
+   "kind": "tcg"
+  },
+  "La Signora": {
+   "file": "la-signora-0a679d.webp",
+   "kind": "tcg"
+  },
+  "Lan Yan": {
+   "file": "lan-yan-bf348a.webp",
+   "kind": "art"
+  },
+  "Large Cryo Slime": {
+   "file": "large-cryo-slime-c78dda.webp",
+   "kind": "tcg"
+  },
+  "Large Electro Slime": {
+   "file": "large-electro-slime-fbe9e0.webp",
+   "kind": "tcg"
+  },
+  "Large Hydro Slime": {
+   "file": "large-hydro-slime-cc3d7d.webp",
+   "kind": "tcg"
+  },
+  "Large Pyro Slime": {
+   "file": "large-pyro-slime-c8d8f2.webp",
+   "kind": "tcg"
+  },
+  "Lasselin": {
+   "file": "lasselin-aa2092.webp",
+   "kind": "tcg"
+  },
+  "Lauma": {
+   "file": "lauma-e197a6.webp",
+   "kind": "art"
+  },
+  "Layla": {
+   "file": "layla-fa6b16.webp",
+   "kind": "art"
+  },
+  "Linnea": {
+   "file": "linnea-961fb0.webp",
+   "kind": "art"
+  },
+  "Lisa": {
+   "file": "lisa-5878ae.webp",
+   "kind": "art"
+  },
+  "Lohen": {
+   "file": "lohen-b562c2.webp",
+   "kind": "art"
+  },
+  "Lord of Eroded Primal Fire": {
+   "file": "lord-of-eroded-primal-fire-10d03d.webp",
+   "kind": "tcg"
+  },
+  "Lumine": {
+   "file": "lumine-3c7e1b.webp",
+   "kind": "art"
+  },
+  "Lynette": {
+   "file": "lynette-352ccb.webp",
+   "kind": "art"
+  },
+  "Lyney": {
+   "file": "lyney-26ecaf.webp",
+   "kind": "art"
+  },
+  "Lyris": {
+   "file": "lyris-ed5de6.webp",
+   "kind": "tcg"
+  },
+  "Maguu Kenki": {
+   "file": "maguu-kenki-5269d9.webp",
+   "kind": "tcg"
+  },
+  "Maryam": {
+   "file": "maryam-29d387.webp",
+   "kind": "tcg"
+  },
+  "Master Lu": {
+   "file": "master-lu-1df486.webp",
+   "kind": "tcg"
+  },
+  "Mavuika": {
+   "file": "mavuika-56aeaf.webp",
+   "kind": "art"
+  },
+  "Mayskaya": {
+   "file": "mayskaya-81cf88.webp",
+   "kind": "tcg"
+  },
+  "Mazatl": {
+   "file": "mazatl-8432c5.webp",
+   "kind": "tcg"
+  },
+  "Mécantre": {
+   "file": "m-cantre-d245d8.webp",
+   "kind": "tcg"
+  },
+  "Mika": {
+   "file": "mika-ac6616.webp",
+   "kind": "art"
+  },
+  "Millennial Pearl Seahorse": {
+   "file": "millennial-pearl-seahorse-5d44bc.webp",
+   "kind": "tcg"
+  },
+  "Mirror Maiden": {
+   "file": "mirror-maiden-34d0ec.webp",
+   "kind": "tcg"
+  },
+  "Mitya": {
+   "file": "mitya-82d269.webp",
+   "kind": "art"
+  },
+  "Mona": {
+   "file": "mona-cb7dc4.webp",
+   "kind": "art"
+  },
+  "Mualani": {
+   "file": "mualani-256dad.webp",
+   "kind": "art"
+  },
+  "Nahida": {
+   "file": "nahida-23e8f8.webp",
+   "kind": "art"
+  },
+  "Navia": {
+   "file": "navia-b6909e.webp",
+   "kind": "art"
+  },
+  "Nefer": {
+   "file": "nefer-caa928.webp",
+   "kind": "art"
+  },
+  "Neko": {
+   "file": "neko-a4ff20.webp",
+   "kind": "tcg"
+  },
+  "Neuvillette": {
+   "file": "neuvillette-044b7a.webp",
+   "kind": "art"
+  },
+  "Nicole": {
+   "file": "nicole-0f5fd2.webp",
+   "kind": "art"
+  },
+  "Nilou": {
+   "file": "nilou-5aa9c2.webp",
+   "kind": "art"
+  },
+  "Ningguang": {
+   "file": "ningguang-2dc68f.webp",
+   "kind": "art"
+  },
+  "Nishikino Reirei": {
+   "file": "nishikino-reirei-f7b68f.webp",
+   "kind": "tcg"
+  },
+  "Nobushi: Hitsukeban": {
+   "file": "nobushi-hitsukeban-a0d993.webp",
+   "kind": "tcg"
+  },
+  "Nobushi: Jintouban": {
+   "file": "nobushi-jintouban-8140d2.webp",
+   "kind": "tcg"
+  },
+  "Nobushi: Kikouban": {
+   "file": "nobushi-kikouban-fd19d4.webp",
+   "kind": "tcg"
+  },
+  "Noelle": {
+   "file": "noelle-585d0f.webp",
+   "kind": "art"
+  },
+  "Odette": {
+   "file": "odette-45c070.webp",
+   "kind": "art"
+  },
+  "Ororon": {
+   "file": "ororon-63c83f.webp",
+   "kind": "art"
+  },
+  "Paimon": {
+   "file": "paimon-5a803f.webp",
+   "kind": "tcg"
+  },
+  "Pitot": {
+   "file": "pitot-8a205e.webp",
+   "kind": "tcg"
+  },
+  "Plate": {
+   "file": "plate-c94feb.webp",
+   "kind": "tcg"
+  },
+  "Prune": {
+   "file": "prune-96950a.webp",
+   "kind": "art"
+  },
+  "Pyro Abyss Mage": {
+   "file": "pyro-abyss-mage-b3c34c.webp",
+   "kind": "tcg"
+  },
+  "Pyro Whopperflower": {
+   "file": "pyro-whopperflower-90fd13.webp",
+   "kind": "tcg"
+  },
+  "Qiqi": {
+   "file": "qiqi-4cdaa2.webp",
+   "kind": "art"
+  },
+  "Raiden Shogun": {
+   "file": "raiden-shogun-e4b7d8.webp",
+   "kind": "art"
+  },
+  "Razor": {
+   "file": "razor-336911.webp",
+   "kind": "art"
+  },
+  "Rene": {
+   "file": "rene-bb5809.webp",
+   "kind": "tcg"
+  },
+  "Rhodeia of Loch": {
+   "file": "rhodeia-of-loch-edbcdc.webp",
+   "kind": "tcg"
+  },
+  "Rock Shieldwall Mitachurl": {
+   "file": "rock-shieldwall-mitachurl-f9cac1.webp",
+   "kind": "tcg"
+  },
+  "Rockfond Rifthound": {
+   "file": "rockfond-rifthound-55aebf.webp",
+   "kind": "tcg"
+  },
+  "Rosaria": {
+   "file": "rosaria-805fda.webp",
+   "kind": "art"
+  },
+  "Ruin Drake: Earthguard": {
+   "file": "ruin-drake-earthguard-6009dd.webp",
+   "kind": "tcg"
+  },
+  "Ruin Guard": {
+   "file": "ruin-guard-43426b.webp",
+   "kind": "tcg"
+  },
+  "Sandrone": {
+   "file": "sandrone-8a1247.webp",
+   "kind": "art"
+  },
+  "Sangonomiya Kokomi": {
+   "file": "sangonomiya-kokomi-6e6186.webp",
+   "kind": "art"
+  },
+  "Sayu": {
+   "file": "sayu-d6fa95.webp",
+   "kind": "art"
+  },
+  "Sedile": {
+   "file": "sedile-f238ce.webp",
+   "kind": "tcg"
+  },
+  "Sethos": {
+   "file": "sethos-8253bb.webp",
+   "kind": "art"
+  },
+  "Shajar": {
+   "file": "shajar-eb8814.webp",
+   "kind": "tcg"
+  },
+  "Shenhe": {
+   "file": "shenhe-12abd9.webp",
+   "kind": "art"
+  },
+  "Shikanoin Heizou": {
+   "file": "shikanoin-heizou-87546b.webp",
+   "kind": "art"
+  },
+  "Sigewinne": {
+   "file": "sigewinne-e6f17a.webp",
+   "kind": "art"
+  },
+  "Skirk": {
+   "file": "skirk-ccba70.webp",
+   "kind": "art"
+  },
+  "Stonehide Lawachurl": {
+   "file": "stonehide-lawachurl-6c3cb3.webp",
+   "kind": "tcg"
+  },
+  "Sucrose": {
+   "file": "sucrose-b728da.webp",
+   "kind": "art"
+  },
+  "Suppression Specialist Mek - Ousia": {
+   "file": "suppression-specialist-mek-ousia-67e27b.webp",
+   "kind": "tcg"
+  },
+  "Suppression Specialist Mek - Pneuma": {
+   "file": "suppression-specialist-mek-pneuma-fcb99f.webp",
+   "kind": "tcg"
+  },
+  "Tainted Hydro Phantasm": {
+   "file": "tainted-hydro-phantasm-756523.webp",
+   "kind": "tcg"
+  },
+  "Taroumaru": {
+   "file": "taroumaru-622051.webp",
+   "kind": "tcg"
+  },
+  "Tartaglia": {
+   "file": "tartaglia-0e34c3.webp",
+   "kind": "art"
+  },
+  "Tetreaux": {
+   "file": "tetreaux-2710e4.webp",
+   "kind": "tcg"
+  },
+  "Teucer": {
+   "file": "teucer-a3e287.webp",
+   "kind": "tcg"
+  },
+  "Thoma": {
+   "file": "thoma-683b13.webp",
+   "kind": "art"
+  },
+  "Thunder Manifestation": {
+   "file": "thunder-manifestation-0f03de.webp",
+   "kind": "tcg"
+  },
+  "Thundercraven Rifthound": {
+   "file": "thundercraven-rifthound-feca2e.webp",
+   "kind": "tcg"
+  },
+  "Tiepolo": {
+   "file": "tiepolo-1bc93d.webp",
+   "kind": "tcg"
+  },
+  "Tighnari": {
+   "file": "tighnari-f215f7.webp",
+   "kind": "art"
+  },
+  "Tlapalli": {
+   "file": "tlapalli-23aee3.webp",
+   "kind": "tcg"
+  },
+  "Tonia": {
+   "file": "tonia-05e40d.webp",
+   "kind": "tcg"
+  },
+  "Treasure Hoarders - Marksman": {
+   "file": "treasure-hoarders-marksman-02f782.webp",
+   "kind": "tcg"
+  },
+  "Treasure Hoarders - Scout": {
+   "file": "treasure-hoarders-scout-831832.webp",
+   "kind": "tcg"
+  },
+  "Treasure Hoarders Gravedigger": {
+   "file": "treasure-hoarders-gravedigger-0324b9.webp",
+   "kind": "tcg"
+  },
+  "Treasure Hoarders Pyro Potioneer": {
+   "file": "treasure-hoarders-pyro-potioneer-0c1bb8.webp",
+   "kind": "tcg"
+  },
+  "Tzompantli": {
+   "file": "tzompantli-44e8f9.webp",
+   "kind": "tcg"
+  },
+  "Valdis": {
+   "file": "valdis-ae2dc0.webp",
+   "kind": "tcg"
+  },
+  "Valeriy": {
+   "file": "valeriy-43bdf8.webp",
+   "kind": "art"
+  },
+  "Varesa": {
+   "file": "varesa-341eea.webp",
+   "kind": "art"
+  },
+  "Varka": {
+   "file": "varka-2fa258.webp",
+   "kind": "art"
+  },
+  "Venti": {
+   "file": "venti-454f73.webp",
+   "kind": "art"
+  },
+  "Vesna": {
+   "file": "vesna-157721.webp",
+   "kind": "art"
+  },
+  "Virda": {
+   "file": "virda-534a5b.webp",
+   "kind": "tcg"
+  },
+  "Vodyanitsa": {
+   "file": "vodyanitsa-433801.webp",
+   "kind": "art"
+  },
+  "Wanderer": {
+   "file": "wanderer-a7cee8.webp",
+   "kind": "art"
+  },
+  "Wayward Hermetic Spiritspeaker": {
+   "file": "wayward-hermetic-spiritspeaker-d59ba3.webp",
+   "kind": "tcg"
+  },
+  "Whistle": {
+   "file": "whistle-96ff4c.webp",
+   "kind": "tcg"
+  },
+  "Winged Cryoshroom": {
+   "file": "winged-cryoshroom-9eec2d.webp",
+   "kind": "tcg"
+  },
+  "Winged Dendroshroom": {
+   "file": "winged-dendroshroom-de1693.webp",
+   "kind": "tcg"
+  },
+  "Wooden Shieldwall Mitachurl": {
+   "file": "wooden-shieldwall-mitachurl-dc12db.webp",
+   "kind": "tcg"
+  },
+  "Wriothesley": {
+   "file": "wriothesley-e09d4b.webp",
+   "kind": "art"
+  },
+  "Xavier": {
+   "file": "xavier-71ad3a.webp",
+   "kind": "tcg"
+  },
+  "Xiangling": {
+   "file": "xiangling-a4eb79.webp",
+   "kind": "art"
+  },
+  "Xianyun": {
+   "file": "xianyun-d36dcd.webp",
+   "kind": "art"
+  },
+  "Xiao": {
+   "file": "xiao-f08490.webp",
+   "kind": "art"
+  },
+  "Xilonen": {
+   "file": "xilonen-75c388.webp",
+   "kind": "art"
+  },
+  "Xingqiu": {
+   "file": "xingqiu-fdeb9c.webp",
+   "kind": "art"
+  },
+  "Xinyan": {
+   "file": "xinyan-a4195b.webp",
+   "kind": "art"
+  },
+  "Yae Miko": {
+   "file": "yae-miko-d65fa0.webp",
+   "kind": "art"
+  },
+  "Yanfei": {
+   "file": "yanfei-c90036.webp",
+   "kind": "art"
+  },
+  "Yaoyao": {
+   "file": "yaoyao-43f75f.webp",
+   "kind": "art"
+  },
+  "Yelan": {
+   "file": "yelan-ac439b.webp",
+   "kind": "art"
+  },
+  "Yoimiya": {
+   "file": "yoimiya-4d4a5f.webp",
+   "kind": "art"
+  },
+  "Yumemizuki Mizuki": {
+   "file": "yumemizuki-mizuki-dd0f33.webp",
+   "kind": "art"
+  },
+  "Yun Jin": {
+   "file": "yun-jin-c7c5d7.webp",
+   "kind": "art"
+  },
+  "Zhongli": {
+   "file": "zhongli-3a974a.webp",
+   "kind": "art"
+  },
+  "Zibai": {
+   "file": "zibai-ca38ee.webp",
+   "kind": "art"
+  }
+ }
+}

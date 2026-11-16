@@ -25,6 +25,8 @@ import {npcKit} from './npc-kits.js';
 import {defeatGuildStaff} from './guild.js';
 import {hostileEnemy,playingEnemy} from './enemy-persona.js';
 import {volumeLevel} from './audio-levels.js';
+import {cardByAvatar,hasCard} from './card-index.js';
+import {effectsAllowed} from './graphics.js';
 
 export async function appendCombatMessage(ctx,{name='Narrator',text,avatar,event}){
     const message={name,is_user:false,is_system:false,send_date:new Date().toISOString(),mes:text,extra:{silly_teyvat_combat:event,silly_teyvat_combat_scene:structuredClone(activeEnemies(ctx))}};
@@ -59,7 +61,7 @@ export function createCombatAdapter({loadScript=()=>import('/script.js')}={}){
         if(script.isGenerating()||script.isChatSaving)throw new Error('Combat result saved. The enemy can react when the current generation finishes.');
         let ctx=getContext(),index=ctx.characters.findIndex(c=>c.avatar===event.avatar);if(index<0)return false;
         await script.unshallowCharacter?.(index);if(!isCurrent())return false;ctx=getContext();
-        const card=ctx.characters.find(c=>c.avatar===event.avatar);if(!card)return false;
+        const card=cardByAvatar(ctx,event.avatar);if(!card)return false;
         syncCombatPrompt(ctx);
         if(ctx.onlineStatus==='no_connection')throw new Error('Connect your main API to hear the enemy react. Its HP and the combat result are saved.');
         // In a duel the one reacting is a friend who chose to spar, not an enemy.
@@ -90,8 +92,9 @@ export function mountCombat({host,getContext,onChange=()=>{},announce=()=>{},ada
         else if(controls.parentElement!==dock)dock.append(controls);
     }
     // Sprites coming and going (and their hidden flags while they decode) change nothing about where Attack sits, and
-    // placeControls measures layout, so those mutations are skipped: with a crowded stage they came in dozens.
-    const inStage=record=>Boolean((record.target.nodeType===Node.ELEMENT_NODE?record.target:record.target.parentElement)?.closest('#gi-sprite-stage'));
+    // placeControls measures layout, so those mutations are skipped: with a crowded stage they came in dozens. So are
+    // changes inside a dialog (the map's pins, the battle board, the Characters screen), which come in hundreds.
+    const inStage=record=>Boolean((record.target.nodeType===Node.ELEMENT_NODE?record.target:record.target.parentElement)?.closest('#gi-sprite-stage, dialog'));
     const layout=new MutationObserver(records=>{if(records.every(inStage))return;placeControls();});layout.observe(host,{subtree:true,childList:true,attributes:true,attributeFilter:['hidden']});layout.observe(document.body,{attributes:true,attributeFilter:['class']});placeControls();
     const sword=controls.querySelector('button'),abort=new AbortController();
     // One dialog asks every combat question: which party members to fight, and whether to revive a fallen one.
@@ -134,7 +137,7 @@ export function mountCombat({host,getContext,onChange=()=>{},announce=()=>{},ada
     const dice=diceAdapter || mountElementalDice({host}),battle=battleAdapter || mountBattle({host,onBurst:unit=>burstVoice.play(unit),onStopVoice:()=>burstVoice.stop(),onTransform:unit=>onChange({transformed:unit})});const hits=new Map(),shown=new Map();let disposed=false,enabled=false,writing=false,revision=0,key='',paint='',lastId=-1,armed=false,target='',visit='',lastView={},duelMusic=false,calmedFor='',sceneFor='';
     const eligibleEnemies=ctx=>{const disabled=activeGroup(ctx)?.disabled_members || [];return activeEnemies(ctx).filter(e=>!disabled.includes(e.avatar));};
     // Party members you can square off against when no enemies are about: everyone present who is on their feet.
-    const duelCandidates=ctx=>sceneMembers(ctx).filter(a=>!activeGroup(ctx)?.disabled_members?.includes(a)&&ctx.characters?.some(c=>c.avatar===a)&&(!isEnemy(ctx,a)||!hostileEnemy(ctx,a))&&partyMember(ctx,a).hp>0);
+    const duelCandidates=ctx=>sceneMembers(ctx).filter(a=>!activeGroup(ctx)?.disabled_members?.includes(a)&&hasCard(ctx,a)&&(!isEnemy(ctx,a)||!hostileEnemy(ctx,a))&&partyMember(ctx,a).hp>0);
     // Battle music. It plays while a hostile enemy is here or a round is on the board, and also from the moment you
     // choose to battle someone friendly (a duel), until you win, flee, or send a message with Attack off. While an
     // enemy is played the roles are reversed: the characters around you are the hostile ones, and meeting them
@@ -181,7 +184,7 @@ export function mountCombat({host,getContext,onChange=()=>{},announce=()=>{},ada
             if(!snapshot.active?.enemy&&snapshot.units.some(u=>u.id===avatar&&u.side==='enemy'&&u.hp>0))snapshot.active={...snapshot.active,enemy:avatar};
             if(!snapshot.units.some(u=>u.side==='party'&&u.hp>0))throw new Error('Nobody in your party can fight. Rest at a town or the Adventurers\' Guild to recover.');
             const describe=state=>({allies:state.units.filter(u=>u.side==='party'&&u.hp>0).map(u=>({avatar:u.id,name:u.name,img:u.circle || u.img,element:u.element,active:state.active?.party===u.id})),enemy:{avatar,name:snapshot.units.find(u=>u.id===avatar)?.name || 'Enemy',img:portrait(ctx,avatar),maxHp:snapshot.units.find(u=>u.id===avatar)?.maxHp}});
-            const options={instant,effects:prefs(ctx).battleEffects!==false,volume:volumeOf(ctx,'battleSound'),isCurrent:valid};
+            const options={instant,effects:prefs(ctx).battleEffects!==false&&effectsAllowed(prefs(ctx)),volume:volumeOf(ctx,'battleSound'),isCurrent:valid};
             const player={name:ctx.name1 || 'You',img:portrait(ctx,USER_KEY)};
             // Roll Phase: eight dice (nine with Electro Resonance), one reroll, thrown onto the table.
             const roll=async state=>{
@@ -249,7 +252,7 @@ export function mountCombat({host,getContext,onChange=()=>{},announce=()=>{},ada
     // Battle cards are larger than SillyTavern's thumbnails, so they use the full portrait.
     const fullPortrait=(ctx,avatar)=>{const url=portrait(ctx,avatar),m=/\/thumbnail\?type=(avatar|persona)&file=([^&]+)/.exec(url);return m?(m[1]==='avatar'?`/characters/${m[2]}`:`/User%20Avatars/${m[2]}`):url;};
     // The circular icon the Sprite wardrobe shows for a character, for every round cutout.
-    const circle=(ctx,avatar)=>circularCharacterAvatar(ctx,avatar===USER_KEY?personaCard(ctx):ctx.characters?.find(c=>c.avatar===avatar)) || portrait(ctx,avatar);
+    const circle=(ctx,avatar)=>circularCharacterAvatar(ctx,avatar===USER_KEY?personaCard(ctx):cardByAvatar(ctx,avatar)) || portrait(ctx,avatar);
     characterAvatarsReady.then(()=>{partyPaint='';paint='';});
     const portrait=(ctx,avatar)=>avatar===USER_KEY?(ctx.getThumbnailUrl?.('persona',activePersonaAvatar(ctx)) || `/User%20Avatars/${encodeURIComponent(activePersonaAvatar(ctx))}`):(ctx.getThumbnailUrl?.('avatar',avatar) || `/characters/${encodeURIComponent(avatar)}`);
     // Pressing Attack with only friends in the scene: choose who to fight, then fight them alone.
@@ -405,7 +408,7 @@ export function mountCombat({host,getContext,onChange=()=>{},announce=()=>{},ada
                 }
             }
             const signature=JSON.stringify([panel.hidden,display]);if(signature===paint)return;paint=signature;panel.replaceChildren();
-            for(const e of display){const card=ctx.characters.find(c=>c.avatar===e.avatar);if(!card)continue;const item=document.createElement('div');item.className='gi-enemy-health';item.dataset.enemy=e.avatar;item.title=`${card.name}: ${e.hp} / ${e.maxHp} HP`;
+            for(const e of display){const card=cardByAvatar(ctx,e.avatar);if(!card)continue;const item=document.createElement('div');item.className='gi-enemy-health';item.dataset.enemy=e.avatar;item.title=`${card.name}: ${e.hp} / ${e.maxHp} HP`;
                 const img=document.createElement('img');img.src=ctx.getThumbnailUrl?.('avatar',e.avatar) || `/characters/${encodeURIComponent(e.avatar)}`;img.alt='';
                 const name=document.createElement('strong');name.textContent=card.name;const health=document.createElement('span');health.textContent=`${e.hp} / ${e.maxHp}`;
                 const bar=document.createElement('div');bar.className='gi-hp';bar.innerHTML='<i class="gi-hp-lag"></i><i class="gi-hp-fill"></i>';

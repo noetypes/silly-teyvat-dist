@@ -2,14 +2,16 @@ import {mediaSettings} from './media-store.js';
 import {activePersonaAvatar} from './persona-wardrobe.js';
 import {isEnemy} from './character-properties.js';
 import {BUNDLED_PERSONAS} from './bundled-personas.js';
+import {cardByAvatar,hasCard,cardsByName} from './card-index.js';
 // A persona can be a character card taken over by the player. The linked card
 // then shares its sprites and outfits with the persona and leaves the world's
 // random encounters while that persona is active. The two Traveler personas
 // that ship with Silly Teyvat are linked to their cards from the start.
 export const personaLinks = ctx => ({...BUNDLED_PERSONAS,...mediaSettings(ctx).personaCharacters});
 export function linkedCardAvatar(ctx, personaAvatar = activePersonaAvatar(ctx)) {
-    const avatar = personaLinks(ctx)[personaAvatar];
-    if(avatar && (ctx.characters || []).some(c => c.avatar === avatar))return avatar;
+    // Asked on every refresh: read the one link rather than copying the whole table.
+    const saved = mediaSettings(ctx).personaCharacters, avatar = saved && Object.hasOwn(saved, personaAvatar) ? saved[personaAvatar] : BUNDLED_PERSONAS[personaAvatar];
+    if(avatar && hasCard(ctx, avatar))return avatar;
     // Existing native personas can already embody a card without a legacy link.
     // Only an unambiguous exact name match is eligible; never guess from substrings.
     const name=ctx.powerUserSettings?.personas?.[personaAvatar];
@@ -21,7 +23,7 @@ export function linkedCardAvatar(ctx, personaAvatar = activePersonaAvatar(ctx)) 
 }
 // The persona file Play as creates for a card.
 export const takeoverAvatar=cardAvatar=>`takeover-${String(cardAvatar || '').replace(/\.[^.]+$/,'').replace(/[^\p{L}\p{N}_-]/gu,'_').slice(0,80) || 'character'}.png`;
-export const linkedCard = (ctx, personaAvatar) => { const avatar = linkedCardAvatar(ctx, personaAvatar); return avatar ? ctx.characters.find(c => c.avatar === avatar) : undefined; };
+export const linkedCard = (ctx, personaAvatar) => { const avatar = linkedCardAvatar(ctx, personaAvatar); return avatar ? cardByAvatar(ctx, avatar) : undefined; };
 // Cards currently played by the active persona.
 // An enemy card is the exception: playing a Hilichurl does not remove the others from the wilds, so its kin still
 // appear in encounters (friendly to the player, see enemy-persona.js).

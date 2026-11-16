@@ -1,5 +1,5 @@
 import {noteLocationArrival} from './arrival-policy.js';
-import {mountLocationCast,assignResidents,locationCastState,residentsAt,castMembership,defaultCharacterLocation,placeResident} from './location-cast.js';
+import {mountLocationCast,assignResidents,locationCastState,residentsAt,defaultCharacterLocation,placeResident} from './location-cast.js';
 import {backgroundRegions,travelState} from './backgrounds.js';
 import {mediaSettings} from './media-store.js';
 import {mountWorldMap} from './world-map.js';

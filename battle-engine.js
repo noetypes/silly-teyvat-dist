@@ -485,7 +485,7 @@ function core(round){
         // Cards put in the deck are remembered (team.deckAdds), since each round deals the deck from the bag again.
         if(to==='deck'){const adds=state.team.party.deckAdds ??= [];for(const id of list){const i=at===null?Math.floor(rand()*(round.deck.length+1)):Math.min(round.deck.length,at);round.deck.splice(i,0,id);adds.push(id);}push({type:'deck-add',cards:list,step});return;}
         const room=Math.max(0,HAND_MAX-round.hand.length),kept=list.slice(0,room);round.hand.push(...kept);
-        if(kept.length)push({type:'draw',cards:kept,burned:[],source:'created',created:true,step});
+        if(kept.length)push({type:'draw',cards:kept,burned:[],source:'created',created:true,step,hand:[...round.hand],deckLeft:round.deck.length});
     }
     // Discard from hand: highest cost first, cards of a cost, or at random. A discarded card's own "after
     // you discard" effect fires (Flamestrider: Soaring Ascent).
@@ -626,6 +626,8 @@ function core(round){
         if(effect.when==='firstUse'&&(actor.usedThisRound?.[move.name] || 0)>1)return;if(effect.when==='repeatUse'&&(actor.usedThisRound?.[move.name] || 0)<=1)return;
         if(effect.whenReaction&&extra.reaction!==effect.whenReaction)return;
         if(effect.when==='energyAtLeast'&&(actor.energy || 0)<effect.min)return;
+        // A party of exactly these elements, every one of them present (Nilou's Golden Chalice's Bounty).
+        if(effect.when==='pureTeam'){const els=new Set(side(state,actor.side).map(u=>u.element)),want=effect.elements || [];if(!want.length||want.some(e=>!els.has(e))||[...els].some(e=>!want.includes(e)))return;}
         if(effect.unless==='summonPresent'&&state.summons.some(x=>x.side===actor.side&&x.name===effect.summon))return;
         const inHand=id=>(round.hand || []).filter(h=>h===id).length;
         const scaled=n=>effect.per==='cardsInHand'?n+Math.min(effect.cap || 99,inHand(effect.card))*(effect.each || REACTION_UNIT):effect.per==='spent'?(extra.spent || 0)*(effect.each || REACTION_UNIT):effect.per==='bond'?Math.min(effect.cap || 99,extra.bond || 0)*(effect.each || REACTION_UNIT):n;
@@ -764,7 +766,7 @@ function core(round){
         if(n<=0)return;
         const {drawn,deck}=drawCards(round.deck,n,forecast?()=>.5:rngOf(round));
         const kept=drawn.slice(0,Math.max(0,HAND_MAX-round.hand.length));round.hand.push(...kept);round.deck=[...deck,...drawn.slice(kept.length)];
-        if(drawn.length)push({type:'draw',cards:kept,burned:drawn.slice(kept.length),source:source || ''});
+        if(drawn.length)push({type:'draw',cards:kept,burned:drawn.slice(kept.length),source:source || '',hand:[...round.hand],deckLeft:round.deck.length});
         noteDrawn(drawn,round);drawnTriggers(kept);
     }
     // Cards that act the moment they are drawn (Sigewinne's Bolstering Bubblebalms), then leave the hand.
@@ -866,7 +868,7 @@ function core(round){
     }
     // Passive supports (cheaper cards or switches): the first one that applies, if it has a use left this round.
     function supportReady(test){return (state.supports || []).find(entry=>{const def=supportDef(entry);return def&&test(def)&&(entry.n || 0)<(def.per || 99);}) || null;}
-    function addSupport(item,id,step){
+    function addSupport(item,id){
         state.supports ??= [];state.supportSeq=(state.supportSeq || 0)+1;
         const entry={id:`support:${state.supportSeq}`,item:id,name:item.name,uses:item.support.uses || 0,progress:0,n:0};
         state.supports.push(entry);supportsChanged('add',entry);
@@ -1181,9 +1183,11 @@ export function endPhase(round){
         planIntent(state,enemy,rngOf(round));
     }
     // Both sides draw two cards (Silly Teyvat's enemies have none). A full hand sends the rest back to the deck.
+    // Each draw records the hand as it is right after it: the board plays the End Phase back after all of
+    // it has been worked out, so an earlier draw (Liyue Harbor Wharf) must not already show these cards.
     const {drawn,deck}=drawCards(round.deck,HAND_DRAW,rngOf(round));
     const kept=drawn.slice(0,Math.max(0,HAND_MAX-round.hand.length));round.hand.push(...kept);round.deck=[...deck,...drawn.slice(kept.length)];
-    if(drawn.length)push({type:'draw',cards:kept,burned:drawn.slice(kept.length)});
+    if(drawn.length)push({type:'draw',cards:kept,burned:drawn.slice(kept.length),hand:[...round.hand],deckLeft:round.deck.length});
     noteDrawn(drawn,round);c.drawnTriggers(kept);
     push({type:'statuses',fields:structuredClone(state.fields),supports:structuredClone(state.supports || []),units:state.units.map(u=>({id:u.id,aura:auraList(u.aura),statuses:structuredClone(u.statuses || []),shield:u.shield || 0,energy:u.energy || 0,hp:u.hp,intent:u.intent || null,cooldowns:structuredClone(u.cooldowns || {}),enraged:Boolean(u.enraged),usedRage:Boolean(u.usedRage)}))});
     state.round++;round.phase='over';

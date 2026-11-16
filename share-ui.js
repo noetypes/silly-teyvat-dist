@@ -1,5 +1,5 @@
 // Settings > Share: one long job at a time, with progress and a way to stop it.
-import {exportExtension,exportGameData,importArchive,importGameData} from './share-package.js';
+import {exportExtension,exportGameData,importArchive,importGameData,restoreSillyTavern} from './share-package.js';
 import {openDownload} from './zip-store.js';
 import {RangeUnsupported,checkLocal,chunkedArchive,downloadRelease,formatBytes,loadRelease,rangedArchive,updatePlan,wholeDownload} from './game-data-update.js';
 const stamp=()=>new Date().toISOString().slice(0,10),KEY='genshin_dialogue_ui',files=n=>`${n} ${n===1?'file':'files'}`;
@@ -144,6 +144,16 @@ export function mountShare({getContext,announce,signal:mountSignal}){
             });
         },
         chooseImport(){$('#gi-share-file')?.click();},
+        // The same undo that deleting the extension runs, for a player who wants their own look back and to keep playing.
+        async restoreSillyTavern(){
+            await run('Restoring SillyTavern',async()=>{
+                const ctx=getContext(),done=await restoreSillyTavern(ctx,{release:await loadRelease()});
+                if(!done.look&&!done.lorebooks.length){paint('Nothing to restore: the Teyvat Slate theme is not in use and the game\u2019s lorebooks are not switched on for every chat.');return;}
+                await (await import('/script.js')).saveSettings();
+                const parts=[done.look&&'your previous theme is back',done.lorebooks.length&&`${done.lorebooks.join(' and ')} ${done.lorebooks.length===1?'is':'are'} no longer sent with every chat`].filter(Boolean);
+                paint(`Done: ${parts.join(', and ')}. Reload the page to finish.`);announce('SillyTavern restored. Reload the page to finish.');
+            });
+        },
         checkGameData,
         cancel(){job?.abort();},
         bind(){

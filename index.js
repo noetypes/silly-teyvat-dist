@@ -31,10 +31,9 @@ import { mountStatueResonance } from './statue-resonance.js';
 import {beginOpeningScene} from './opening-scene.js';
 import {enemySpeaker} from './enemy-actions.js';
 import {hostileSpeaker,syncEnemyPersonaPrompt,enemyPersonaPrompt} from './enemy-persona.js';
-import { mountLocationCast } from './location-cast.js';
+import { mountLocationCast, castIdentity, defaultCharacterLocation } from './location-cast.js';
 import { loadCharacterHomes } from './character-homes.js';
-import { castIdentity, defaultCharacterLocation } from './location-cast.js';
-import { startCharacterAtHome } from './character-location.js';
+import { followGreeting, startCharacterAtHome } from './character-location.js';
 import { loadStarterLocations } from './starter-locations.js';
 import { loadStarterCGs } from './starter-cgs.js';
 import { alignEnemyPools, addNewEnemies } from './enemy-regions.js';
@@ -50,7 +49,7 @@ import {mountTrust} from './trust-ui.js';
 import {giveGift} from './gifts.js';
 import {namecardsReady,namecards,namecardUrl,chooseNamecard} from './namecards.js';
 import {structureSettings,paintResets,resetSection,bindSettingsSearch,clearSettingsSearch} from './settings-ui.js';
-import {renderFeatureSwitches,paintFeatureSwitches,setGroup,setSettings,paimonKeys,paimonOn,paimonValues,linkPaimon,PAIMON_LINKS} from './feature-switches.js';
+import {renderFeatureSwitches,paintFeatureSwitches,setGroup,setSettings,paimonKeys,paimonOn,paimonValues,linkPaimon,PAIMON_LINKS,featureState,anyFeatureOn} from './feature-switches.js';
 import {loadPersonaSupport,personaCard,syncPersonaSettings,setPersonaSpriteSetting,adoptActivePersona} from './persona-wardrobe.js';
 import {circularCharacterAvatar,characterAvatarsReady,personaMenuIcon} from './character-avatars.js';
 import {createPersonaSession,repairSoloPortraits} from './persona-session.js';
@@ -60,15 +59,17 @@ import {freshJourneySource,openFreshSoloChat,randomizeGreeting} from './fresh-ch
 import {createLoadingScreen} from './loading-screen.js';
 import {nameTagNames,cleanMessageNameTags,ownTagNames,guestNamesFor} from './name-tags.js';
 import {createKeyboardFrame} from './keyboard-frame.js';
-import {applyPackagedSettings} from './share-package.js';
+import {applyPackagedSettings,restoreSillyTavern} from './share-package.js';
+import {loadRelease} from './game-data-update.js';
 import {mountShare} from './share-ui.js';
 import * as fullscreen from './fullscreen.js';
 import {FRAME_CAP_OPTIONS,FRAME_CAP_MIN,FRAME_CAP_MAX,frameCapFps,setFrameCap} from './frame-rate.js';
+import {GRAPHICS_OPTIONS,GRAPHICS_LABELS,applyGraphics,removeGraphics,detectGraphics,graphicsLevel} from './graphics.js';
 const KEY = 'genshin_dialogue_ui';
 // A GitHub install takes the repository's name, so the folder is read from where this file is served.
 const FOLDER = `third-party/${decodeURIComponent(new URL('./', import.meta.url).pathname.split('/').filter(Boolean).at(-1))}`;
-const defaults = Object.freeze({ ...stagingDefaults, enabled: false, choices: true, composer: true, frameCap: 'unlimited', frameCapCustom: 90, textScale: 1, scrim: 0.8, revealSpeed: 45, tapAdvance: true, pageExpressions: true, narration: false, narrationMode: 'quotes', narrationKeyword: 'Narrator:', hideDialogueQuotes:false, nameTagFilter:true, nameTagScope:'all', nameTagExtra:'', guestSpeakers:false, wardrobe: true, locationEncounters:true, locationCharacterLimit:5, randomEncounters:true, encounterRate:40, allowMainDeparture:false, worldPromptAllRegions:false, roleplayPromptsEnabled:true, wildernessEncounters:true, maxEnemies:3, combatDamageMin:1, combatDamageMax:6, enemyStrikeBack:true,combatTriggerPhrase:'[start_combat]', enemyDamageMin:2, enemyDamageMax:6, enemyDice:4, userMaxHp:30, combatDifficulty:'normal', battleEffects:true, battleSound:true,uiSound:true,uiSoundVolume:.7,masterVolume:1,locationMusicEnabled:true,locationMusicVolume:.45,voiceVolume:.8,cgVolume:.8,effectsVolume:.8, personaSpriteClassify:false, soloGreeting:'standard', personaIcon: 'Aether', personaIconMode:'auto', hudTopIcons:'auto', namecard:'', signature:'', trimSprites:true, cgEnabled:true, cgClassifier:'main', cgProfile:'', choicesProfile:'', cgBypassReasoning:true, choicesBypassReasoning:true, cgPrompt:defaultCGPrompt, cgDisplayMode:'each', cgCooldown:10, cgAudio:true, spriteAudio:true, burstAudio:true, diceSound:true, trustSystem:false, travelerTwin:'Aether', master:true, cardArt:true, paimonLinks:PAIMON_LINKS, paimonRestore:{} });
-const bodyClasses = ['gi-menu-open', 'gi-enabled', 'gi-scene', 'gi-history', 'gi-hidden', 'gi-compose', 'gi-generating', 'gi-reading', 'gi-choices-enabled', 'gi-native-staging', 'gi-sprite-idle', 'gi-hud-top-off', 'gi-welcome'];
+const defaults = Object.freeze({ ...stagingDefaults, enabled: false, choices: true, hud: true, shell: true, worldEnabled: true, battles: true, groupReplies: true, composer: true, frameCap: 'unlimited', frameCapCustom: 90, graphics: 'auto', textScale: 1, scrim: 0.8, revealSpeed: 45, tapAdvance: true, pageExpressions: true, narration: false, narrationMode: 'quotes', narrationKeyword: 'Narrator:', hideDialogueQuotes:false, nameTagFilter:true, nameTagScope:'all', nameTagExtra:'', guestSpeakers:false, wardrobe: true, locationEncounters:true, locationCharacterLimit:5, randomEncounters:true, encounterRate:40, allowMainDeparture:false, worldPromptAllRegions:false, roleplayPromptsEnabled:true, wildernessEncounters:true, maxEnemies:3, combatDamageMin:1, combatDamageMax:6, enemyStrikeBack:true,combatTriggerPhrase:'[start_combat]', enemyDamageMin:2, enemyDamageMax:6, enemyDice:4, userMaxHp:30, combatDifficulty:'normal', battleEffects:true, battleSound:true,uiSound:true,uiSoundVolume:.7,masterVolume:1,locationMusicEnabled:true,locationMusicVolume:.45,voiceVolume:.8,cgVolume:.8,effectsVolume:.8, personaSpriteClassify:false, soloGreeting:'standard', personaIcon: 'Aether', personaIconMode:'auto', hudTopIcons:'auto', namecard:'', signature:'', trimSprites:true, cgEnabled:true, cgClassifier:'main', cgProfile:'', choicesProfile:'', cgBypassReasoning:true, choicesBypassReasoning:true, cgPrompt:defaultCGPrompt, cgDisplayMode:'each', cgCooldown:10, cgAudio:true, spriteAudio:true, burstAudio:true, diceSound:true, trustSystem:false, travelerTwin:'Aether', master:true, cardArt:true, paimonLinks:PAIMON_LINKS, paimonLinksVersion:2, paimonRestore:{} });
+const bodyClasses = ['gi-menu-open', 'gi-enabled', 'gi-scene', 'gi-history', 'gi-hidden', 'gi-compose', 'gi-generating', 'gi-reading', 'gi-hud-enabled', 'gi-native-staging', 'gi-sprite-idle', 'gi-hud-top-off', 'gi-welcome', 'gi-classic'];
 const icons = {
     compass: '<path d="m12 2 3 7 7 3-7 3-3 7-3-7-7-3 7-3Z"/><path d="m12 8 4 4-4 4-4-4Z"/>',
     back: '<path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/>',
@@ -104,6 +105,9 @@ const TRUST_ICON = `data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://
 const cornerIcon = path => `data:image/svg+xml,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="${path}" stroke="#1c1c1c" stroke-width="4.2"/><path d="${path}" stroke="#fff" stroke-width="2.4"/></svg>`)}`;
 const FULLSCREEN_ICONS = { enter: cornerIcon('M4 9V4h5M15 4h5v5M20 15v5h-5M9 20H4v-5'), exit: cornerIcon('M9 4v5H4M20 9h-5V4M15 20v-5h5M4 15h5v5') };
 const fullscreenButton = () => `<button type="button" data-gi-action="fullscreen" aria-label="Full Screen" aria-pressed="false"><img class="gi-pm-icon" src="${FULLSCREEN_ICONS.enter}" alt="" aria-hidden="true" draggable="false"><span>Full Screen</span></button>`;
+// Story view has its own tile: the speech bubble the map uses for a waypoint where someone is waiting.
+const STORY_ICON = iconAsset('map-badge-people');
+const storyButton = () => `<button type="button" data-gi-action="story" aria-label="Story view" aria-pressed="false"><img class="gi-pm-icon" src="${STORY_ICON}" alt="" aria-hidden="true" draggable="false"><span>Story view</span></button>`;
 // Card Search is available throughout a chat, with the game's Quests icon.
 const questButton = () => `<button type="button" data-gi-action="card-search" aria-label="Card Search" hidden><img class="gi-pm-icon" src="${QUEST_MENU_ICON}" alt="" aria-hidden="true" draggable="false"><span>Card Search</span></button>`;
 const trustButton = () => `<button type="button" data-gi-action="trust" aria-label="Trust"><img class="gi-pm-icon" src="${TRUST_ICON}" alt="" aria-hidden="true" draggable="false"><span>Trust</span></button>`;
@@ -153,7 +157,7 @@ let combatUI;
 let locationMusicUI;
 let spriteUI;
 let wardrobeUI,inventoryUI,trustUI,cardSearchUI;
-let personaSession,soloChatUI,loadingUI,keyboardFrame,lastPlaceId='',backgroundMenuUI;
+let personaSession,soloChatUI,loadingUI,keyboardFrame,lastPlaceId='',backgroundMenuUI,openPlace=async()=>{};
 let mediaUI,shareUI,uiSound;
 let stageEffects;
 let visit = 0;
@@ -236,6 +240,15 @@ function preferences() {
     if (store[KEY].spriteCrowd === undefined && store[KEY].autoHideSprites) store[KEY].spriteCrowd = 'recent';
     if (!['auto', 'recent', 'all'].includes(store[KEY].spriteCrowd ?? 'auto')) store[KEY].spriteCrowd = 'auto';
     migrateVolumes(store[KEY]);
+    // Teyvat Choices and the HUD icons were once one switch (choices). Each player keeps the HUD as the shared switch left it,
+    // and a Paimon menu switch linked to Choices & HUD stays linked to both.
+    if (store[KEY].hud === undefined && typeof store[KEY].choices === 'boolean') {
+        store[KEY].hud = store[KEY].choices;
+        const links = store[KEY].paimonLinks;
+        if (Array.isArray(links) && links.includes('choices') && !links.includes('hud')) links.splice(links.indexOf('choices') + 1, 0, 'hud');
+    }
+    // 0.68a: the Paimon menu switch turns every set off by default, leaving only the menu. Links chosen before then are replaced once.
+    if (store[KEY].paimonLinksVersion !== 2) { store[KEY].paimonLinks = [...PAIMON_LINKS]; store[KEY].paimonRestore = {}; store[KEY].paimonLinksVersion = 2; }
     for (const [key, value] of Object.entries(defaults)) {
         if (typeof store[KEY][key] !== typeof value) store[KEY][key] = value;
     }
@@ -245,7 +258,9 @@ function preferences() {
     if (!['auto','on','off'].includes(store[KEY].hudTopIcons)) store[KEY].hudTopIcons = 'auto';
     if (!FRAME_CAP_OPTIONS.includes(store[KEY].frameCap)) store[KEY].frameCap = 'unlimited';
     store[KEY].frameCapCustom = Math.max(FRAME_CAP_MIN,Math.min(FRAME_CAP_MAX,Math.round(Number(store[KEY].frameCapCustom) || 90)));
-    setFrameCap(frameCapFps(store[KEY]));
+    if (!GRAPHICS_OPTIONS.includes(store[KEY].graphics)) store[KEY].graphics = 'auto';
+    // Graphics quality can lower the frame cap, and marks <body> for performance.css. Switched off, nothing is marked.
+    if (mounted && store[KEY].master !== false) applyGraphics(store[KEY]); else setFrameCap(frameCapFps(store[KEY]));
     store[KEY].textScale = Math.min(1.4, Math.max(0.85, Number(store[KEY].textScale) || 1));
     store[KEY].revealSpeed = Math.min(150, Math.max(0, Number(store[KEY].revealSpeed) || 0));
     store[KEY].scrim = Math.min(0.95, Math.max(0.4, Number(store[KEY].scrim) || 0.8));
@@ -253,7 +268,7 @@ function preferences() {
 }
 function messages() {
     // Native staging reads the full transcript without mutating another extension's classes.
-    const own = preferences().enabled && preferences().nativeStaging;
+    const own = preferences().nativeStaging;
     const chat = context().chat || [];
     return [...document.querySelectorAll('#chat > .mes[mesid]')]
         .filter(el => /^\d+$/.test(el.getAttribute('mesid')) && (own || !el.classList.contains('displayNone')))
@@ -303,11 +318,10 @@ function imageLoaded(path){
     return entry.done;
 }
 function stageReady(){
-    if(!preferences().enabled)return true;
     if(openingHome)return false;
     const place=backgroundUI?.current;
     if(place&&!imageLoaded(localMediaPath(place.location.path)))return false;
-    return document.body.classList.contains('gi-scene')&&spriteUI?.settled !== false;
+    return (document.body.classList.contains('gi-scene')||document.body.classList.contains('gi-classic'))&&spriteUI?.settled !== false;
 }
 // Moving to another place covers the stage until its background and sprites have loaded. While the
 // screen is already up (a chat still opening), this only updates the emblem and the place.
@@ -322,10 +336,19 @@ function holdTravelLoad(place){
 // then return under the same chat id with no CHAT_CHANGED, so their return ends the hold.
 let bridgeRelease=null,bridgeChatId=null;
 function bridgeChatSwitch(){
-    if(bridgeRelease||!loadingUI)return;
+    if(bridgeRelease||!loadingUI||!preferences().worldEnabled)return;
     bridgeChatId=context().getCurrentChatId?.() ?? null;
     const release=loadingUI.hold(loadingPlace(context()),{instant:true}),timer=setTimeout(()=>bridgeRelease?.(),3000);
     bridgeRelease=(options)=>{clearTimeout(timer);bridgeRelease=null;release(options);};
+}
+// SillyTavern's Backgrounds menu lists every location while World map & travel is on; choosing one in a journey teleports there.
+function syncBackgroundMenu(on) {
+    if (on && !backgroundMenuUI) backgroundMenuUI = mountBackgroundMenu({getContext:context,announce,
+        inJourney:()=>{const ctx=context();return Boolean(ctx.characterId!=null||ctx.groupId);},
+        canTeleport:id=>worldWaypoints(context()).some(w=>w.location.id===id),
+        currentLocation:()=>travelState(context()).location,
+        teleport:id=>worldMapUI.teleport(id)});
+    else if (!on && backgroundMenuUI) { backgroundMenuUI.dispose(); backgroundMenuUI = undefined; }
 }
 function schedule() {
     if (!mounted || frame) return;
@@ -374,6 +397,11 @@ function syncSettings(force=true) {
     document.querySelector('#gi-choices-reasoning-row')?.toggleAttribute('hidden', Boolean(prefs.choicesProfile));
     document.querySelector('#gi-crowd-max-row')?.toggleAttribute('hidden', prefs.spriteCrowd !== 'recent');
     document.querySelector('#gi-frame-cap-custom-row')?.toggleAttribute('hidden', prefs.frameCap !== 'custom');
+    // Auto names the level it chose and why, so the player can tell what their device was taken for.
+    const auto = document.querySelector('#gi-graphics option[value="auto"]'), found = detectGraphics();
+    if (auto) auto.textContent = `Auto (${GRAPHICS_LABELS[found.level]})`;
+    const graphicsNote = document.querySelector('#gi-graphics-note');
+    if (graphicsNote) graphicsNote.textContent = prefs.graphics === 'auto' ? `Auto chose ${GRAPHICS_LABELS[found.level]}: ${found.reason}.` : `Auto would choose ${GRAPHICS_LABELS[found.level]}: ${found.reason}.`;
     const scale = document.querySelector('#gi-text-scale-value');
     const scrim = document.querySelector('#gi-scrim-value');
     if (scale) scale.value = `${Math.round(prefs.textScale * 100)}%`;
@@ -395,8 +423,14 @@ function refresh({passive=false}={}) {
     const inChat = ctx.characterId !== undefined && ctx.characterId !== null || Boolean(ctx.groupId);
     // The place and neutral roster exist before a quiet opening narration has
     // returned. Dialogue controls still wait for an actual rendered message.
-    const sceneActive = prefs.enabled && inChat;
-    const active = sceneActive && list.length > 0;
+    // Each feature set runs only while it is switched on (feature-switches.js). `world` here means a scene is
+    // drawn in this chat (a place, sprites or Story view); with none of them the chat is SillyTavern's own.
+    // Story view only decides how the messages are shown: as dialogue pages over the scene, or, off, as the
+    // classic chat in a box over it.
+    const feature = featureState(prefs, inChat), placed = feature.world;
+    const world = feature.scene, classic = world && !prefs.enabled;
+    const sceneActive = prefs.enabled && world;
+    const active = sceneActive && list.length > 0, live = world && list.length > 0;
     if ((editing() || deleting()) && active) { view.send('OPEN_REVIEW'); stopAuto(); }
     const history = inReview(), hidden = uiHidden(), menuOpen = menuIsOpen();
     if (!list.some(el => el.getAttribute('mesid') === current)) current = list.at(-1)?.getAttribute('mesid') ?? null;
@@ -410,47 +444,61 @@ function refresh({passive=false}={}) {
         const newest = ctx.chat?.[Number(latest)];
         if (!unread && (regenerating || newest?.is_user || newest?.extra?.silly_teyvat_gift)) current = latest;
     }
+    // The classic chat shows every message, so the stage follows the newest one.
+    if (classic) current = list.at(-1)?.getAttribute('mesid') ?? null;
     const selected = list.find(el => el.getAttribute('mesid') === current);
     const index = list.indexOf(selected);
     const page = pageState(selected);
-    const morePages = page.index < page.pages.length - 1;
-    const narrated = Boolean(page.pages[page.index]?.giNarration);
+    const morePages = active && page.index < page.pages.length - 1;
+    // The classic chat shows the whole message, so the stage takes its last page.
+    const shownPage = classic ? Math.max(0, page.pages.length - 1) : page.index;
+    const narrated = Boolean(page.pages[shownPage]?.giNarration);
     for (const el of Array.from(chatWith('gi-narration'))) if (el !== selected || !narrated || !active) el.classList.remove('gi-narration');
     if (active && narrated) selected.classList.add('gi-narration');
     // Guest speakers: the name plate shows whoever the character is voicing (Oz, Ajaw) on their pages.
-    const guest = active && !narrated ? page.pages[page.index]?.giGuest || '' : '';
+    const guest = live && !narrated ? page.pages[shownPage]?.giGuest || '' : '';
     showGuestName(selected, guest);
     presentPage(selected, page, active && !history);
     for (const el of Array.from(chatWith('gi-current'))) if (el.parentElement?.id === 'chat' && (el !== selected || !active)) el.classList.remove('gi-current');
     if (active && selected) selected.classList.add('gi-current');
     // The welcome page is styled by this class rather than by #chat:has(> .welcomePanel): a :has() on #chat is re-checked on every text change in it, and re-styles every message with it.
-    const flags = { 'gi-welcome': Boolean(document.querySelector('#chat > .welcomePanel')), 'gi-native-staging': prefs.enabled && prefs.nativeStaging, 'gi-sprite-idle': prefs.enabled && prefs.spriteIdle !== false, 'gi-hud-top-off': prefs.enabled && prefs.choices && topIconsHidden(prefs), 'gi-enabled': prefs.enabled, 'gi-scene': sceneActive, 'gi-history': active && history, 'gi-hidden': active && hidden, 'gi-compose': active && (composing || history), 'gi-generating': active && generating, 'gi-reading': active && (morePages || index < list.length - 1 || generating || reveal.revealing) };
+    const flags = { 'gi-welcome': Boolean(document.querySelector('#chat > .welcomePanel')), 'gi-native-staging': prefs.nativeStaging, 'gi-sprite-idle': prefs.spriteIdle !== false, 'gi-hud-top-off': prefs.hud && topIconsHidden(prefs), 'gi-enabled': true, 'gi-scene': sceneActive, 'gi-classic': classic, 'gi-history': active && history, 'gi-hidden': active && hidden, 'gi-compose': active && (composing || history), 'gi-generating': active && generating, 'gi-reading': active && (morePages || index < list.length - 1 || generating || reveal.revealing) };
+    const wasClassic = document.body.classList.contains('gi-classic');
     for (const [name, value] of Object.entries(flags)) document.body.classList.toggle(name, Boolean(value));
-    spriteUI?.sync({ on: Boolean(sceneActive && !history && (prefs.nativeStaging || prefs.pageExpressions || prefs.narration)), id: selected ? Number(current) : -1, page: page.index, text: page.pages[page.index]?.textContent || '', narration: narrated || Boolean(guest), guest: Boolean(guest), classifyPages: prefs.pageExpressions, enemyAction:page.pages[page.index]?.giEnemyAction || 'neutral', complete: !generating || index < list.length - 1 || morePages, generating });
-    stageEffects?.sync(Boolean(sceneActive&&!history&&!hidden),Boolean(reveal.revealing||generating));
-    mediaUI?.sync({on:Boolean(active && !history && !hidden),id:Number(current),page:page.index,generating});
-    backgroundUI?.sync({on:Boolean(sceneActive&&!history),id:selected ? Number(current) : -1,generating:generating||openingHome});
+    // The box opens on the newest message, as SillyTavern's own chat does, with every avatar shown as its card.
+    if (classic && !wasClassic) { cardArtUI?.refresh(); requestAnimationFrame(() => { const chat = document.querySelector('#chat'); if (chat) chat.scrollTop = chat.scrollHeight; }); }
+    spriteUI?.sync({ on: Boolean(world && !history && (prefs.nativeStaging || prefs.pageExpressions || prefs.enabled && prefs.narration)), id: selected ? Number(current) : -1, page: shownPage, text: page.pages[shownPage]?.textContent || '', narration: narrated || Boolean(guest), guest: Boolean(guest), classifyPages: prefs.pageExpressions, enemyAction:page.pages[shownPage]?.giEnemyAction || 'neutral', complete: !generating || index < list.length - 1 || morePages, generating });
+    stageEffects?.sync(Boolean(world&&!history&&!hidden),Boolean(reveal.revealing||generating));
+    mediaUI?.sync({on:Boolean(live && (feature.cgs || feature.stage || feature.story) && !history && !hidden),id:Number(current),page:shownPage,generating});
+    syncBackgroundMenu(prefs.worldEnabled);
+    backgroundUI?.sync({on:Boolean(placed&&!history),id:selected ? Number(current) : -1,generating:generating||openingHome});
     const placeNow=backgroundUI?.current;
-    if(placeNow?.location?.id){if(prefs.enabled&&lastPlaceId&&placeNow.location.id!==lastPlaceId)holdTravelLoad(placeNow);if(placeNow.location.id!==lastPlaceId)backgroundMenuUI?.sync();lastPlaceId=placeNow.location.id;}
-    locationCastUI?.sync({on:Boolean(prefs.enabled&&inChat&&!openingHome),generating:generating||groupGenerating||combatUI?.busy||personaSession?.busy});
-    worldMapUI?.sync({on:Boolean(prefs.enabled&&inChat),show:Boolean(sceneActive&&!history&&!hidden&&!menuOpen),location:backgroundUI?.current,loading:Boolean(loadingUI?.visible)});
+    if(placeNow?.location?.id){if(lastPlaceId&&placeNow.location.id!==lastPlaceId)holdTravelLoad(placeNow);if(placeNow.location.id!==lastPlaceId)backgroundMenuUI?.sync();lastPlaceId=placeNow.location.id;}
+    locationCastUI?.sync({on:Boolean(placed&&!openingHome),generating:generating||groupGenerating||combatUI?.busy||personaSession?.busy});
+    worldMapUI?.sync({on:placed,show:Boolean(placed&&!history&&!hidden&&!menuOpen),location:backgroundUI?.current,loading:Boolean(loadingUI?.visible),generating});
     // Arriving at a Statue of The Seven offers the Traveler its element once the new place is on screen and nothing is busy.
-    statueUI?.sync({on:Boolean(prefs.enabled&&inChat),ready:Boolean(active&&!history&&!hidden&&!menuOpen&&!generating&&!groupGenerating&&!loadingUI?.visible&&!combatUI?.busy&&!combatUI?.engaged&&!locationCastUI?.busy&&!personaSession?.busy&&!worldMapUI?.busy&&!document.querySelector('dialog[open]:not(#gi-statue)'))});
+    statueUI?.sync({on:placed,ready:Boolean(placed&&live&&!history&&!hidden&&!menuOpen&&!generating&&!groupGenerating&&!loadingUI?.visible&&!combatUI?.busy&&!combatUI?.engaged&&!locationCastUI?.busy&&!personaSession?.busy&&!worldMapUI?.busy&&!document.querySelector('dialog[open]:not(#gi-statue)'))});
     for (const el of uiActions('wardrobe')) el.hidden = !prefs.wardrobe;
     for (const el of uiActions('trust')) el.hidden = !prefs.trustSystem;
-    const canSearch = Boolean(prefs.enabled && inChat);
+    // A tile is offered only while its feature set is on.
+    const canSearch = feature.battles;
     for (const el of uiActions('card-search')) el.hidden = !canSearch;
+    for (const el of uiActions('inventory')) el.hidden = !prefs.battles;
+    for (const el of uiActions('map')) el.hidden = !prefs.worldEnabled;
+    for (const el of uiActions('gallery')) el.hidden = !prefs.cgEnabled;
+    for (const action of ['auto', 'history', 'compose', 'hide']) for (const el of uiActions(action)) el.hidden = !prefs.enabled;
+    if (!prefs.battles) inventoryUI?.close?.();
     if (!canSearch && cardSearchUI?.isOpen) cardSearchUI.close();
     if (!prefs.wardrobe) wardrobeUI?.close();
     // Top-right SillyTavern icons: shown, hidden, or (Auto) hidden on phones for a clean layout.
     const hideTop = topIconsHidden(prefs);
-    syncHudIcons(prefs.enabled && prefs.choices, personaMenuIcon(ctx), hideTop);
+    syncHudIcons(prefs.hud, personaMenuIcon(ctx), hideTop, prefs.shell);
     document.querySelectorAll('#gi-toolbar .gi-pm-tavern img[data-persona]').forEach(img => { const src = drawerIcon('persona-management-button', personaMenuIcon(ctx)); if (img.src !== src) img.src = src; });
     if (menuOpen) paintProfile();
-    combatUI?.sync({on:Boolean(prefs.enabled&&inChat&&!openingHome),id:Number(current),generating:generating||groupGenerating||locationCastUI?.busy||personaSession?.busy,show:Boolean(active&&!history&&!hidden),idle:!(morePages||index<list.length-1||generating||reveal.revealing)});
-    locationMusicUI?.sync({on:Boolean(prefs.enabled&&inChat&&!openingHome),viewed:placeNow?.location || null,combat:Boolean(prefs.enabled&&inChat&&!openingHome&&(combatUI?.busy||combatUI?.engaged||activeEnemies(ctx).some(enemy=>!activeGroup(ctx)?.disabled_members?.includes(enemy.avatar))))});
-    soloChatUI?.sync({on:Boolean(prefs.enabled && inChat)});
-    choiceUI?.sync({ on: Boolean(prefs.enabled && inChat && !soloChatUI?.solo), suggested:prefs.choices, generating:generating||groupGenerating||Boolean(combatUI?.busy)||Boolean(locationCastUI?.busy) });
+    combatUI?.sync({on:Boolean(feature.battles&&!openingHome),id:Number(current),generating:generating||groupGenerating||locationCastUI?.busy||personaSession?.busy,show:Boolean(feature.battles&&live&&!history&&!hidden),idle:!(morePages||active&&index<list.length-1||generating||reveal.revealing)});
+    locationMusicUI?.sync({on:Boolean(placed&&!openingHome),viewed:placeNow?.location || null,combat:Boolean(placed&&feature.battles&&!openingHome&&(combatUI?.busy||combatUI?.engaged||activeEnemies(ctx).some(enemy=>!activeGroup(ctx)?.disabled_members?.includes(enemy.avatar))))});
+    soloChatUI?.sync({on:placed});
+    choiceUI?.sync({ on: Boolean(feature.choices && !soloChatUI?.solo), suggested:prefs.choices, generating:generating||groupGenerating||Boolean(combatUI?.busy)||Boolean(locationCastUI?.busy) });
     if (active && !history) {
         const height = document.querySelector('#chat').getBoundingClientRect().height;
         document.body.style.setProperty('--gi-dialogue-height', `${Math.round(height)}px`);
@@ -466,18 +514,19 @@ function refresh({passive=false}={}) {
         document.body.classList.toggle('gi-menu-open', menuOpen);
         if (menuOpen) paintProfile(); else paintNamecards();
     }
+    const storyTile = document.querySelector('#gi-toolbar [data-gi-action="story"]');
+    storyTile.setAttribute('aria-pressed', String(prefs.enabled)); storyTile.setAttribute('aria-label', prefs.enabled ? 'Story view: On' : 'Story view: Off');
     const toggle = document.querySelector('#gi-toolbar [data-gi-action="toggle"]');
     toggle.setAttribute('aria-pressed', String(paimonOn(prefs)));
     toggle.setAttribute('aria-label', paimonOn(prefs) ? 'Silly Teyvat: On' : 'Silly Teyvat: Off');
-    const mapButton = document.querySelector('#gi-toolbar [data-gi-action="map"]');
-    if (mapButton) mapButton.disabled = !prefs.enabled;
     // Only a welcome page with no character or journey open can start a solo journey.
     const soloButton = document.querySelector('#gi-toolbar [data-gi-action="solo-journey"]');
-    soloButton.hidden = !prefs.enabled || inChat;
+    soloButton.hidden = inChat || !prefs.worldEnabled;
     soloButton.disabled = Boolean(personaSession?.busy);
     for (const action of ['auto', 'history', 'hide']) document.querySelector(`#gi-toolbar [data-gi-action="${action}"]`).disabled = !active;
     document.querySelector('#gi-review-heading').hidden = !active || !history;
-    document.querySelector('#gi-navigation').hidden = !active || history || hidden;
+    const navigation = document.querySelector('#gi-navigation');
+    navigation.hidden = !active || history || hidden;
     const regeneration=regenerationState(ctx,{id:Number(current),generating,editing:editing()||deleting(),busy:regenerating});
     const regenerateButton=document.querySelector('#gi-regenerate');
     regenerateButton.hidden=!active || history || hidden || generating || !regeneration.visible;regenerateButton.disabled=!regeneration.allowed;
@@ -485,15 +534,16 @@ function refresh({passive=false}={}) {
     const position = document.querySelector('#gi-position');
     position.textContent = `${index + 1} / ${list.length}${page.pages.length > 1 ? ` · ${page.index + 1} / ${page.pages.length}` : ''}`;
     position.setAttribute('aria-label', `Message ${index + 1} of ${list.length}, page ${page.index + 1} of ${page.pages.length}`);
-    document.querySelector('[data-gi-action="previous"]').disabled = index <= 0 && page.index <= 0;
-    const previous = document.querySelector('[data-gi-action="previous"]');
+    // Scoped to the navigation bar: an attribute lookup from the document walks the whole transcript first.
+    const previous = navigation.querySelector('[data-gi-action="previous"]');
+    previous.disabled = index <= 0 && page.index <= 0;
     previous.title = page.index > 0 ? 'Previous dialogue page' : 'Previous message';
     previous.setAttribute('aria-label', previous.title);
-    const next = document.querySelector('#gi-navigation [data-gi-action="next"]');
+    const next = navigation.querySelector('[data-gi-action="next"]');
     next.disabled = index === list.length - 1 && !morePages && !reveal.revealing;
     next.title = reveal.revealing ? 'Show the rest of this dialogue' : morePages ? 'Next dialogue page' : 'Next message';
     next.setAttribute('aria-label', next.title);
-    document.querySelector('[data-gi-action="latest"]').disabled = index === list.length - 1 && !morePages;
+    navigation.querySelector('[data-gi-action="latest"]').disabled = index === list.length - 1 && !morePages;
     for (const action of ['auto', 'history', 'compose', 'hide']) {
         const el = document.querySelector(`#gi-toolbar [data-gi-action="${action}"]`);
         el.setAttribute('aria-pressed', String(({ auto, history, compose: composing, hide: hidden })[action]));
@@ -502,15 +552,15 @@ function refresh({passive=false}={}) {
     const hide = document.querySelector('#gi-toolbar [data-gi-action="hide"]');
     const hideLabel = hidden ? 'Show UI' : 'Hide UI';
     hide.setAttribute('aria-label', hideLabel);
-    hide.querySelector('span').textContent = hideLabel; hide.setAttribute('aria-pressed', String(hidden));
+    hide.querySelector('span').textContent = hideLabel;
     paintFullscreen();
     const notice = document.querySelector('#gi-notice');
     const conflict = conflictText();
-    notice.hidden = !prefs.enabled || !conflict || conflict === dismissedNotice || hidden;
+    notice.hidden = !conflict || conflict === dismissedNotice || hidden;
     notice.querySelector('p').textContent = conflict;
     syncSettings(!passive);
     // Measure everything first: reading layout between these writes would force a reflow for each one.
-    const arrow=document.querySelector('#gi-navigation [data-gi-action="next"]').getBoundingClientRect(),nav=document.querySelector('#gi-navigation').getBoundingClientRect();
+    const arrow=next.getBoundingClientRect(),nav=navigation.getBoundingClientRect();
     const dialogue=(selected?.querySelector('.gi-page') || selected?.querySelector('.mes_block') || document.querySelector('#chat')).getBoundingClientRect();
     const actionLeft=Math.max(arrow.right+5,Math.min(innerWidth-8,dialogue.right)-(arrow.width || 44));
     document.body.style.setProperty('--gi-stop-left',`${actionLeft}px`);document.body.style.setProperty('--gi-stop-top',`${arrow.top}px`);document.body.style.setProperty('--gi-action-size',`${arrow.height || 44}px`);document.body.style.setProperty('--gi-action-width',`${arrow.width || 44}px`);document.body.style.setProperty('--gi-action-left',`${actionLeft-nav.left}px`);document.body.style.setProperty('--gi-attack-left',`${Math.max(8,dialogue.left)-nav.left}px`);document.body.style.setProperty('--gi-action-top',`${arrow.top-nav.top}px`);
@@ -571,17 +621,16 @@ async function prepareCardData() {
     try { await registerGenshinTags(context()); } catch (error) { console.warn('[Silly Teyvat] Genshin tag', error); }
     try { await registerOfficialArt(context()); } catch (error) { console.warn('[Silly Teyvat] Official Art', error); }
 }
+// Story view changes only how the chat is shown. The scene, map, HUD and battles stay as they are.
 function setEnabled(value) {
     preferences().enabled = value;
-    if(value){startCharacterAtHome(context());personaSession?.request();}
-    else loadingUI?.hide();
     view.send('RESET');
     composing = preferences().composer;
     followLatest = true;
     stopAuto();
     context().saveSettingsDebounced();
     refresh();
-    announce(value ? 'Silly Teyvat enabled.' : 'Silly Teyvat off. Normal chat restored.');
+    announce(value ? 'Story view on.' : 'Story view off. Classic chat shown.');
 }
 // The Paimon menu switch flips every set linked to it in Settings → Features. Each setting goes
 // through the panel's own change handling, as if switched there; Story view does so through setEnabled.
@@ -709,12 +758,13 @@ function handleAction(event) {
         case 'persona': menu.send('CLOSE');refresh();wardrobeUI?.open({persona:true}).catch(fail);break;
         case 'map': menu.send('CLOSE'); refresh(); void openWorldMap().catch(fail); break;
         case 'toggle': togglePaimon(); break;
+        case 'story': setEnabled(!preferences().enabled); syncSettings(); break;
         case 'paimon-link': linkPaimon(preferences(),target.dataset.group,target.getAttribute('aria-pressed')!=='true'); context().saveSettingsDebounced(); refresh(); break;
         case 'solo-journey': {
             // The journey is saved and opened before CHAT_CHANGED takes its own hold, so cover the
             // welcome page from the click, showing the place the journey begins.
             menu.send('CLOSE'); refresh();
-            const release = preferences().enabled ? loadingUI?.hold(loadingPlace(context(), personaCard(context())?.avatar)) : null;
+            const release = loadingUI?.hold(loadingPlace(context(), personaCard(context())?.avatar));
             void (personaSession?.flush({ startJourney: true }) || Promise.resolve()).finally(() => release?.());
             break;
         }
@@ -763,6 +813,7 @@ function handleAction(event) {
         case 'share-import': shareUI?.chooseImport(); break;
         case 'share-cancel': shareUI?.cancel(); break;
         case 'share-game-data': void shareUI?.checkGameData(); break;
+        case 'share-restore': void shareUI?.restoreSillyTavern(); break;
         case 'audio-unlock': mediaUI?.unlockAudio().then(()=>announce('Sprite audio enabled on this device.')).catch(()=>fail(new Error('Audio is blocked by this browser. Check its sound permissions.'))); break;
         case 'settings':
             menu.send('CLOSE'); refresh();
@@ -871,7 +922,7 @@ export async function initialize(options = {}) {
     if(!mounted || version!==mountVersion)return;
     syncPersonaSettings(context());
     composing = preferences().composer;
-    const opening=context();if(preferences().enabled&&!inPartyChat(opening)&&opening.characters?.[opening.characterId])beginOpeningScene(opening,opening.characters[opening.characterId].avatar,opening.chatMetadata?.silly_teyvat_world?.location?.id);
+    const opening=context();if(preferences().worldEnabled&&!inPartyChat(opening)&&opening.characters?.[opening.characterId])beginOpeningScene(opening,opening.characters[opening.characterId].avatar,opening.chatMetadata?.silly_teyvat_world?.location?.id);
     const host = document.createElement('div');
     host.id = 'gi-root';
     host.innerHTML = `<button id="gi-launcher" type="button" data-gi-action="menu" aria-controls="gi-toolbar" aria-expanded="false"><img src="${iconAsset('Silly Teyvat')}" alt="" aria-hidden="true"></button>
@@ -896,7 +947,7 @@ export async function initialize(options = {}) {
                 <button type="button" class="gi-pm-switch" data-gi-action="toggle" aria-pressed="false" aria-label="Silly Teyvat"><span>Silly Teyvat</span><i aria-hidden="true"></i></button>
                 <button type="button" class="gi-pm-switch gi-pm-solo" data-gi-action="solo-journey" hidden><span>Start solo journey</span></button>
                 <section id="gi-pm-namecards" class="gi-pm-namecards" aria-label="Namecards" hidden><header><h3>Namecard</h3>${menuButton('namecards', 'Done', 'close')}</header><div class="gi-pm-nc-list" role="radiogroup" aria-label="Choose a namecard"></div></section>
-                <div class="gi-pm-grid">${menuButton('auto', 'Auto')}${menuButton('history', 'Review', 'book')}${menuButton('wardrobe', 'Characters')}${menuButton('inventory', 'Inventory', 'bag')}${questButton()}${trustButton()}${menuButton('map', 'Map')}${menuButton('gallery', 'Gallery', 'cg')}${menuButton('compose', 'Chat Box')}${menuButton('hide', 'Hide UI')}${fullscreenButton()}${menuButton('namecards', 'Namecard', 'namecard')}</div>
+                <div class="gi-pm-grid">${menuButton('auto', 'Auto')}${menuButton('history', 'Review', 'book')}${menuButton('wardrobe', 'Characters')}${menuButton('inventory', 'Inventory', 'bag')}${questButton()}${trustButton()}${menuButton('map', 'Map')}${menuButton('gallery', 'Gallery', 'cg')}${menuButton('compose', 'Chat Box')}${menuButton('hide', 'Hide UI')}${fullscreenButton()}${storyButton()}</div>
                 <section class="gi-pm-tavern" aria-label="SillyTavern"><h3>SillyTavern</h3><div class="gi-pm-grid">${ST_DRAWERS.map(([id, label]) => `<button type="button" data-gi-action="st-drawer" data-drawer="${id}" aria-label="${label}"><img src="${drawerIcon(id)}" alt="" aria-hidden="true" draggable="false"${id === 'persona-management-button' ? ' data-persona' : ''}><span>${label}</span></button>`).join('')}</div></section>
             </div>
         </nav>
@@ -918,7 +969,7 @@ export async function initialize(options = {}) {
     if(preferences().cardArt)cardArtUI=mountCardArt({getContext:context});
     loadingUI=createLoadingScreen({isReady:stageReady,onChange:schedule});
     keyboardFrame=createKeyboardFrame({onChange:()=>{spriteUI?.relayout();schedule();}});
-    backgroundUI=mountBackgrounds({host,getContext:context,adapter:mediaAdapter,announce,onChange:schedule});
+    backgroundUI=mountBackgrounds({host,getContext:context,onChange:schedule});
     locationCastUI=mountLocationCast({host,getContext:context,adapter:castAdapter,announce,onChange:event=>{
         if(followLatest&&(event.added||event.removed))void spriteUI?.refreshPresentation().catch(error=>console.warn('[Silly Teyvat] Travel stage',error));
         schedule();
@@ -929,17 +980,12 @@ export async function initialize(options = {}) {
         openJourney:id=>journeyAdapter.open(id),
         prepareTeleport:location=>locationCastUI.prepareTeleport(location),commitTeleport:plan=>locationCastUI.commitTeleport(plan),onTeleport:jumpToArrival,retryCast:()=>locationCastUI.retry(),
         openStatue:location=>statueUI?.open(location),
-        onChange:()=>{backgroundUI.refresh();schedule();}});
+        onChange:schedule});
     statueUI=mountStatueResonance({host,getContext:context,announce,onChange:schedule});
-    // SillyTavern's Backgrounds menu lists every location; choosing one in a journey teleports there.
-    backgroundMenuUI=mountBackgroundMenu({getContext:context,announce,
-        inJourney:()=>{const ctx=context();return Boolean(preferences().enabled&&(ctx.characterId!=null||ctx.groupId));},
-        canTeleport:id=>worldWaypoints(context()).some(w=>w.location.id===id),
-        currentLocation:()=>travelState(context()).location,
-        teleport:id=>worldMapUI.teleport(id)});
+    syncBackgroundMenu(preferences().worldEnabled);
     mediaUI = mountSceneMedia({host,getContext:context,adapter:mediaAdapter,sound,announce});
     spriteUI = mountPageSprites({ host, getContext: context, adapter: spriteAdapter, isDefeated: defeatedHere, announce, renderMessage: id => document.querySelector(`#chat > .mes[mesid="${id}"] .mes_text`), onAppearance:event=>mediaUI?.appearance(event) });
-    wardrobeUI = mountWardrobe({ host, getContext: context, adapter: wardrobeAdapter, personaAdapter, mediaAdapter, previewAudio:files=>mediaUI.previewAudio(files), previewCG:cg=>mediaUI.previewCG(cg), onMediaChange:(options={})=>{backgroundUI.refresh();if(options.reclassify)mediaUI.reclassifyCurrent();else mediaUI.refresh();schedule();}, onChange: async (character,options) => { if(options?.classification){schedule();return;}
+    wardrobeUI = mountWardrobe({ host, getContext: context, adapter: wardrobeAdapter, personaAdapter, mediaAdapter, previewAudio:files=>mediaUI.previewAudio(files), previewCG:cg=>mediaUI.previewCG(cg), onMediaChange:(options={})=>{if(options.reclassify)mediaUI.reclassifyCurrent();else mediaUI.refresh();schedule();}, onChange: async (character,options) => { if(options?.classification){schedule();return;}
         if(options?.presentation)await spriteUI?.refreshPresentation();else await spriteUI?.refreshSprite(character,options);schedule(); } });
     combatUI=mountCombat({host,getContext:context,adapter:combatAdapter,diceAdapter,announce,onChange:event=>{inventoryUI?.refresh();if(event?.transformed)locationMusicUI?.formChanged(event.transformed.form);if(event?.roundSettled)locationMusicUI?.roundSettled();if(event?.hit)spriteUI?.hit(event.hit);if(event?.hurt)spriteUI?.hurt(event.hurt);if(event?.healed)spriteUI?.heal(event.healed);if(event?.slain)spriteUI?.defeat(event.defeated);if(event?.defeated)locationCastUI?.retry();if(event?.removed)void spriteUI?.refreshPresentation().catch(error=>console.warn('[Silly Teyvat] Party stage',error));schedule();}});
     choiceUI = mountChoices({ host, getContext: context, adapter: choicesAdapter, announce });
@@ -977,6 +1023,8 @@ export async function initialize(options = {}) {
     });
     uiSound=createUiSound({getVolume:()=>preferences().uiSound?volumeLevel(preferences(),'ui'):0});mountUiSound({sound:uiSound,signal:abort.signal});
     document.addEventListener('click', handleAction, { signal: abort.signal });
+    // A card's art was set or removed in its Profile.
+    document.addEventListener('gi-card-art-changed', () => cardArtUI?.refresh(), { signal: abort.signal });
     fullscreen.onChange(() => { paintFullscreen(); announce(fullscreen.active() ? 'Full screen on.' : 'Full screen off.'); }, abort.signal);
     document.addEventListener('keydown', handleKey, { signal: abort.signal });
     renderPromptLibrary();
@@ -1020,8 +1068,12 @@ export async function initialize(options = {}) {
             if(['cgClassifier','cgProfile','cgPrompt','cgBypassReasoning','cgEnabled'].includes(key))mediaUI?.refresh();
             if(key==='choicesProfile')choiceUI?.reset();
             if(key==='cardArt'){if(value)cardArtUI??=mountCardArt({getContext:context});else{cardArtUI?.dispose();cardArtUI=undefined;}}
-            if(key==='roleplayPromptsEnabled')syncRoleplayPrompts(context(),preferences().enabled);
-            if(key==='trustSystem'){syncTrustPrompt(context(),preferences().enabled);if(!value)trustUI?.close();}
+            if(key==='roleplayPromptsEnabled')syncRoleplayPrompts(context(),true);
+            if(key==='trustSystem'){syncTrustPrompt(context(),true);if(!value)trustUI?.close();}
+            // A set switched in an open chat takes effect there and then: the place is found, or cleared, and its prompts follow.
+            if(key==='worldEnabled'){if(value)void openPlace();else{worldMapUI?.syncPrompt(false);syncTwinPrompt(context(),false);restoreTwinCards();}}
+            if(key==='battles'&&!value){combatUI?.cancelPending?.();syncCombatPrompt(context(),false);}
+            if(key==='groupReplies'&&!value){forgetGroupReply();endGroupRound();}
             context().saveSettingsDebounced(); refresh();
         }
     }, { signal: abort.signal });
@@ -1031,7 +1083,7 @@ export async function initialize(options = {}) {
         // SillyTavern empties #chat before it announces the next chat (New Chat, another character).
         // Cover the stage in this same task, before a frame of the bare interface can paint.
         const shown=Boolean(document.querySelector('#chat > .mes'));
-        if(preferences().enabled&&!shown&&records.some(record=>record.target.id==='chat'&&[...record.removedNodes].some(node=>node.classList?.contains('mes'))))bridgeChatSwitch();
+        if(!shown&&records.some(record=>record.target.id==='chat'&&[...record.removedNodes].some(node=>node.classList?.contains('mes'))))bridgeChatSwitch();
         else if(bridgeRelease&&shown&&(context().getCurrentChatId?.() ?? null)===bridgeChatId)bridgeRelease({unneeded:true});
         // Ignore our own presentation copy; native streaming and edit mutations
         // still schedule a refresh. This avoids an observer/render feedback loop.
@@ -1056,8 +1108,10 @@ export async function initialize(options = {}) {
     for (const key of ['CHARACTER_MESSAGE_RENDERED', 'MESSAGE_UPDATED', 'MESSAGE_DELETED', 'MESSAGE_SWIPED', 'MESSAGE_SWIPE_DELETED', 'MORE_MESSAGES_LOADED', 'SETTINGS_UPDATED']) subscribe(key, schedule);
     // Choosing a persona in SillyTavern's own list plays its character, as Play as does.
     subscribe('PERSONA_CHANGED',async()=>{
+        // With every set off, a persona is only SillyTavern's persona.
+        if(!anyFeatureOn(preferences()))return;
         let played=null;try{played=await adoptActivePersona(context());}catch(error){console.warn('[Silly Teyvat] Persona switch',error);}
-        if(preferences().enabled)personaSession?.request();
+        personaSession?.request();
         syncPersonaSettings(context());context().saveSettingsDebounced();
         await wardrobeUI?.refreshPersona();
         const persona=personaCard(context());
@@ -1065,67 +1119,76 @@ export async function initialize(options = {}) {
         else if(persona)await spriteUI?.refreshSprite(persona);
         refresh();schedule();
     });
-    subscribe('MESSAGE_RECEIVED',(id,type)=>{try{splitReceivedReply(context(),id,type);}finally{forgetGroupReply();}tagNarratorMessage(context(),id);if(preferences().enabled)cleanMessageNameTags(context(),id,preferences());});
+    subscribe('MESSAGE_RECEIVED',(id,type)=>{try{if(preferences().groupReplies)splitReceivedReply(context(),id,type);}finally{forgetGroupReply();}tagNarratorMessage(context(),id);cleanMessageNameTags(context(),id,preferences());});
     subscribe('CHARACTER_MESSAGE_RENDERED',id=>trustUI?.noteMessage(Number(id)));
-    // Dialogue pages hide tags as they are shown. This covers the native chat, for when the dialogue view is off.
+    // Dialogue pages hide tags as they are shown. This covers the native chat, for when Story view is off.
     for(const key of ['CHARACTER_MESSAGE_RENDERED','MESSAGE_UPDATED','MESSAGE_SWIPED','MORE_MESSAGES_LOADED','CHAT_CHANGED','CHAT_LOADED'])subscribe(key,hideChatTrustTags);
-    subscribe('USER_MESSAGE_RENDERED',async id=>{if(preferences().enabled)await combatUI?.onUserMessage(id);schedule();});
+    subscribe('USER_MESSAGE_RENDERED',async id=>{if(preferences().battles)await combatUI?.onUserMessage(id);schedule();});
     subscribe('APP_READY',()=>{void prepareCardData();void loadStarterCGs(context()).catch(error=>console.warn('[Silly Teyvat] Starter scenes',error));});
     subscribe('CHAT_CHANGED',async()=>{
         void prepareCardData();void loadStarterCGs(context()).catch(error=>console.warn('[Silly Teyvat] Starter scenes',error));
-        const ctx=context(),freshSource=preferences().enabled?freshJourneySource(ctx):null;lastPlaceId='';
+        await openPlace();
+    });
+    // Puts the open chat in its place: its saved location or the character's home, with the people who are there.
+    // Run when a chat opens and when World map & travel is switched on in one. Off, the chat has no place.
+    openPlace=async()=>{
+        if(!preferences().worldEnabled){openingHome=false;schedule();return;}
+        const ctx=context(),freshSource=freshJourneySource(ctx);lastPlaceId='';
         // Cover the stage at once, so the previous chat's place never shows, until this chat has settled.
-        const release=preferences().enabled?loadingUI?.hold(loadingPlace(ctx,freshSource),{instant:true}):null;
+        const release=loadingUI?.hold(loadingPlace(ctx,freshSource),{instant:true});
         bridgeRelease?.();
         try{
             if(freshSource){try{if(await openFreshSoloChat(ctx,freshSource))return;}catch(error){console.warn('[Silly Teyvat] Fresh solo chat',error);}}
             const key=castIdentity(ctx),revision=++homeOpenRevision;openingHome=true;locationCastUI?.sync({on:false});
-            if(preferences().enabled&&!inPartyChat(ctx)&&ctx.characters?.[ctx.characterId])beginOpeningScene(ctx,ctx.characters[ctx.characterId].avatar,ctx.chatMetadata?.silly_teyvat_world?.location?.id);
-            try{await loadStarterLocations(ctx);alignEnemyPools(ctx);addNewEnemies(ctx);await loadCharacterHomes(ctx);if(preferences().enabled&&ctx.characters?.length)await ensureNarrator(ctx);if(preferences().enabled&&revision===homeOpenRevision&&castIdentity(context())===key)startCharacterAtHome(ctx);}
+            if(!inPartyChat(ctx)&&ctx.characters?.[ctx.characterId])beginOpeningScene(ctx,ctx.characters[ctx.characterId].avatar,ctx.chatMetadata?.silly_teyvat_world?.location?.id);
+            try{await loadStarterLocations(ctx);alignEnemyPools(ctx);addNewEnemies(ctx);await loadCharacterHomes(ctx);if(ctx.characters?.length)await ensureNarrator(ctx);if(revision===homeOpenRevision&&castIdentity(context())===key)startCharacterAtHome(ctx);}
             catch(error){console.warn('[Silly Teyvat] Character homes',error);}
             finally{if(revision===homeOpenRevision)openingHome=false;schedule();}
         }finally{release?.();}
-    });
+    };
     subscribe('CHAT_CREATED',async()=>{
-        if(!preferences().enabled)return;const ctx=context();if(!keepAbyssGreeting(ctx)&&!randomizeGreeting(ctx))return;
+        // A random greeting starts the chat at that greeting's own waypoint, with its scenario.
+        const ctx=context();if(!preferences().worldEnabled)return;if(!keepAbyssGreeting(ctx)&&!randomizeGreeting(ctx))return;followGreeting(ctx);
         const release=loadingUI?.hold(loadingPlace(ctx),{instant:true});
         try{await ctx.saveChat?.();await ctx.reloadCurrentChat?.();}finally{release?.();}
     });
     for (const key of ['CHAT_CHANGED', 'CHAT_LOADED']) subscribe(key, () => {
-        if(preferences().enabled)personaSession?.request();
+        personaSession?.request();
         trustUI?.close();choiceUI?.reset(); spriteUI?.reset(); mediaUI?.reset();backgroundUI?.reset(); reveal.reset(); visit++; pageStates = new WeakMap(); current = null; followLatest = true; view.send('RESET'); generating = false; stopAuto(); schedule();
     });
     // A reply may voice everyone present, one part per speaker (group-reply.js). SillyTavern's cut at
     // another member's name is held off while it is written, and MESSAGE_RECEIVED splits it instead.
-    subscribe('GENERATION_STARTED',(type,params,dryRun)=>{if(preferences().enabled)holdGroupReply(context(),type,dryRun);});
+    subscribe('GENERATION_STARTED',(type,params,dryRun)=>{if(preferences().groupReplies)holdGroupReply(context(),type,dryRun);});
     subscribe('GENERATION_ENDED',releaseGroupReply);
     for(const key of ['GENERATION_STOPPED','CHAT_CHANGED'])subscribe(key,forgetGroupReply);
-    subscribe('CHARACTER_MESSAGE_RENDERED',id=>finishSplitReply(context(),id));
-    subscribe('MESSAGE_SWIPED',id=>{if(preferences().enabled)restoreSwipedSpeaker(context(),id);});
+    subscribe('CHARACTER_MESSAGE_RENDERED',id=>{if(preferences().groupReplies)finishSplitReply(context(),id);});
+    subscribe('MESSAGE_SWIPED',id=>{restoreSwipedSpeaker(context(),id);
+        // Swiping to another greeting moves the opening scene to that greeting's waypoint, with its music and scenario.
+        if(Number(id)===0&&preferences().worldEnabled&&followGreeting(context()))schedule();});
     subscribe('GENERATION_STARTED', type => { if (type === 'quiet') return; generating = true; followLatest = true; view.send('SHOW'); stopAuto(); schedule(); announce('Reply is being written. The native Stop button is available.'); });
     // AI Config edits and preset switches flow back into Settings → Prompts.
-    for (const key of ['SETTINGS_UPDATED', 'OAI_PRESET_CHANGED_AFTER', 'MAIN_API_CHANGED']) subscribe(key, () => syncRoleplayPrompts(context(), preferences().enabled));
-    subscribe('CHAT_COMPLETION_PROMPT_READY', data => { if (data?.dryRun) return; dropRoleplayPrompts(context(), preferences().enabled, data?.chat, [trustPrompt(context()),twinRolesPrompt(context()),enemyPersonaPrompt(context())]); stripPromptTrustTags(data?.chat); if(preferences().enabled)rewriteGroupNudge(data?.chat,context().name1); });
-    subscribe('GENERATION_AFTER_COMMANDS',(type,params)=>{worldMapUI?.syncPrompt(preferences().enabled);syncCombatPrompt(context(),preferences().enabled);syncTrustPrompt(context(),preferences().enabled);syncTwinPrompt(context(),preferences().enabled);syncEnemyPersonaPrompt(context(),preferences().enabled);noteGeneration(type,params);syncRoleplayPrompts(context(),preferences().enabled);if(preferences().enabled)wearTwinCards(context());});
+    for (const key of ['SETTINGS_UPDATED', 'OAI_PRESET_CHANGED_AFTER', 'MAIN_API_CHANGED']) subscribe(key, () => syncRoleplayPrompts(context(), true));
+    subscribe('CHAT_COMPLETION_PROMPT_READY', data => { if (data?.dryRun) return; dropRoleplayPrompts(context(), true, data?.chat, [trustPrompt(context()),twinRolesPrompt(context()),enemyPersonaPrompt(context())]); stripPromptTrustTags(data?.chat); if (preferences().groupReplies) rewriteGroupNudge(data?.chat,context().name1); });
+    subscribe('GENERATION_AFTER_COMMANDS',(type,params)=>{const prefs=preferences(),placed=prefs.worldEnabled,game=placed||prefs.battles;worldMapUI?.syncPrompt(placed);syncCombatPrompt(context(),prefs.battles);syncTrustPrompt(context(),true);syncTwinPrompt(context(),placed);syncEnemyPersonaPrompt(context(),game);noteGeneration(type,params);syncRoleplayPrompts(context(),true);if(placed)wearTwinCards(context());});
     for(const key of ['GENERATE_AFTER_DATA','GENERATION_ENDED','GENERATION_STOPPED','CHAT_CHANGED'])subscribe(key,restoreTwinCards);
-    subscribe('CHARACTER_FIRST_MESSAGE_SELECTED',args=>{const text=preferences().enabled&&abyssGreeting(context(),args?.character);if(text)args.output=text;});
-    subscribe('GROUP_WRAPPER_STARTED',args=>{groupGenerating=true;if(preferences().enabled)startGroupRound(context(),args?.type);schedule();});
-    subscribe('GROUP_MEMBER_DRAFTED',id=>draftGroupMember(context(),Number(id)));
+    subscribe('CHARACTER_FIRST_MESSAGE_SELECTED',args=>{if(!preferences().worldEnabled)return;const text=abyssGreeting(context(),args?.character);if(text)args.output=text;});
+    subscribe('GROUP_WRAPPER_STARTED',args=>{groupGenerating=true;if(preferences().groupReplies)startGroupRound(context(),args?.type);schedule();});
+    subscribe('GROUP_MEMBER_DRAFTED',id=>{if(preferences().groupReplies)draftGroupMember(context(),Number(id));});
     repairGroupTrimming(context());
     // manifest.json names this as the generation interceptor. It skips a character who already spoke this round.
-    globalThis.sillyTeyvatGenerateInterceptor=async(chat,contextSize,abort,type)=>{if(preferences().enabled)skipSpokenMember(context(),type,abort);};
+    globalThis.sillyTeyvatGenerateInterceptor=async(chat,contextSize,abort,type)=>{if(preferences().groupReplies)skipSpokenMember(context(),type,abort);};
     subscribe('GROUP_WRAPPER_FINISHED',()=>{groupGenerating=false;endGroupRound();forgetGroupReply();repairGroupTrimming(context());schedule();});
-    subscribe('GROUP_UPDATED',()=>{if(preferences().enabled)personaSession?.request();schedule();});
-    for (const key of ['GENERATION_STOPPED', 'GENERATION_ENDED']) subscribe(key, () => { if(key==='GENERATION_STOPPED')combatUI?.cancelPending();generating = false;if(preferences().enabled)personaSession?.request();schedule(); announce('Reply ready.'); });
+    subscribe('GROUP_UPDATED',()=>{personaSession?.request();schedule();});
+    for (const key of ['GENERATION_STOPPED', 'GENERATION_ENDED']) subscribe(key, () => { if(key==='GENERATION_STOPPED')combatUI?.cancelPending();generating = false;personaSession?.request();schedule(); announce('Reply ready.'); });
     await prepareCardData();
     try{await loadStarterLocations(context());alignEnemyPools(context());addNewEnemies(context());await loadCharacterHomes(context());}catch(error){console.warn('[Silly Teyvat] Starter locations',error);fail(error);}
     try{await loadStarterCGs(context());}catch(error){console.warn('[Silly Teyvat] Starter scenes',error);}
     try{if(preferences().journeysPurged!==true&&context().getRequestHeaders){const ctx=context(),removed=await purgeLegacyJourneys(ctx);if(removed.length){ctx.groups?.splice(0,ctx.groups.length,...ctx.groups.filter(g=>!removed.includes(g.id)));await ctx.getCharacters?.();}if(!(ctx.groups || []).some(isLegacyJourneyGroup))preferences().journeysPurged=true,ctx.saveSettingsDebounced();}if(context().getRequestHeaders)await repairSoloPortraits(context());}catch(error){console.warn('[Silly Teyvat] Journey cleanup',error);}
     try{const remove=await journeyAdapter.install();if(!mounted||version!==mountVersion){remove?.();return;}removeJourneyFilter=remove;}catch(error){console.warn('[Silly Teyvat] Journey library',error);announce(error.message);}
     if(!mounted||version!==mountVersion)return;
-    if(preferences().enabled)startCharacterAtHome(context());
+    if(preferences().worldEnabled)startCharacterAtHome(context());
     openingHome=false;
-    if(preferences().enabled)personaSession?.request();
+    personaSession?.request();
     refresh();
 }
 
@@ -1168,7 +1231,7 @@ export function dispose() {
     subscriptions = [];
     document.querySelector('#gi-root')?.remove();
     document.querySelector('#gi-settings')?.remove();
-    document.body.classList.remove(...bodyClasses);
+    document.body.classList.remove(...bodyClasses);removeGraphics();
     for (const name of ['--gi-text-scale', '--gi-scrim-opacity', '--gi-composer-height', '--gi-dialogue-height','--gi-stop-left','--gi-stop-top','--gi-action-size','--gi-action-width','--gi-action-top','--gi-action-left','--gi-attack-left']) document.body.style.removeProperty(name);
     document.querySelectorAll('#chat .gi-narration').forEach(el => el.classList.remove('gi-narration'));
     showGuestName(null, '');
@@ -1179,6 +1242,15 @@ export function dispose() {
     current = null; followLatest = true; menu.send('CLOSE'); view.send('RESET'); generating = false;
     // Switched back on later, the place is read afresh rather than compared with one from before it was off.
     lastPlaceId = ''; dismissedNotice = '';
+}
+
+// manifest.json names this for SillyTavern's Delete: once the folder is gone nothing of the extension runs
+// again, so this is the only chance to give SillyTavern back as it was. SillyTavern saves the settings and
+// reloads after the hook, and gives it five seconds.
+export async function uninstall() {
+    dispose();
+    try { await restoreSillyTavern(context(), {release: await loadRelease()}); }
+    catch (error) { console.error('[Silly Teyvat] Uninstall', error); }
 }
 
 // APP_READY also fires immediately for a late listener. Defer to avoid blocking ST's event chain.

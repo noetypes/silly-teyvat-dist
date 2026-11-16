@@ -10,12 +10,20 @@ export function mediaSettings(ctx) {
     prefs.spriteAudioFiles ??= {}; prefs.characterCGs ??= {}; prefs.archivedSprites ??= {};
     return prefs;
 }
+// Every sprite, background, CG and music track is asked for on each refresh, so an address is parsed once.
+const localPaths = new Map();
 export function localMediaPath(value) {
     if(typeof value!=='string'||!value.trim())return '';
-    try {
-        const url = new URL(value, location.href);
-        return url.origin === location.origin && /^https?:$/.test(url.protocol) ? url.pathname + url.search : '';
-    } catch { return ''; }
+    let path = localPaths.get(value);
+    if (path === undefined) {
+        try {
+            const url = new URL(value, location.href);
+            path = url.origin === location.origin && /^https?:$/.test(url.protocol) ? url.pathname + url.search : '';
+        } catch { path = ''; }
+        if (localPaths.size >= 4000) localPaths.clear();
+        localPaths.set(value, path);
+    }
+    return path;
 }
 // Per-sprite settings are keyed by folder and name, not by file extension (sprite-files.js).
 export {spriteAudioKey, spriteVoiceLines};

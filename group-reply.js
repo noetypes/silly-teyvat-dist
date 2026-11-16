@@ -3,6 +3,7 @@ import {isJourneyGroup} from './journey-library.js';
 import {NARRATOR_NAME,NARRATOR_AVATAR,narratorAvatar} from './narrator.js';
 import {newLocalId} from './local-id.js';
 import {mediaSettings} from './media-store.js';
+import {cardByAvatar} from './card-index.js';
 // Speaker parts. A reply may voice everyone present in the scene: each part starts with a name and a
 // colon ("Kamisato Ayato: ...", "Narrator: ..."). The reply is saved as one chat message per part, so
 // the name plate, sprites, expressions, Trust and the history all follow the character who is talking.
@@ -40,7 +41,6 @@ export function releaseGroupReply(){
     held=null;
 }
 export function forgetGroupReply(){releaseGroupReply();expecting=false;}
-export const holdingGroupReply=()=>Boolean(held);
 // On load and after every group round: a hold this extension made and never released (a reload or
 // an interrupted generation) is undone, so the player's own group trimming setting is never left off.
 export function repairGroupTrimming(ctx){
@@ -59,7 +59,7 @@ const WRAP='(?:\\*\\*|__|\\*|_)?';
 // last name ("Ayato:") counts too; one two characters share ("Kamisato:") is left as text.
 export function sceneSpeakers(ctx,speakerName){
     const group=activeGroup(ctx),cards=(group?group.members.filter(a=>!group.disabled_members?.includes(a)):[ctx.characters?.[ctx.characterId]?.avatar])
-        .map(avatar=>ctx.characters?.find(card=>card.avatar===avatar)).filter(card=>card&&card.avatar!==NARRATOR_AVATAR);
+        .map(avatar=>cardByAvatar(ctx,avatar)).filter(card=>card&&card.avatar!==NARRATOR_AVATAR);
     const speakers=cards.map(card=>({name:card.name,avatar:card.avatar,kind:'character'}));
     if(speakerName&&!speakers.some(s=>s.name===speakerName)){const card=ctx.characters?.find(c=>c.name===speakerName);speakers.push({name:speakerName,avatar:card?.avatar,kind:speakerName===NARRATOR_NAME?'narrator':'character'});}
     if(!speakers.some(s=>s.name===NARRATOR_NAME))speakers.push({name:NARRATOR_NAME,kind:'narrator'});

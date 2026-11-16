@@ -3,7 +3,7 @@ import {sharedAudioContext} from './audio-context.js';
 // and played through Web Audio. An element can name its sound with data-gi-sound, "none" included;
 // everything else follows soundFor. Hovering is silent.
 const MENUS=':is(dialog[id^="gi-"], dialog.gi-wilderness-menu):not(#gi-battle, #gi-combat-ask, #gi-elemental-roll, #gi-cg-preview)';
-const SCOPE='#gi-root, #gi-settings, #gi-choices, body.gi-scene #send_but, body.gi-enabled #top-settings-holder, dialog.gi-wilderness-menu, dialog[id^="gi-"]:not(#gi-battle, #gi-combat-ask, #gi-elemental-roll, #gi-cg-preview)';
+const SCOPE='#gi-root, #gi-settings, #gi-choices, body:is(.gi-scene, .gi-classic) #send_but, body.gi-enabled #top-settings-holder, dialog.gi-wilderness-menu, dialog[id^="gi-"]:not(#gi-battle, #gi-combat-ask, #gi-elemental-roll, #gi-cg-preview)';
 const TARGET='button, summary, .drawer-toggle, [role="tab"], [role="radio"], input[type="checkbox"], [data-gi-sound]';
 const CLOSING='[data-w="close"], [data-gi-action="dismiss"], [aria-label^="Close"], [aria-label="Done"], [class*="-close"]';
 // These open a dialog, which makes its own sound.

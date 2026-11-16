@@ -1,4 +1,5 @@
 import {mediaSettings} from './media-store.js';
+import {hasCard} from './card-index.js';
 
 // A hidden card that keeps the player company wherever no other card is in the party. SillyTavern's
 // groups need a member to reply, so the card is a real one, created once and never listed.
@@ -14,7 +15,7 @@ Rules for {{char}}:
 - Never bring in named characters or enemies. The game handles who appears, travel and combat.
 - Never decide what {{user}} does next, thinks or feels. Stop at a point that leaves the next move to them.
 - Keep it to one or two short paragraphs.`;
-const present=ctx=>(ctx.characters || []).some(c=>c.avatar===NARRATOR_AVATAR);
+const present=ctx=>hasCard(ctx,NARRATOR_AVATAR);
 export const narratorAvatar=ctx=>present(ctx)?NARRATOR_AVATAR:'';
 export const isNarrator=card=>(card?.avatar ?? card)===NARRATOR_AVATAR;
 export const narratorMessage=message=>message?.original_avatar===NARRATOR_AVATAR;
@@ -33,7 +34,7 @@ async function createNarrator(ctx,fetchImpl){
     await ctx.getCharacters?.();
     return NARRATOR_AVATAR;
 }
-// A reply from the card reads as narration: no sprite, no trust, and a narration page in the dialogue view.
+// A reply from the card reads as narration: no sprite, no trust, and a narration page in Story view.
 export function tagNarratorMessage(ctx,id){
     const message=ctx.chat?.[Number(id)];if(!narratorMessage(message))return false;
     (message.extra ??= {}).type='narrator';return true;

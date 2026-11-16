@@ -49,7 +49,7 @@ button:focus-visible, summary:focus-visible { outline: 2px solid #f2cf72; outlin
 .qr--button { background: #354658; color: #f1e6cc; border: 1px solid #e4c88a66; border-radius: 20px; padding: 7px 14px; }
 .displayNone { display: none !important; }
 @media (max-width: 760px) { #demo-tools { top: 112px; width: 205px; right: 10px; font-size: 11px; } .demo-sprite { height: 75dvh; bottom: 7dvh; max-width: 128vw; } .demo-brand span { display: none; } }
-@media (max-width: 560px) { body.gi-choices-enabled #demo-tools { top: 166px; } }
+@media (max-width: 560px) { body.gi-hud-enabled #demo-tools { top: 166px; } }
 @media (max-height: 550px) and (orientation: landscape) { #demo-tools { top: auto; right: auto; left: 14px; bottom: 14px; width: 190px; max-height: calc(100dvh - 28px); overflow: auto; } }
 
 .demo-group-sprite { position:fixed; bottom:8dvh; height:78dvh; width:40vw; object-fit:contain; object-position:bottom; }

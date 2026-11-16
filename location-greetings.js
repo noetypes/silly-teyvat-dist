@@ -6,6 +6,8 @@ import {promptText,renderPrompt} from './prompt-templates.js';
 import {queueSoloHint} from './narrator.js';
 import {linkedCard} from './persona-link.js';
 import {TWINS} from './twin-roles.js';
+import {cardGreetings,greetingScene} from './greeting-scenes.js';
+import {cardByAvatar} from './card-index.js';
 
 // One character met while travelling alone: the same arrival as the card's written greeting, wherever it happens.
 export const soloMeeting=entry=>entry.mode!=='narrator'&&entry.travellers?.length===0&&entry.residents?.length===1&&entry.residents[0]===entry.avatar;
@@ -13,7 +15,7 @@ export const soloMeeting=entry=>entry.mode!=='narrator'&&entry.travellers?.lengt
 export function playedCharacter(ctx){const card=linkedCard(ctx);return card&&!TWINS.includes(card.name)?card:null;}
 
 export function locationGreetingPrompt(ctx,character,destination,home,entry={}){
-    const names=avatars=>(avatars || []).map(a=>ctx.characters.find(c=>c.avatar===a)?.name).filter(Boolean);
+    const names=avatars=>(avatars || []).map(a=>cardByAvatar(ctx,a)?.name).filter(Boolean);
     return renderPrompt(ctx,'greeting',{character:character.name,player:ctx.name1 || 'the player',
         defeat_note:entry.reason==='defeat'?renderPrompt(ctx,'greeting_defeat',{place:entry.defeatFrom || 'the wilds'}):'',
         enemy_note:greetingNote(ctx,character),
@@ -34,10 +36,17 @@ export function narratorGreetingPrompt(ctx,destination,region,entry={}){
         defeat_note:entry.reason==='defeat'?renderPrompt(ctx,'greeting_narrator_defeat',{player:ctx.name1 || 'the player',place:entry.defeatFrom || 'the wilds'}):''});
 }
 
+// The card's written greetings for meeting a character alone at a place: those linked to that
+// waypoint, and at their home also those linked nowhere. One of them is chosen at random.
+export function writtenGreetings(character,locationId,homeId){
+    return cardGreetings(character).map((text,index)=>({text,location:greetingScene(character,index).location}))
+        .filter(({text,location})=>text.trim()&&(location?location===locationId:locationId===homeId)).map(g=>g.text);
+}
+
 // Quiet generation uses the selected character's complete native card and chat
 // context. It cannot submit or execute the user's unfinished composer draft.
 // The returned greeting is then added as an ordinary, saved character message.
-export async function deliverLocationGreeting(getContext,entry,isCurrent,{loadScript=()=>import('/script.js')}={}){
+export async function deliverLocationGreeting(getContext,entry,isCurrent,{loadScript=()=>import('/script.js'),random=Math.random}={}){
     let ctx=getContext();if(!isCurrent())return false;
     if(ctx.chat.some(m=>m.extra?.silly_teyvat_arrival?.key===entry.key))return true;
     const script=await loadScript();
@@ -50,21 +59,21 @@ export async function deliverLocationGreeting(getContext,entry,isCurrent,{loadSc
     if(index<0)return true;
     await script.unshallowCharacter?.(index);
     if(!isCurrent())return false;ctx=getContext();
-    const character=ctx.characters.find(c=>c.avatar===entry.avatar);
+    const character=cardByAvatar(ctx,entry.avatar);
     const narrated=entry.mode==='narrator',region=backgroundRegions(ctx).find(r=>r.locations.some(l=>l.id===entry.locationId));
     const locations=backgroundRegions(ctx).flatMap(r=>r.locations),destination=locations.find(l=>l.id===entry.locationId),home=locations.find(l=>l.id===entry.defaultLocationId);
     if(!character||!destination)return true;
     // Generated solo greetings replace the card's written one; enemies keep their own encounter prompt.
     const solo=ctx.extensionSettings.genshin_dialogue_ui?.soloGreeting==='generated'&&soloMeeting(entry)&&!isEnemy(ctx,character);
-    const dynamic=solo||!(entry.mode==='written'&&entry.locationId===entry.defaultLocationId&&soloMeeting(entry));
+    const written=!solo&&entry.mode==='written'&&soloMeeting(entry)?writtenGreetings(character,entry.locationId,entry.defaultLocationId):[];
+    const dynamic=!written.length;
     let text;
     if(dynamic){
         syncWorldPrompt(ctx);
         if(ctx.onlineStatus==='no_connection')throw new Error(`Connect your main API, then use Retry location guests to generate ${character.name}'s arrival greeting.`);
         text=await ctx.generateQuietPrompt({quietPrompt:narrated?narratorGreetingPrompt(ctx,destination,region,entry):solo?soloGreetingPrompt(ctx,character,destination,home,entry):locationGreetingPrompt(ctx,character,destination,home,entry),quietToLoud:true,forceChId:ctx.characters.indexOf(character),responseLength:350,removeReasoning:true});
     }else{
-        const options=[character.first_mes || character.data?.first_mes,...(character.data?.alternate_greetings || [])].filter(s=>typeof s==='string'&&s.trim());
-        text=options[0] || '';
+        text=written[Math.min(written.length-1,Math.floor(random()*written.length))];
         const args={input:text,output:'',character};
         if(ctx.eventTypes?.CHARACTER_FIRST_MESSAGE_SELECTED)await ctx.eventSource?.emit?.(ctx.eventTypes.CHARACTER_FIRST_MESSAGE_SELECTED,args);
         text=args.output || text;

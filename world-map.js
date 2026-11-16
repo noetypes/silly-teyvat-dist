@@ -3,20 +3,20 @@ import {createMachine} from './machine.js';
 import {cue} from './ui-sound.js';
 import {mountWildernessMenu,wildernessSummary,wildernessPool} from './wilderness.js';
 import {clearedEnemies,restoreEnemies,healParty} from './combat-state.js';
-import {localMediaPath,createMediaAdapter} from './media-store.js';
+import {localMediaPath,createMediaAdapter,mediaSettings} from './media-store.js';
 import {backgroundRegions,travelState,saveTravel} from './backgrounds.js';
 import {REGION_NAMES,STATUE_KINDS,worldSettings,worldWaypoints,activeWorldLocation,worldScale,walkingSpeed,mapDistance,directionFrom,formatDistance,syncWorldPrompt,worldScalePrompt,saveWaypoint,unpinWaypoint,teleportTo,validMapPoint,setWaypointArtwork} from './world-data.js';
 import {L,makeMap,mapMarker,flightPins,toLatLng,toMapPoint,waypointIcon,waypointPin,playerIcon,playerPin,waypointGlyph} from './map-engine.js';
 import {locationResidentsIndex,encountersBypassed,toggleEncounterBypass} from './location-encounters.js';
 import {mountLocationRosterPicker} from './location-roster-picker.js';
 import {musicSummary} from './location-music-state.js';
-import {mediaSettings} from './media-store.js';
 import {isJourneyGroup,createJourneyLibraryAdapter} from './journey-library.js';
 import {mountCardPoolMenu,locationCardPool,cardPoolSummary} from './card-pools.js';
 import {waypointBadges,waypointBoss,waypointEnemy,badgeLabels,badgeMarkup,isBossArena,domainIcon} from './waypoint-badges.js';
 import {iconsReady} from './battle-icons.js';
 import {searchedCards,questCardsAt,questLabel,questMarkup,QUEST_MARKER} from './card-search.js';
 import {isStatue,statueElement,statueIcon,resonanceTravelers} from './statue-resonance.js';
+import {cardByAvatar} from './card-index.js';
 
 const svg=path=>`<svg viewBox="0 0 24 24" aria-hidden="true">${path}</svg>`;
 const ICON={
@@ -315,7 +315,7 @@ export function mountWorldMap({host,getContext,adapter=createMediaAdapter(getCon
     // Wilderness enemies: who can still be met here, who was defeated in this chat, and a way to bring them back.
     function enemySection(item){
         const ctx=getContext(),section=document.createElement('section');section.className='gi-map-residents gi-map-enemies';section.append(element('h4','Enemies'));
-        const name=avatar=>ctx.characters?.find(c=>c.avatar===avatar)?.name || avatar.replace(/\.png$/i,'');
+        const name=avatar=>cardByAvatar(ctx,avatar)?.name || avatar.replace(/\.png$/i,'');
         const waiting=wildernessPool(ctx,item.location.id),defeated=clearedEnemies(ctx,item.location.id);
         const chips=document.createElement('div');chips.className='gi-map-chips';
         chips.append(...waiting.map(a=>element('span',name(a))));
@@ -488,7 +488,7 @@ export function mountWorldMap({host,getContext,adapter=createMediaAdapter(getCon
             else {listWaypoints();status('');if(current){map.setView(toLatLng(current.point),from?-1.5:-2);if(from)setTimeout(()=>{if(dialog.open&&view.is('list'))map.flyTo(toLatLng(current.point),-2.5,{duration:.7});},180);}}
             updateScale();
         },
-        sync({on,show=true,location,loading=false}={}){
+        sync({on,show=true,location,loading=false,generating=false}={}){
             if(disposed)return;
             const ctx=getContext(),nextChat=identity(ctx),promptStale=nextChat!==chatKey||Boolean(on)!==enabled;if(chatKey&&nextChat!==chatKey){close();signature='';lastRegion=null;pendingBanner='';}chatKey=nextChat;enabled=Boolean(on);visible=Boolean(on&&show);viewLocation=location || null;mini.hidden=!visible;
             // This runs on every refresh, so the World scale text is rebuilt only here and before each generation.
@@ -501,7 +501,9 @@ export function mountWorldMap({host,getContext,adapter=createMediaAdapter(getCon
             // Behind a loading screen the banner waits, so it plays once the new place is visible.
             if(pendingBanner&&!loading&&visible){showRegionBanner(pendingBanner);pendingBanner='';}else if(!enabled)pendingBanner='';
             if(enabled)lastRegion=regionId;
-            if(!dialog.open)return;
+            // The open map is compared with everything it draws (every waypoint and card). While a reply is being
+            // written that would be read on each streamed frame; the refresh that ends the reply compares it once.
+            if(!dialog.open||generating)return;
             const prefs=mediaSettings(ctx);
             const nextSignature=JSON.stringify([searchedCards(ctx),backgroundRegions(ctx),travelState(ctx),worldScale(ctx),walkingSpeed(ctx),prefs.worldPromptAllRegions,prefs.allowMainDeparture,prefs.characterProperties,prefs.personaCharacters,prefs.travelerTwin,ctx.userAvatar,ctx.name1,ctx.powerUserSettings?.personas,ctx.chatMetadata?.silly_teyvat_cast,ctx.characters?.map(c=>[c.avatar,c.name,c.data?.extensions?.silly_teyvat,c.isPersona])]);
             if(nextSignature!==signature){signature=nextSignature;refresh({sidebarRefresh:true});}

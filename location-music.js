@@ -17,7 +17,7 @@ export function mountLocationMusic({host,getContext,adapter=createMediaAdapter(g
         <section class="gi-music-combat"><h3>Battle music</h3><label>Battle track<select data-music-combat aria-label="Battle music track"></select></label><small>The battle track is excluded from exploration. It loops during a fight here, wherever it starts, then the exploration song resumes.</small></section>
         <p class="gi-music-wilderness-note" hidden>Battle music can be set at any waypoint.</p><p class="gi-music-now" role="status" aria-live="polite"></p><p class="gi-music-status" role="status" aria-live="polite"></p>
         <footer><button type="button" data-music="library">Manage music library</button><button type="button" data-music="close-picker">Cancel</button><button type="button" data-music="save">Save waypoint music</button></footer>`;
-    host.append(library,picker);
+    host.append(library,picker);const nowPlaying=[...library.querySelectorAll('.gi-music-now'),...picker.querySelectorAll('.gi-music-now')];
     const abort=new AbortController(),on=(node,type,handler)=>node.addEventListener(type,handler,{signal:abort.signal});
     let disposed=false,busy=false,locationId='',draft=new Set(),combatDraft=null,lastOn=false,lastCombat=false,lastViewed=null,chatKey='';
     // A transformation shown on the battle board, before the round is saved: the music changes with it.
@@ -28,7 +28,7 @@ export function mountLocationMusic({host,getContext,adapter=createMediaAdapter(g
         if(disposed)return;
         const state=player.status,label=state.track?.label || state.track?.name;
         const text=state.blocked?'Music is blocked. Choose Enable audio in the library.':label&&state.playing?`${state.mode==='preview'?'Preview':state.mode==='combat'?'Combat':'Now playing'}: ${label}`:'No music playing.';
-        for(const node of host.querySelectorAll('.gi-music-now'))node.textContent=text;
+        for(const node of nowPlaying)if(node.textContent!==text)node.textContent=text;
         for(const button of library.querySelectorAll('[data-music="preview"]')){const playing=state.mode==='preview'&&state.track?.id===button.closest('[data-music-id]').dataset.musicId;button.textContent=playing?'Stop preview':'Preview';button.setAttribute('aria-pressed',String(playing));}
     }
     function sync(){

@@ -7,6 +7,7 @@ import { characterProperties } from './character-properties.js';
 import {personaCard,personaSpriteSettings,stageCharacter} from './persona-wardrobe.js';
 import {playedAvatars} from './persona-link.js';
 import {NARRATOR_AVATAR} from './narrator.js';
+import {cardByAvatar} from './card-index.js';
 // Relative standing heights of Genshin's body models. In every scene the tallest
 // model's sprite reaches the Sprite height line and the others scale against it.
 export const MODEL_HEIGHTS = Object.freeze({'small female':.72,'medium female':.86,'medium male':.89,'tall female':.94,'tall male':1});
@@ -21,15 +22,7 @@ export function roster(ctx){
     const group=activeGroup(ctx);
     const members=inPartyChat(ctx)?(group?.members || []).filter(a=>!group.disabled_members?.includes(a) && a!=='prome-user'): [ctx.characters?.[ctx.characterId]?.avatar];
     const played=playedAvatars(ctx);
-    return members.filter(a=>!played.has(a)&&a!==NARRATOR_AVATAR).map(a=>ctx.characters?.find(c=>c.avatar===a)).filter(Boolean);
-}
-export function visibleRoster(ctx,scene,message,id=ctx.chat.indexOf(message)){
-    const prefs=ctx.extensionSettings.genshin_dialogue_ui || {};
-    if(!prefs.autoHideSprites)return scene;
-    const limit=bounded(prefs.maxViewableCharacters,1,20,5);
-    const recent=[];for(let i=Math.max(0,id);i>=0;i--){const m=ctx.chat[i];if(!m?.is_system&&!m?.is_user){const a=speakerAvatar(ctx,m);if(!recent.includes(a))recent.push(a);}}
-    const ordered=[...new Set([...recent,...scene.map(s=>s.avatar)])].filter(a=>scene.some(s=>s.avatar===a));
-    const chosen=new Set(ordered.slice(0,limit));return scene.filter(s=>chosen.has(s.avatar));
+    return members.filter(a=>!played.has(a)&&a!==NARRATOR_AVATAR).map(a=>cardByAvatar(ctx,a)).filter(Boolean);
 }
 // Global × character × exact-sprite percentages, read from current settings so a
 // Wardrobe size change also applies to scenes already saved in earlier messages.
@@ -38,7 +31,7 @@ export function liveSpriteScale(ctx,s,character=stageCharacter(ctx,s)){
     const percent=prefs.spriteScales?.[spriteAudioKey(s.folder,s.src)] ?? 100;
     return bounded(prefs.spriteGlobalScale,10,300,100)*bounded(cp.scale,10,300,100)*bounded(percent,10,300,100)/1000000;
 }
-export function stageScene(ctx,input,message,{id=ctx.chat.indexOf(message)}={}){
+export function stageScene(ctx,input,message){
     const prefs={...stagingDefaults,...ctx.extensionSettings.genshin_dialogue_ui},native=prefs.nativeStaging;
     // Who is shown is decided when the page is drawn (stage-layout.js), since a phone shows
     // fewer listeners than a desktop; the saved scene keeps everyone present.
@@ -72,7 +65,7 @@ export function fitModelHeights(scene){
     return scene.map(s=>{if(!(s.model>0&&s.baseH>0))return s;const lift=1-s.h-s.y,h=s.baseH*s.model/tallest;return {...s,h,y:1-h-lift};});
 }
 export function createStageRoster(inventory){
-    return async function prepare(ctx,base,isCurrent,{message=ctx.chat.at(-1),onlyPersona=false}={}){
+    return async function prepare(ctx,base,isCurrent,{onlyPersona=false}={}){
         const prefs={...stagingDefaults,...ctx.extensionSettings.genshin_dialogue_ui};
         const opening=openingCharacter(ctx);
         const entries=onlyPersona?[]:roster(ctx).filter(c=>!opening||c.avatar===opening).map(c=>({avatar:c.avatar,name:c.name,folder:ctx.extensionSettings.expressionOverrides?.find(x=>x.name===c.avatar.replace(/\.[^.]+$/,''))?.path || c.name}));

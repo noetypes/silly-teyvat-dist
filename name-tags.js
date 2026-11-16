@@ -3,6 +3,7 @@
 // as soon as it arrives (so later replies never see the habit in the chat history) and from the
 // dialogue pages while a reply is still streaming in.
 import {activeGroup} from './party.js';
+import {cardByAvatar} from './card-index.js';
 
 const escapeRegExp=text=>String(text).replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
 const WRAP='(?:\\*\\*|__|\\*|_)?';
@@ -16,7 +17,7 @@ export function nameTagNames(ctx,message,prefs={}){
     add(message?.name);add('{{char}}');
     if(prefs.nameTagScope!=='speaker'){
         add(ctx?.name1);add('{{user}}');
-        for(const avatar of activeGroup(ctx)?.members || [])add(ctx.characters?.find(c=>c.avatar===avatar)?.name);
+        for(const avatar of activeGroup(ctx)?.members || [])add(cardByAvatar(ctx,avatar)?.name);
         add(ctx?.characters?.[ctx?.characterId]?.name);
     }
     for(const extra of String(prefs.nameTagExtra || '').split(','))add(extra);

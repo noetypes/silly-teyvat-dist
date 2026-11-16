@@ -36,7 +36,7 @@ export function structureSettings(panel){
                 group.append(...extra);advanced.append(group);
             }
             // A section with settings of its own gets a Reset; the prompt texts have their own.
-            // Dialogue view is the story view's own on switch, not a preference, so Reset leaves it alone.
+            // Story view is a choice of chat display, not a tuned preference, so Reset leaves it alone.
             const keys=[...new Set([...basic,...extra].flatMap(row=>row.matches?.('[data-gi-setting]')?[row]:[...(row.querySelectorAll?.('[data-gi-setting]') || [])]).map(input=>input.dataset.giSetting))].filter(key=>key!=='enabled');
             if(keys.length&&section.heading){
                 const reset=element('button','gi-set-reset','Reset');reset.type='button';

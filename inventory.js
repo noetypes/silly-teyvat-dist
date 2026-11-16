@@ -99,7 +99,9 @@ export function mountInventory({host,getContext,announce=()=>{},onEat=()=>{},onC
         b.setAttribute('aria-pressed',String(id===selected));b.setAttribute('aria-label',`${item.name}, ${count} in bag${inDeck===undefined?'':`, ${inDeck} in deck`}${isNew?', new':''}`);
         b.innerHTML=`<span class="gi-inv-art"><img alt="" loading="lazy" draggable="false"><b class="gi-inv-count">×${count}</b>${inDeck>0?`<i class="gi-inv-deck-mark" title="In your deck">Deck ${inDeck}</i>`:''}${isNew?'<i class="gi-inv-new">New</i>':''}<span class="gi-inv-stars" aria-hidden="true">${'★'.repeat(stars(item.rarity))}</span></span><span class="gi-inv-name"></span>`;
         b.querySelector('img').src=itemArt(id);b.querySelector('.gi-inv-name').textContent=item.name;
-        on(b,'click',()=>{selected=id;paint();});
+        // Tiles and the detail card are redrawn often and thrown away with their listeners, so they take none of the
+        // dialog's own abort signal, which would keep every discarded one alive until dispose.
+        b.addEventListener('click',()=>{selected=id;paint();});
         return b;
     }
     function detail(card){
@@ -141,7 +143,7 @@ export function mountInventory({host,getContext,announce=()=>{},onEat=()=>{},onC
             $('.gi-inv-total').textContent=`Cards ${bagCount(bag)} · Deck ${total}/${DECK_MAX}`;
         };
         const change=delta=>{const now=partyDeck(ctx)[id] || 0;setDeckCount(ctx,id,now+delta);cue('use');show();paintTileDeck(id);};
-        on(minus,'click',()=>change(-1));on(plus,'click',()=>change(1));
+        minus.addEventListener('click',()=>change(-1));plus.addEventListener('click',()=>change(1));
         show();
     }
     // Updates the deck mark on one tile without redrawing the grid (and losing focus).
@@ -166,10 +168,10 @@ export function mountInventory({host,getContext,announce=()=>{},onEat=()=>{},onC
             const img=el('img');img.alt='';img.draggable=false;img.src=circularCharacterAvatar(ctx,card) || ctx.getThumbnailUrl?.('avatar',card.avatar) || `/characters/${encodeURIComponent(card.avatar)}`;
             img.addEventListener('error',()=>{img.removeAttribute('src');},{once:true});
             b.append(img,el('span','',card.name));
-            on(b,'click',()=>{close();gift.give(id,card.avatar);});
+            b.addEventListener('click',()=>{close();gift.give(id,card.avatar);});
             return b;
         }));
-        on(open,'click',()=>{const show=list.hidden;list.hidden=!show;open.setAttribute('aria-expanded',String(show));});
+        open.addEventListener('click',()=>{const show=list.hidden;list.hidden=!show;open.setAttribute('aria-expanded',String(show));});
     }
     // "Use on": the party with their health, for dishes that heal or revive between battles.
     function paintEat(box,{id,item}){
@@ -189,7 +191,7 @@ export function mountInventory({host,getContext,announce=()=>{},onEat=()=>{},onC
             b.querySelector('.gi-inv-eat-hp').style.setProperty('--hp',String(member.maxHp?member.hp/member.maxHp:0));
             b.querySelector('small').textContent=member.downed?'Downed':`${member.hp} / ${member.maxHp}`;
             b.setAttribute('aria-label',`${member.name}, ${member.downed?'downed':`${member.hp} of ${member.maxHp} HP`}${usable?'':use.revive?', not downed':member.downed?', downed: needs a revive':', already at full health'}`);
-            on(b,'click',()=>{
+            b.addEventListener('click',()=>{
                 const healed=eatOutsideBattle(getContext(),id,member.avatar);if(!healed)return;
                 const after=partyStatus(getContext()).find(m=>m.avatar===member.avatar);
                 cue('use');announce(use.revive?`${member.name} is back on their feet with ${after.hp} HP.`:`${member.name} ate ${item.name}: +${healed} HP (${after.hp}/${after.maxHp}).`);

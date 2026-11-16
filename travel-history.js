@@ -8,6 +8,7 @@ import {playedAvatars} from './persona-link.js';
 import {NARRATOR_AVATAR} from './narrator.js';
 import {isGuildStaff,leaveDefeatedGuildStaff} from './guild.js';
 import {companionSide} from './enemy-persona.js';
+import {cardByAvatar} from './card-index.js';
 
 export function partyAvatars(ctx){const played=playedAvatars(ctx);return (activeGroup(ctx)?.members?.slice() || [ctx.characters?.[ctx.characterId]?.avatar].filter(Boolean)).filter(a=>!played.has(a)&&a!==NARRATOR_AVATAR);}
 export function travellingAvatars(ctx,destination,{automatic=false}={}){
@@ -16,7 +17,7 @@ export function travellingAvatars(ctx,destination,{automatic=false}={}){
     return travellers;
 }
 const list=names=>names.length<2?names[0] || 'The party':names.length===2?names.join(' and '):`${names.slice(0,-1).join(', ')}, and ${names.at(-1)}`;
-const nameOf=(ctx,avatar)=>ctx.characters?.find(c=>c.avatar===avatar)?.name;
+const nameOf=(ctx,avatar)=>cardByAvatar(ctx,avatar)?.name;
 // found: avatars already at the destination when the party arrives.
 export function travelHistoryText(ctx,from,to,avatars=partyAvatars(ctx),found=[]){
     const names=[ctx.name1 || 'Traveler',...avatars.map(a=>nameOf(ctx,a)).filter(Boolean)];

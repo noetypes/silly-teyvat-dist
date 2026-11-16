@@ -9,6 +9,8 @@ import {saveTravel,travelState} from './backgrounds.js';
 import {beginOpeningScene} from './opening-scene.js';
 import {isNarrator} from './narrator.js';
 import {enemyNative} from './enemy-regions.js';
+import {abyssAvatar} from './twin-roles.js';
+import {applyGreetingScenario,greetingIndex,greetingScene} from './greeting-scenes.js';
 
 // Called when a solo card opens a new chat. A chat that already has a saved location
 // resumes there instead, and group conversion or history views never move it.
@@ -18,19 +20,46 @@ export function startCharacterAtHome(ctx,random=Math.random){
     if(inPartyChat(ctx))return false;
     const character=ctx.characters?.[ctx.characterId];if(!character||playedAvatars(ctx).has(character.avatar))return false;
     if(hasSavedLocation(ctx))return false;
+    if(character.avatar!==abyssAvatar(ctx))applyGreetingScenario(ctx,character);
     const points=worldWaypoints(ctx),enemy=isEnemy(ctx,character),defaultHome=defaultCharacterLocation(ctx,character.avatar);
     const habitats=enemy?points.filter(({location})=>location.wilderness&&(location.enemyPool || []).includes(character.avatar)):[];
     const regional=enemy?points.filter(({region,location})=>location.wilderness&&enemyNative(character.name,region.name)):[];
     const options=habitats.length?habitats:regional;
-    const home=(options.length?options[Math.min(options.length-1,Math.floor(random()*options.length))].location:null) || points.find(item=>item.location.id===defaultHome?.id)?.location || points[0]?.location;
+    // The opening greeting's own waypoint comes first; without one, enemies roam and everyone else is at home.
+    const home=greetingPlace(ctx,character) || (options.length?options[Math.min(options.length-1,Math.floor(random()*options.length))].location:null) || points.find(item=>item.location.id===defaultHome?.id)?.location || points[0]?.location;
     beginOpeningScene(ctx,character.avatar,home?.id);if(!home)return false;
-    const state=locationCastState(ctx);
+    openAt(ctx,character,home);return true;
+}
+// Where the chat's opening greeting starts, when its waypoint exists and has artwork.
+// The Abyss twin keeps its own greeting and the Chasm, whatever the card's greetings say.
+export function greetingPlace(ctx,character){
+    if(character?.avatar===abyssAvatar(ctx))return null;
+    const id=greetingScene(character,greetingIndex(ctx,character)).location;
+    return id?worldWaypoints(ctx).find(item=>item.location.id===id)?.location || null:null;
+}
+function openAt(ctx,character,home){
+    const enemy=isEnemy(ctx,character),state=locationCastState(ctx);
     state.core=enemy?[]:[character.avatar];
     state.managed=[];if(!enemy)state.placements[character.avatar]=home.id;
     teleportTo(ctx,home.id,{record:false});
     state.encounter=rollLocationEncounter(ctx,home.id,enemy?[]:[character.avatar],{kind:'open'});
     if(enemy)state.encounter.enemies=[character.avatar];
-    noteLocationArrival(ctx,home.id,{kind:'open',travellers:[character.avatar]});saveTravel(ctx);return true;
+    noteLocationArrival(ctx,home.id,{kind:'open',travellers:[character.avatar]});saveTravel(ctx);
+}
+// The opening message changed: a new chat's random greeting, or a swipe to another greeting.
+// While the party is still where the chat began, it moves to that greeting's waypoint (or home)
+// and takes its scenario. Returns whether anything changed.
+export function followGreeting(ctx,random=Math.random){
+    if(ctx.groupId||inPartyChat(ctx))return false;
+    const character=ctx.characters?.[ctx.characterId];if(!character||playedAvatars(ctx).has(character.avatar)||character.avatar===abyssAvatar(ctx))return false;
+    const index=greetingIndex(ctx,character);if(index<0)return false;
+    if(!hasSavedLocation(ctx))return startCharacterAtHome(ctx,random);
+    const scenario=applyGreetingScenario(ctx,character,index),opening=locationCastState(ctx).opening;
+    if(!opening?.active||opening.avatar!==character.avatar){if(scenario)saveTravel(ctx);return scenario;}
+    const points=worldWaypoints(ctx),home=defaultCharacterLocation(ctx,character.avatar);
+    const target=greetingPlace(ctx,character) || (isEnemy(ctx,character)?null:points.find(item=>item.location.id===home?.id)?.location);
+    if(!target||target.id===travelState(ctx).location?.id){if(scenario)saveTravel(ctx);return scenario;}
+    opening.locationId=target.id;openAt(ctx,character,target);return true;
 }
 
 // A brand-new group has no location. Start it at the home of a random member

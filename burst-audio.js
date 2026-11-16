@@ -4,6 +4,7 @@ import {linkedCard} from './persona-link.js';
 import {personaCard} from './persona-wardrobe.js';
 import {characterProperties,ELEMENTS} from './character-properties.js';
 import {volumeLevel} from './audio-levels.js';
+import {cardByAvatar} from './card-index.js';
 
 let defaults={};
 export const burstAudioReady=fetch(new URL('./assets/burst-audio/index.json',import.meta.url))
@@ -28,7 +29,7 @@ export function createBurstVoicePlayer({getContext,sound=createSpriteSoundPlayer
         },
         async play(unit){
             if(disposed||!on||mediaSettings(getContext()).burstAudio===false)return;
-            const ctx=getContext(),card=unit.isUser || unit.id==='__user__'?personaCard(ctx):ctx.characters?.find(c=>c.avatar===unit.id);
+            const ctx=getContext(),card=unit.isUser || unit.id==='__user__'?personaCard(ctx):cardByAvatar(ctx,unit.id);
             if(!card)return;
             const files=burstAudioFiles(ctx,card).filter(file=>!file.element || file.element===unit.element);
             if(!files.length)return;

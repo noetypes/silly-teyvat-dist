@@ -10,6 +10,7 @@ import {homeRegionName,regionGuild} from './defeat.js';
 import {loadCharacterHomes} from './character-homes.js';
 import {teleportTo,worldWaypoints} from './world-data.js';
 import {enemyStartPoint,playedEnemy} from './enemy-persona.js';
+import {hasCard} from './card-index.js';
 
 export function inheritCharacterHistory(ctx,card){
     if(!card)return 0;let count=0;
@@ -35,13 +36,13 @@ export function detachPlayedMetadata(ctx){
 }
 export function soloParty(ctx){
     const group=activeGroup(ctx),played=playedAvatars(ctx);
-    return Boolean(group)&&!(group.members || []).some(a=>!played.has(a)&&!group.disabled_members?.includes(a)&&ctx.characters?.some(c=>c.avatar===a));
+    return Boolean(group)&&!(group.members || []).some(a=>!played.has(a)&&!group.disabled_members?.includes(a)&&hasCard(ctx,a));
 }
 // A solo journey has no party to draw a portrait from, so past chats show who the player is playing.
 // SillyTavern only accepts a group portrait stored as a data URL, so the thumbnail is kept that way.
 function journeyPortrait(ctx,card){
     if(!card)return '';
-    return ctx.characters?.some(c=>c.avatar===card.avatar)?ctx.getThumbnailUrl?.('avatar',card.avatar):ctx.getThumbnailUrl?.('persona',card.personaAvatar);
+    return hasCard(ctx,card.avatar)?ctx.getThumbnailUrl?.('avatar',card.avatar):ctx.getThumbnailUrl?.('persona',card.personaAvatar);
 }
 async function portraitData(url,fetchImpl=fetch){
     if(!url)return undefined;
@@ -55,7 +56,7 @@ export async function repairSoloPortraits(ctx,fetchImpl=fetch){
     let repaired=0;
     for(const group of ctx.groups || []){
         const avatar=group.silly_teyvat_journey?.source?.avatar,solo=group.silly_teyvat_journey?.source?.chatId?.startsWith('solo:');
-        if(!solo||group.avatar_url||!ctx.characters?.some(c=>c.avatar===avatar))continue;
+        if(!solo||group.avatar_url||!hasCard(ctx,avatar))continue;
         const avatar_url=await portraitData(ctx.getThumbnailUrl?.('avatar',avatar),fetchImpl);if(!avatar_url)continue;
         const next={...group,avatar_url};
         const response=await fetchImpl('/api/groups/edit',{method:'POST',headers:ctx.getRequestHeaders(),body:JSON.stringify(next)});

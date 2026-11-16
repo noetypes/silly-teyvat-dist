@@ -9,6 +9,7 @@ import {enemySpeaker} from './enemy-actions.js';
 import {rollLocationEncounter,encountersBypassed,toggleEncounterBypass} from './location-encounters.js';
 import {recordTravel} from './travel-history.js';
 import {cardPortrait,cardShape,mountCardArt} from './card-art.js';
+import {cardArtFor,cardArtState,cardKind,removeCardArt,restoreCardArt,setBundledCardArt} from './card-art-store.js';
 function encounterRuleChecks(check){
  const names=['Amber','Barbara','Chongyun','Diona','Eula'],enemies=['Slime','Shooter','Whopper','Mage'];
  const card=(name,extra={})=>({name,avatar:`${name}.png`,...extra}),foe=name=>card(name,{data:{extensions:{silly_teyvat:{role:'enemy'}}}});
@@ -48,18 +49,38 @@ function encounterRuleChecks(check){
  ctx.extensionSettings.genshin_dialogue_ui.backgroundRegions[0].locations[0].residents.push('Barbara.png');ctx.groups[0].members=['Amber.png','Slime.png'];
  recordTravel(ctx,place('away'),place('here'),{avatars:['Amber.png'],reason:'teleport'});
  check('finding them again clears the memory',ctx.chatMetadata.silly_teyvat_cast.encounter.present.includes('Barbara.png')&&!('Barbara.png' in left()));
- const box=cardPortrait({characters:[card('Klee')]},card('Klee'));
- check('menu portraits are SillyTavern avatar boxes with a lazy thumbnail',box.matches('span.avatar.gi-card-art')&&box.firstChild.loading==='lazy'&&box.firstChild.getAttribute('src')==='/characters/Klee.png'&&box.firstChild.dataset.giThumb.includes('/thumbnail?type=avatar&file=Klee.png'));
- const stranger=cardPortrait({characters:[]},card('Somebody'));
- check('avatars that are not installed cards get the same frame as the character list',stranger.classList.contains('gi-card-frame')&&stranger.firstChild.classList.contains('gi-card-img-frame'));
- check('uploaded images are recognised by their shape alone',cardShape(208,248)===true&&cardShape(420,720)==='tcg'&&cardShape(1000,1800)==='tcg'&&cardShape(512,768)===false&&cardShape(0,0)===false);
- const root=document.createElement('div');root.innerHTML='<div id="persona-management-block"><div id="user_avatar_block"><div class="avatar"><img src="/thumbnail?type=persona&amp;file=Traveler.png"></div></div></div><div id="chat"><div class="recentChat group" data-group="j1"><div class="avatar"><img src="data:image/gif;base64,R0lGODlhAQABAAAAACw="></div></div><div class="recentChat group" data-group="j2"><div class="avatar"><img src="data:image/gif;base64,R0lGODlhAQABAAAAACw="></div></div></div>';document.body.append(root);
- const hadCardArt=document.body.classList.contains('gi-card-art-on'),art=mountCardArt({getContext:()=>({characters:[card('Klee')],groups:[{id:'j1',silly_teyvat_journey:{source:{avatar:'Klee.png'}}},{id:'j2',silly_teyvat_journey:{source:{avatar:'persona:Traveler.png',chatId:'solo:x'}}}]}),root});
- const [persona,journey,soloPersona]=root.querySelectorAll('img');
- check('persona images in Persona Management are shown whole, like character cards',persona.getAttribute('src')==='/User Avatars/Traveler.png'&&persona.classList.contains('gi-card-img'));
- check('a solo journey portrait is drawn from the card it was taken from',journey.getAttribute('src')==='/characters/Klee.png'&&journey.closest('.avatar').classList.contains('gi-card-art'));
- check('a solo journey played as a persona shows the persona image whole, like Persona Management',soloPersona.getAttribute('src')==='/User Avatars/Traveler.png'&&soloPersona.classList.contains('gi-card-img')&&soloPersona.closest('.avatar').classList.contains('gi-card-art'));
- art.dispose();root.remove();document.body.classList.toggle('gi-card-art-on',hadCardArt);
+ // Card art is a picture stored for the character, never worked out from their own image.
+ const artUrl=name=>new URL(`assets/card-art/${name}`,import.meta.url).href,tagged=name=>card(name,{tags:['Genshin']});
+ setBundledCardArt({Klee:{file:'klee.webp',kind:'art'},Hilichurl:{file:'hilichurl.webp',kind:'tcg'}});
+ const artCtx={characters:[tagged('Klee'),tagged('Hilichurl'),card('Stranger'),card('Mine')],extensionSettings:{genshin_dialogue_ui:{cardArtImages:{'Mine.png':{path:'/user/files/mine.png',kind:'tcg'}}}}};
+ const box=cardPortrait(artCtx,artCtx.characters[0]);
+ check('menu portraits are SillyTavern avatar boxes with the character\u2019s card art, loaded lazily',box.matches('span.avatar.gi-card-art')&&box.firstChild.loading==='lazy'&&box.firstChild.getAttribute('src')===artUrl('klee.webp')&&box.firstChild.dataset.giThumb.includes('/thumbnail?type=avatar&file=Klee.png'));
+ const tcgBox=cardPortrait(artCtx,artCtx.characters[1]);
+ check('an enemy\u2019s card art is laid out as a TCG card',tcgBox.firstChild.classList.contains('gi-card-img-tcg')&&tcgBox.firstChild.getAttribute('src')===artUrl('hilichurl.webp'));
+ const stranger=cardPortrait(artCtx,artCtx.characters[2]);
+ check('a character with no card art keeps their own icon, in the frame the character list uses',stranger.classList.contains('gi-card-frame')&&stranger.firstChild.classList.contains('gi-card-img-frame')&&stranger.firstChild.getAttribute('src').includes('/thumbnail?type=avatar&file=Stranger.png'));
+ check('a card with the game\u2019s name but not its tag is not given the game\u2019s art',cardArtFor({...artCtx,characters:[card('Klee')]},card('Klee'))===null);
+ const mine=cardArtFor(artCtx,artCtx.characters[3]);
+ check('a picture set in the Profile is the card\u2019s art, with the shape recorded when it was set',mine.url==='/user/files/mine.png'&&mine.kind==='tcg'&&mine.own===true&&cardArtState(artCtx,artCtx.characters[3])==='own');
+ removeCardArt(artCtx,artCtx.characters[3]);
+ check('removing a picture of your own leaves a card with no art',cardArtFor(artCtx,artCtx.characters[3])===null&&cardArtState(artCtx,artCtx.characters[3])==='none');
+ removeCardArt(artCtx,artCtx.characters[0]);
+ check('the game\u2019s art can be hidden for one character, and brought back',cardArtFor(artCtx,artCtx.characters[0])===null&&cardArtState(artCtx,artCtx.characters[0])==='hidden'&&(restoreCardArt(artCtx,artCtx.characters[0]),cardArtState(artCtx,artCtx.characters[0])==='game'));
+ check('uploaded pictures are laid out by their shape',cardShape(208,248)===true&&cardShape(420,720)==='tcg'&&cardShape(512,768)===false&&cardKind(1000,1800)==='tcg'&&cardKind(512,768)==='tcg'&&cardKind(600,600)==='art'&&cardKind(208,248)==='art');
+ const root=document.createElement('div');root.innerHTML='<div id="persona-management-block"><div id="user_avatar_block"><div class="avatar"><img src="/thumbnail?type=persona&amp;file=teyvat-persona-aether.png"></div><div class="avatar"><img src="/thumbnail?type=persona&amp;file=Somebody.png"></div></div></div><div id="right-nav-panel"><div class="character_select"><div class="avatar"><img src="/thumbnail?type=avatar&amp;file=Klee.png"></div></div></div><div id="chat"><div class="recentChat group" data-group="j1"><div class="avatar"><img src="data:image/gif;base64,R0lGODlhAQABAAAAACw="></div></div></div>';document.body.append(root);
+ setBundledCardArt({Klee:{file:'klee.webp',kind:'art'},Aether:{file:'aether.webp',kind:'art'}});
+ const listCtx={characters:[tagged('Klee'),tagged('Aether')],extensionSettings:{genshin_dialogue_ui:{}},groups:[{id:'j1',silly_teyvat_journey:{source:{avatar:'Klee.png'}}}]};
+ const hadCardArt=document.body.classList.contains('gi-card-art-on'),art=mountCardArt({getContext:()=>listCtx,root});
+ const [persona,ownPersona,listed,journey]=root.querySelectorAll('img');
+ check('a persona that plays a character shows that character\u2019s card art',persona.getAttribute('src')===artUrl('aether.webp')&&persona.classList.contains('gi-card-img'));
+ check('a persona of the player\u2019s own keeps its picture, framed',ownPersona.getAttribute('src').includes('file=Somebody.png')&&ownPersona.classList.contains('gi-card-img-frame'));
+ check('the character list shows card art without fetching the character\u2019s own image',listed.getAttribute('src')===artUrl('klee.webp')&&listed.loading==='lazy'&&listed.closest('.avatar').classList.contains('gi-card-art'));
+ check('a solo journey portrait is drawn from the card it was taken from',journey.getAttribute('src')===artUrl('klee.webp')&&journey.closest('.avatar').classList.contains('gi-card-art'));
+ removeCardArt(listCtx,listCtx.characters[0]);art.refresh();
+ check('hiding a character\u2019s card art puts their icon back in the list at once',listed.getAttribute('src').includes('/thumbnail?type=avatar&file=Klee.png')&&listed.classList.contains('gi-card-img-frame'));
+ restoreCardArt(listCtx,listCtx.characters[0]);art.refresh();
+ art.dispose();root.remove();document.body.classList.toggle('gi-card-art-on',hadCardArt);setBundledCardArt({});
+ check('turning card art off puts every icon back',listed.getAttribute('src').includes('/thumbnail?type=avatar&file=Klee.png')&&!listed.closest('.avatar').classList.contains('gi-card-art')&&persona.getAttribute('src').includes('type=persona'));
  check('turning card art off puts back the stored portrait',journey.getAttribute('src').startsWith('data:')&&!journey.closest('.avatar').classList.contains('gi-card-art'));
 }
 export async function runEncounterFixTests(){

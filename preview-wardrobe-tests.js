@@ -1,6 +1,6 @@
 import {newLocalId} from './local-id.js';
 // Disposable UI checks. All upload and generation adapters are in-memory fakes.
-import {mountWardrobe,spriteIdentity} from './wardrobe.js';
+import {mountWardrobe} from './wardrobe.js';
 import {nextSlotName,spriteDrafts} from './wardrobe-slots.js';
 import {mountPageSprites} from './page-sprites.js';
 import {mountSceneMedia} from './scene-media.js';

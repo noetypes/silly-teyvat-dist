@@ -1,4 +1,4 @@
-import {FEATURE_GROUPS,groupState,renderFeatureSwitches,paintFeatureSwitches,setGroup,setSettings,paimonKeys,paimonOn,paimonValues,linkPaimon} from './feature-switches.js';
+import {FEATURE_GROUPS,groupState,renderFeatureSwitches,paintFeatureSwitches,setGroup,setSettings,paimonKeys,paimonOn,paimonValues,linkPaimon,featureState,anyFeatureOn} from './feature-switches.js';
 // The switches at the top of Settings, against a panel built from the real settings page.
 export async function runFeatureSwitchTests(){
     const results=[],check=(name,ok)=>{results.push(`${ok?'PASS':'FAIL'} ${name}`);if(!ok)throw new Error(name);};
@@ -28,7 +28,10 @@ export async function runFeatureSwitchTests(){
         check('switching a set off turns off every setting in it',changed.join()===FEATURE_GROUPS.find(g=>g.id==='combat').keys.join()&&!prefs.wildernessEncounters&&!prefs.battleEffects);
         const storySet=FEATURE_GROUPS.find(g=>g.id==='story'),soundSet=FEATURE_GROUPS.find(g=>g.id==='sound');
         delete prefs.paimonLinks;paintFeatureSwitches(panel,prefs);
-        check('the Paimon menu switch starts linked to Story view only',paimonKeys(prefs).join()==='enabled'&&panel.querySelector('[data-gi-action="paimon-link"][data-group="story"]').getAttribute('aria-pressed')==='true'&&panel.querySelector('[data-gi-action="paimon-link"][data-group="sound"]').getAttribute('aria-pressed')==='false');
+        check('the Paimon menu switch starts linked to every set, so off leaves only the menu',paimonKeys(prefs).join()===keys.join()&&[...panel.querySelectorAll('[data-gi-action="paimon-link"]')].every(link=>link.getAttribute('aria-pressed')==='true')&&anyFeatureOn(Object.fromEntries(keys.map(key=>[key,false])))===false);
+        const state=featureState({enabled:false,worldEnabled:false,nativeStaging:false,pageExpressions:false,battles:false,cgEnabled:false,choices:false,hud:true,trustSystem:true,cardArt:true});
+        check('with nothing drawn around the chat, the chat is left as SillyTavern\u2019s own',state.scene===false&&featureState({battles:true}).scene===true&&featureState({choices:true}).scene===true&&featureState({worldEnabled:true},false).scene===false);
+        prefs.paimonLinks=['story'];paintFeatureSwitches(panel,prefs);
         check('every set has its own Paimon link beside its switch',panel.querySelectorAll('.gi-feature-row [data-gi-action="paimon-link"]').length===FEATURE_GROUPS.length);
         linkPaimon(prefs,'sound',true);paintFeatureSwitches(panel,prefs);
         check('linking a set lights its Paimon icon and adds its settings',panel.querySelector('[data-gi-action="paimon-link"][data-group="sound"]').getAttribute('aria-pressed')==='true'&&paimonKeys(prefs).join()===[...storySet.keys,...soundSet.keys].join());

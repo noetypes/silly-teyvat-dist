@@ -16,7 +16,7 @@ Requires **SillyTavern 1.19.0 or later**, Git, and about **7 GB of free disk spa
    ```
 2. Reload SillyTavern. Accept **Download** when Silly Teyvat offers its game data (**2.14 GB**). Keep the page open while it downloads and installs, then choose **Reload** when finished.
 3. Connect your own **Chat Completion API** in SillyTavern. No model subscription or API credentials are included.
-4. Choose a persona (Aether and Lumine are included), open a Genshin character card, and start chatting. The Paimon menu opens **Characters**, **Map**, **Inventory** and the other game screens. If dialogue view is off, switch **Silly Teyvat** on in that menu or press **Alt+G**.
+4. Choose a persona (Aether and Lumine are included), open a Genshin character card, and start chatting. The Paimon menu opens **Characters**, **Map**, **Inventory** and the other game screens. If the game is off, switch **Silly Teyvat** on in that menu or press **Alt+G**; the **Story view** tile there turns the visual novel pages on and off.
 
 The download includes **275 character cards, 2,484 sprites, 959 uploaded files, the Aether and Lumine personas, two lorebooks, the Teyvat Slate theme and Teyvat Choices**. Map backgrounds, portraits, TCG artwork, dice, fonts and interface assets are included with the extension. Your existing SillyTavern content is kept.
 
@@ -34,7 +34,8 @@ Expressions use SillyTavern's **Character Expressions** classifier settings. Cha
 - Narration is shown apart from dialogue, and a hidden **Narrator** sets the scene whenever you are travelling alone.
 - **Teyvat Choices** suggests three replies after each character message. Click one to send it.
 - **Auto** reads for you, **History** opens the full transcript for editing and swiping, and **Hide UI** clears the screen for screenshots, and **Full Screen** hides the browser around the game on PC and Android (on iPhone, add SillyTavern to the Home Screen and open it from there). Regenerate and Stop sit beside the dialogue box.
-- The HUD icons and the Paimon menu open SillyTavern's own panels, restyled to match the game.
+- The HUD icons and the Paimon menu open SillyTavern's own panels, restyled to match the game. Teyvat Choices and the HUD icons each have their own switch in Settings → Dialogue.
+- Turn off **Story view** (its tile in the Paimon menu, or Settings → Dialogue) to read the classic SillyTavern chat instead, in a frosted box at the foot of the scene. The place, sprites, map, HUD, Choices and battles carry on as usual.
 
 ### Characters, sprites and scenes
 
@@ -42,6 +43,7 @@ Expressions use SillyTavern's **Character Expressions** classifier settings. Cha
 - Expressions are chosen for each page or message and remembered, so revisiting old dialogue shows the same scene without asking the model again.
 - **Scene CGs**: hundreds of official artworks, including every character birthday illustration, are offered to a classifier that picks one when a reply fits. CGs can replace the background or open in a frame, and can be images, GIFs or videos with their own sound. Scenes can require certain characters or a location. The **Gallery** collects every scene a chat has shown.
 - **Character Customization** (the Paimon menu's Characters screen) edits each card's name, card details and portrait, profile, outfits, expressions, scenes, staging, combat kit and starting Trust. You can upload your own sprite sets, expressions, voice clips and CGs.
+- Each greeting has its own place and scenario. A new chat opens on a random greeting and starts where that greeting is set, so Klee may be outside the Knights' Headquarters, fish-blasting at Starfell Lake or hiding from Razor in Wolvendom. Swiping to another greeting before you travel moves the scene, background and music with it. Browse, write and place greetings, and set a character's home waypoint, in the Profile section of Character Customization.
 - Every card carries a **Silly Teyvat** tag and SillyTavern tags for its role (playable, NPC, enemy or boss), rarity, element, region, weapon, build, titles and nicknames, occupation, affiliation and personality, so the Character List's tag filter can show, say, every Pyro character, every Fatui or every 5★.
 - Sprites can have voice clips, and Elemental Bursts play Japanese Burst voice lines. An outfit without its own clip for an expression speaks with that expression's clip from the character's other sprite sets, unless you turn that off for the sprite.
 
@@ -55,7 +57,7 @@ Expressions use SillyTavern's **Character Expressions** classifier settings. Cha
 
 - A full interactive map of Teyvat with **270 waypoints in eight regions**: Mondstadt, Liyue, Inazuma, Sumeru, Fontaine, Natlan, Nod-Krai and Snezhnaya. Each has its own background and music.
 - **Teleport** to any waypoint, from the map or from the **Teyvat** tab of SillyTavern's Backgrounds menu, which shows every location picture. Travel is recorded in the chat with real distances, and a classifier follows the party when the story moves somewhere within the current region.
-- Characters live at the places they belong to, and you meet some of them when you arrive. When you leave, you choose who travels with you. Favourites are always there, and anyone left behind waits for you.
+- Characters live at the places they belong to, and you meet some of them when you arrive. Meet one alone at a place their card has a greeting for, and they greet you with it. When you leave, you choose who travels with you. Favourites are always there, and anyone left behind waits for you.
 - Wilderness waypoints have regional enemy pools, and **20 boss arenas** each hold one boss with its own music.
 - Every region has a **Statue of The Seven**, marked with the statue's own map icon (Nod-Krai's is a Statue of the New Moon). Arriving at one restores your party's HP. Arrive with Aether or Lumine in your party, or while playing one of them, to resonate with the region's element. Starfell Lake is a statue too, and the waypoint editor can make any waypoint one.
 - You can add, move and edit waypoints, set exploration and battle playlists per place, and adjust encounter chances.
@@ -65,7 +67,7 @@ Expressions use SillyTavern's **Character Expressions** classifier settings. Cha
 
 - Each character has up to five hearts of Trust with you in each chat. They gain or lose it through the roleplay, and higher Trust makes them more willing to go along with you.
 - Characters who already know the one you play start with suitable Trust.
-- Give cards from your Inventory as gifts. Everyone has favourite and least favourite cards, based on the game, including their own summons, weapons and haunts. A favourite gives the most Trust, up to +1 for a 5★ card and +0.5 for any other. The **Gifts** menu in a character's profile sets how much each card raises or lowers their Trust.
+- Give cards from your Inventory as gifts. Everyone has favourite and least favourite cards, based on the game, including their own summons, weapons and haunts. A favourite gives the most Trust: +1 for a 5★ card, or +0.9 for someone who likes no 5★ card, and other likes give less, down to +0.3. The **Gifts** menu in a character's profile sets how much each card raises or lowers their Trust.
 - **What do they think of you?** in the Trust menu shows a character's private opinion of you.
 - Some sprites and scenes unlock only at a minimum Trust, set in half hearts.
 
@@ -81,8 +83,11 @@ Expressions use SillyTavern's **Character Expressions** classifier settings. Cha
 
 ### Settings and sharing
 
-- The **Silly Teyvat** switch unloads the whole extension. Below it, feature sets (story view, choices, sprites, CGs, sounds, encounters, battles, Trust, prompts and card art) turn on and off separately.
+- The **Silly Teyvat** switch at the top of Settings unloads the whole extension. Below it, thirteen feature sets turn on and off separately: Story view, Teyvat Choices, HUD icons and panels, sprites, Scene CGs, sounds, the world map and travel, enemies and battles, Character Customization, Trust, party replies, roleplay prompts and card art. With every set off, SillyTavern looks and behaves as it does without the game, with only the Paimon menu button added.
+- The **Silly Teyvat** switch in the Paimon menu turns every set off and back on as you had them. The Paimon icon beside each set in Settings → Features chooses which sets it controls.
+- **Card art in SillyTavern** shows each character's Genshin card in the character list. The card is a picture of its own, set or removed in the character's **Profile** (Character details → Card art); the character's own image is their icon, which is what SillyTavern shows with card art, or the game, off.
 - Settings are searchable, every section has a Reset, and fine-tuning is folded under **Advanced**.
+- **Graphics quality** (Settings → Display) is High, Balanced or Low, or **Auto**, which chooses from what the browser reports about your device and says why. Balanced drops the blur behind panels; Low also drops looping glows, Burst splash art and particles and draws at most 30 frames a second.
 - **CG & Audio** has a Main volume and separate volumes for music, voices, CG audio, sound effects and interface sounds.
 - Every prompt the extension sends, including its roleplay writing guides, is editable under **Settings → Prompts**.
 - Scene, location and choice requests can use the main API, a saved Connection Manager profile or WebLLM.
@@ -93,6 +98,6 @@ Expressions use SillyTavern's **Character Expressions** classifier settings. Cha
 
 - Map tiles load from HoYoverse's map service as you zoom in. Chat text is never sent there.
 - Scene choices, Trust and travel are saved in the chat. Uploaded media and settings are kept on the SillyTavern server; copy them together if you move servers.
-- To uninstall, turn Silly Teyvat off, remove it in the extension manager and reload. Saved scene data in chats is harmless without it.
+- To uninstall, delete Silly Teyvat in **Manage extensions**. It restores the theme you had before Teyvat Slate and switches the game's lorebooks off as it goes; **Settings → Share → Restore my SillyTavern theme** does the same while you keep playing. Your cards, sprites and chats are left alone, and saved scene data in chats is harmless without the extension.
 
-Guides: [Combat](https://github.com/noetypes/silly-teyvat/blob/main/docs/guides/COMBAT.md) · [Trust, gifts and scenes](https://github.com/noetypes/silly-teyvat/blob/main/docs/guides/TRUST-GIFTS-AND-SCENES.md) · [Location catalog](https://github.com/noetypes/silly-teyvat/blob/main/docs/guides/LOCATION-CATALOG.md) · [Location music](https://github.com/noetypes/silly-teyvat/blob/main/docs/guides/LOCATION-MUSIC.md) · [Teyvat Choices](https://github.com/noetypes/silly-teyvat/blob/main/docs/guides/QUICK-REPLIES.md)
+Guides: [Combat](https://github.com/noetypes/silly-teyvat/blob/main/docs/guides/COMBAT.md) · [Trust, gifts and scenes](https://github.com/noetypes/silly-teyvat/blob/main/docs/guides/TRUST-GIFTS-AND-SCENES.md) · [Location catalog](https://github.com/noetypes/silly-teyvat/blob/main/docs/guides/LOCATION-CATALOG.md) · [Location music](https://github.com/noetypes/silly-teyvat/blob/main/docs/guides/LOCATION-MUSIC.md) · [Teyvat Choices](https://github.com/noetypes/silly-teyvat/blob/main/docs/guides/QUICK-REPLIES.md) · [Performance and hardware](https://github.com/noetypes/silly-teyvat/blob/main/docs/guides/PERFORMANCE.md)

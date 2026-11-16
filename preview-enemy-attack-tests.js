@@ -1,6 +1,6 @@
 import {autoBattle} from './preview-battle-auto.js';
 import {mountCombat} from './combat.js';
-import {activeEnemies,combatState,partyStatus,healParty,USER_KEY} from './combat-state.js';
+import {combatState,partyStatus,healParty,USER_KEY} from './combat-state.js';
 import {battleSnapshot,commitRound} from './battle-state.js';
 import {resolveRound} from './battle-engine.js';
 import {nearestGuild,resolveDefeat,findKatheryne,isGuildLocation} from './defeat.js';

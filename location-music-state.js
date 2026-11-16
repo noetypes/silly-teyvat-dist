@@ -16,7 +16,10 @@ export function musicLibrary(ctx){
         seen.add(track.id);return true;
     });
 }
-export function musicLocation(ctx,id){return (mediaSettings(ctx).backgroundRegions || []).flatMap(region=>region.locations || []).find(location=>location.id===id);}
+export function musicLocation(ctx,id){
+    for(const region of mediaSettings(ctx).backgroundRegions || []){const location=(region.locations || []).find(location=>location.id===id);if(location)return location;}
+    return undefined;
+}
 export function addMusicTrack(ctx,file,label){
     const path=localMediaPath(file?.path);
     if(!path)throw new Error('The uploaded music has no valid local file path.');

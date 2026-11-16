@@ -4,7 +4,7 @@ import {WEAPONS,ROLES,EFFECT_TYPES,BUFF_STATS,DEBUFF_STATS,TARGETS,KIND_LABEL,de
 import {TRAVELER_ELEMENTS,isTravelerCard,setTravelerElement} from './statue-resonance.js';
 import {baseName} from './card-name.js';
 import {kitForCard} from './battle-state.js';
-import {characterProperties} from './character-properties.js';
+import {characterProperties,saveCharacterProperties,hasCustomMaxHp,resetMaxHp} from './character-properties.js';
 import {linkedCard} from './persona-link.js';
 import {ELEMENTS} from './battle-engine.js';
 
@@ -14,7 +14,7 @@ const STAT_NAMES={atk:'Damage dealt ↑',guard:'Damage taken ↓',crit:'Crit cha
 const TYPE_NAMES={damage:'Damage',heal:'Heal',shield:'Shield',buff:'Buff',debuff:'Debuff',summon:'Summon',energy:'Energy',cleanse:'Cleanse',hpcost:'HP cost (%)'};
 const num=(value,min,max,fallback)=>{const n=Math.round(Number(value));return Number.isFinite(n)?Math.max(min,Math.min(max,n)):fallback;};
 
-export function mountMovesetEditor({panel,getContext,getCharacter,status=()=>{},onElementChange=()=>{}}){
+export function mountMovesetEditor({panel,getContext,getCharacter,status=()=>{},onElementChange=()=>{},onHealthChange=()=>{}}){
     const abort=new AbortController();let kit=null,card=null;
     panel.classList.add('gi-moveset');
     const plainKey=()=>card?.isPersona?(linkedCard(getContext(),card.personaAvatar)?.avatar || card.avatar):card?.avatar;
@@ -45,6 +45,7 @@ export function mountMovesetEditor({panel,getContext,getCharacter,status=()=>{},
         const resonance=!enemy&&traveler()?`<label class="gi-traveler-element" title="The element ${esc(card.name)} resonates with. Each element has its own Skill and Burst, and a Statue of The Seven changes it too.">Element<select data-traveler-element>${TRAVELER_ELEMENTS.map(x=>opt(x)).join('')}</select></label>`:'';
         panel.innerHTML=`<h3 class="gi-cs-heading">Stats</h3>
             <div class="gi-moveset-head">${resonance}
+                ${card.isPersona?'':`<label title="Health changes apply to new encounters. Existing encounters keep their HP.">Maximum HP<input data-k="maxHp" type="number" min="1" max="100000" step="1" value="${esc(props.maxHp)}"></label>`}
                 <label>Role<select data-k="role">${[...ROLES,'Enemy'].map(x=>opt(x)).join('')}</select></label>
                 ${enemy?`<label>Element<select data-k="element">${['Physical',...ELEMENTS].map(x=>opt(x)).join('')}</select></label>
                 <label>Shield<input data-k="shield" type="number" min="0" max="99" value="${esc(kit.shield || 0)}"></label>
@@ -62,7 +63,7 @@ export function mountMovesetEditor({panel,getContext,getCharacter,status=()=>{},
             ${kit.moves.map((move,i)=>`<section class="gi-move-edit" data-move="${i}">
                 <div class="gi-move-head"><small>${KIND_LABEL[move.kind]}</small><input data-m="name" maxlength="80" value="${esc(move.name)}" aria-label="${KIND_LABEL[move.kind]} name"></div>
                 <div class="gi-move-row">
-                    ${move.kind==='normal'||move.kind==='skill'||move.kind==='burst'?`<label>Dice cost<input data-m="cost" type="number" min="0" max="8" value="${esc(move.cost ?? 3)}"></label>`:''}
+                    ${move.kind==='normal'||move.kind==='skill'||move.kind==='burst'?`<label>Dice cost<input data-m="cost" type="number" min="1" max="8" value="${esc(move.cost ?? 3)}"></label>`:''}
                     ${move.kind==='special'?`<label>Cooldown (rounds)<input data-m="cooldown" type="number" min="1" max="9" value="${esc(move.cooldown ?? 3)}"></label>`:''}
                     <label>Element<select data-m="element">${opt('',`Default (${esc(move.kind==='normal'&&!enemy?(kit.weapon==='catalyst'?element:'Physical'):element)})`)}${['Physical',...ELEMENTS].map(x=>opt(x)).join('')}</select></label>
                 </div>
@@ -70,7 +71,7 @@ export function mountMovesetEditor({panel,getContext,getCharacter,status=()=>{},
                 <button type="button" data-add-effect="${i}">+ Add effect</button>
                 <p class="gi-move-desc"></p>
             </section>`).join('')}
-            <div class="gi-wardrobe-row"><button type="button" data-save-kit>Save moveset</button><button type="button" data-reset-kit${kit.custom?'':' disabled title="This moveset has not been edited."'}>Reset to default</button></div>`;
+            <div class="gi-wardrobe-row"><button type="button" data-save-kit>Save moveset</button><button type="button" data-reset-kit${kit.custom||hasCustomMaxHp(ctx,card)?'':' disabled title="This moveset has not been edited."'}>Reset to default</button></div>`;
         const set=(selector,value)=>{const node=panel.querySelector(selector);if(node)node.value=value ?? '';};
         set('[data-traveler-element]',TRAVELER_ELEMENTS.includes(props.element)?props.element:'');
         set('[data-k="role"]',kit.role);set('[data-k="weapon"]',kit.weapon);set('[data-k="element"]',kit.element);set('[data-k="weakTo"]',kit.weakTo || '');set('[data-k="armorBreak"]',kit.armorBreak || '');{const box=panel.querySelector('[data-k="infusion"]');if(box)box.checked=kit.infusion===true;}
@@ -93,7 +94,7 @@ export function mountMovesetEditor({panel,getContext,getCharacter,status=()=>{},
         next.moves=kit.moves.map((move,i)=>{
             const section=panel.querySelector(`.gi-move-edit[data-move="${i}"]`),field=name=>section.querySelector(`[data-m="${name}"]`)?.value;
             const out={...move,name:String(field('name') || move.name).trim().slice(0,80) || move.name};
-            if(move.kind==='normal'||move.kind==='skill'||move.kind==='burst')out.cost=num(field('cost'),0,8,move.cost ?? 3);
+            if(move.kind==='normal'||move.kind==='skill'||move.kind==='burst')out.cost=num(field('cost'),1,8,move.cost ?? 3);
             if(move.kind==='special')out.cooldown=num(field('cooldown'),1,9,3);
             const chosen=field('element');out.element=chosen || (move.kind==='normal'&&!enemy?(next.weapon==='catalyst'?element:'Physical'):undefined);if(!out.element)delete out.element;
             out.effects=[...section.querySelectorAll('.gi-effect')].map(row=>{
@@ -137,8 +138,22 @@ export function mountMovesetEditor({panel,getContext,getCharacter,status=()=>{},
         const add=event.target.closest('[data-add-effect]'),remove=event.target.closest('[data-remove-effect]');
         if(add){event.stopPropagation();kit=read();const i=Number(add.dataset.addEffect);if(kit.moves[i].effects.length>=6){status('A move can have up to six effects.');return;}kit.moves[i].effects.push({type:'damage',power:3,target:'one'});rebuild();return;}
         if(remove){event.stopPropagation();kit=read();const row=remove.closest('.gi-effect');kit.moves[Number(row.dataset.move)].effects.splice(Number(row.dataset.effect),1);rebuild();return;}
-        if(event.target.closest('[data-save-kit]')){event.stopPropagation();try{const next=read();delete next.custom;saveKitOverride(getContext(),saveKey(),{...next,moves:next.moves});render();status(`${card.name}'s moveset saved. It applies from the next round.`);}catch(error){status(error.message);}return;}
-        if(event.target.closest('[data-reset-kit]')){event.stopPropagation();resetKitOverride(getContext(),saveKey());if(saveKey()!==plainKey())resetKitOverride(getContext(),plainKey());render();status(`${card.name}'s moveset is back to its default.`);}
+        if(event.target.closest('[data-save-kit]')){
+            event.stopPropagation();
+            try{
+                const next=read();delete next.custom;
+                // Maximum HP is a character property; it is checked before anything is saved.
+                const hpField=panel.querySelector('[data-k="maxHp"]'),hp=hpField?Number(hpField.value):null,ctx=getContext();
+                if(hpField&&(!Number.isInteger(hp)||hp<1||hp>100000))throw new Error('Maximum HP must be a whole number from 1 to 100000.');
+                const hpChanged=hpField&&hp!==characterProperties(ctx,card).maxHp;
+                saveKitOverride(ctx,saveKey(),{...next,moves:next.moves});
+                if(hpChanged)saveCharacterProperties(ctx,card,{maxHp:hp});
+                render();if(hpChanged)onHealthChange();
+                status(`${card.name}'s moveset saved. It applies from the next round${hpChanged?'; the new Maximum HP applies to new encounters':''}.`);
+            }catch(error){status(error.message);}
+            return;
+        }
+        if(event.target.closest('[data-reset-kit]')){event.stopPropagation();const ctx=getContext();resetKitOverride(ctx,saveKey());if(saveKey()!==plainKey())resetKitOverride(ctx,plainKey());const hpReset=resetMaxHp(ctx,card);render();if(hpReset)onHealthChange();status(`${card.name}'s moveset is back to its default.`);}
     },{signal:abort.signal});
     // Re-render from the working copy (keeps unsaved edits).
     function rebuild(){

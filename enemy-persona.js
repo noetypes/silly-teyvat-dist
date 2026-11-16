@@ -10,11 +10,12 @@ import {NARRATOR_AVATAR} from './narrator.js';
 import {combatTrigger} from './enemy-actions.js';
 import {promptText,renderPrompt} from './prompt-templates.js';
 import {syncPromptOrder} from './prompt-order.js';
+import {cardByAvatar} from './card-index.js';
 
 // The enemy card the player is playing, or null.
 export function playedEnemy(ctx){const card=linkedCard(ctx);return card&&isEnemy(ctx,card)?card:null;}
 export const playingEnemy=ctx=>Boolean(playedEnemy(ctx));
-const cardOf=(ctx,avatar)=>ctx.characters?.find(c=>c.avatar===avatar);
+const cardOf=(ctx,avatar)=>cardByAvatar(ctx,avatar);
 export const isBossAvatar=(ctx,avatar)=>isTcgBoss(cardOf(ctx,avatar)?.name);
 // Which side can travel with the player. Bosses stay at their encounter even when their kind is played.
 export const companionSide=(ctx,avatar)=>playingEnemy(ctx)?isEnemy(ctx,avatar)&&!isBossAvatar(ctx,avatar):!isEnemy(ctx,avatar);

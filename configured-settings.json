@@ -30225,7 +30225,7 @@
    "Diluc.png": "expansion-dawn-winery",
    "Diona.png": "starter-the-cat-s-tail",
    "Jean.png": "starter-knights-of-favonius-headquarters",
-   "Klee.png": "expansion-starfell-lake",
+   "Klee.png": "starter-knights-of-favonius-headquarters",
    "Kaeya.png": "starter-knights-of-favonius-headquarters",
    "Albedo.png": "starter-albedo-s-campsite",
    "Qiqi.png": "starter-bubu-pharmacy",
@@ -30856,8 +30856,8 @@
     "element": "Anemo",
     "modelType": "custom",
     "region": "",
-    "maxHp": "26",
-    "modelScale": "60",
+    "maxHp": 26,
+    "modelScale": "70",
     "deathMessage": "{name} falls still. The threat has passed.",
     "hpCustom": false
    },
@@ -30944,8 +30944,8 @@
     "element": "Cryo",
     "modelType": "custom",
     "region": "",
-    "maxHp": "26",
-    "modelScale": "65",
+    "maxHp": 26,
+    "modelScale": "70",
     "deathMessage": "{name} falls still. The threat has passed.",
     "hpCustom": false
    },
@@ -30988,8 +30988,8 @@
     "element": "Dendro",
     "modelType": "custom",
     "region": "",
-    "maxHp": "26",
-    "modelScale": "60",
+    "maxHp": 26,
+    "modelScale": "80",
     "deathMessage": "{name} falls still. The threat has passed.",
     "hpCustom": false
    },
@@ -31043,8 +31043,8 @@
     "element": "Electro",
     "modelType": "custom",
     "region": "",
-    "maxHp": "26",
-    "modelScale": "60",
+    "maxHp": 26,
+    "modelScale": "75",
     "deathMessage": "{name} falls still. The threat has passed.",
     "hpCustom": false
    },
@@ -31409,6 +31409,17 @@
     "maxHp": "76",
     "modelScale": "90",
     "deathMessage": "Hydro Tulpa falls still as its elemental power fades.",
+    "hpCustom": false
+   },
+   "Blazing Axe Mitachurl.png": {
+    "role": "enemy",
+    "playable": false,
+    "element": "Pyro",
+    "modelType": "custom",
+    "region": "",
+    "maxHp": 46,
+    "modelScale": "100",
+    "deathMessage": "{name} falls still. The threat has passed.",
     "hpCustom": false
    }
   },
@@ -34273,17 +34284,19 @@
   "hideNonGenshin": true,
   "master": true,
   "cardArt": true,
-  "rosterView": {
-   "type": "playable"
-  },
+  "rosterView": {},
   "paimonLinks": [
    "story",
    "choices",
+   "hud",
    "stage",
    "cgs",
+   "sound",
    "world",
    "combat",
+   "characters",
    "trust",
+   "replies",
    "prompts",
    "cardArt"
   ],
@@ -34310,10 +34323,10 @@
    "Wayward Hermetic Spiritspeaker"
   ],
   "cgFrame": {
-   "left": 268.0546875,
-   "top": 9.921875,
-   "width": 467.265625,
-   "height": 503.265625
+   "left": 234.890625,
+   "top": 104.46875,
+   "width": 555.0078125,
+   "height": 429.4921875
   },
   "nameTagFilter": true,
   "nameTagScope": "all",
@@ -34347,6 +34360,17 @@
    }
   },
   "spriteTrust": {},
-  "guestSpeakers": true
+  "guestSpeakers": true,
+  "giftTrust": {
+   "Fischl.png": {
+    "sweet-madame": 2
+   }
+  },
+  "hud": true,
+  "paimonLinksVersion": 2,
+  "shell": true,
+  "worldEnabled": true,
+  "battles": true,
+  "groupReplies": true
  }
 }

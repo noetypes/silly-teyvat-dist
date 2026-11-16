@@ -7,6 +7,7 @@ import {playedAvatars} from './persona-link.js';
 import {ABYSS_HOME,abyssAvatar} from './twin-roles.js';
 import {guildBranch,isGuildStaff,isGuildLocation,findKatheryne,guildStaffAbsent} from './guild.js';
 import {companionSide,playingEnemy} from './enemy-persona.js';
+import {cardPosition} from './card-index.js';
 
 const MAX_ENCOUNTERED=3;
 // Assigned homes and this chat's travelling placements are separate from the
@@ -19,8 +20,13 @@ export function locationResidents(ctx,id){
     // A card the player has taken over as their persona never appears as a resident.
     const played=playedAvatars(ctx);
     // Katheryne is at every Guild branch and nowhere else, wherever her card says she lives.
-    const branch=guildBranch(ctx,id);
-    return (ctx.characters || []).filter(c=>(isGuildStaff(ctx,c.avatar)?branch&&!guildStaffAbsent(ctx,id):homes.get(c.avatar)===id)&&!played.has(c.avatar)&&!isEnemy(ctx,c));
+    const branch=guildBranch(ctx,id),staff=findKatheryne(ctx)?.avatar,staffHere=branch&&!guildStaffAbsent(ctx,id);
+    // Start from the few avatars that live here, never from the library: it may be far larger than the game's cast.
+    const here=new Set();
+    for(const [avatar,home] of homes)if(home===id&&avatar!==staff)here.add(avatar);
+    if(staff&&staffHere)here.add(staff);
+    return [...here].filter(avatar=>!played.has(avatar)).map(avatar=>[cardPosition(ctx,avatar),avatar]).filter(([at])=>at>=0)
+        .sort((a,b)=>a[0]-b[0]).map(([at])=>ctx.characters[at]).filter(c=>!isEnemy(ctx,c));
 }
 // A map paint needs every roster. Build the shared home/persona/role lookup once,
 // rather than scanning every location and card again for each pin and list row.

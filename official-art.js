@@ -1,4 +1,5 @@
 import {mediaSettings} from './media-store.js';
+import {cardByName} from './card-index.js';
 // Every playable character with downloaded official portraits has an "Official Art" sprite
 // folder (Name/Official Art). Offer it once as an extra set; forgetting it later sticks.
 const LABEL='Official Art';
@@ -7,7 +8,7 @@ export async function registerOfficialArt(ctx,load=async()=>{const response=awai
     prefs.outfits ??= {};prefs.officialArtOffered ??= [];
     let added=0;
     for(const name of names){
-        const card=ctx.characters?.find(c=>c.name===name);
+        const card=cardByName(ctx,name);
         if(!card||prefs.officialArtOffered.includes(card.avatar))continue;
         const sets=prefs.outfits[card.avatar] ??= [],folder=`${name}/${LABEL}`;
         if(!sets.some(set=>set.folder===folder)){sets.push({label:LABEL,folder});added++;}
@@ -18,7 +19,7 @@ export async function registerOfficialArt(ctx,load=async()=>{const response=awai
     prefs.officialArtEquipped ??= [];ctx.extensionSettings.expressionOverrides ??= [];
     let equipped=0;
     for(const name of equipByDefault){
-        const card=ctx.characters?.find(c=>c.name===name);
+        const card=cardByName(ctx,name);
         if(!card||prefs.officialArtEquipped.includes(card.avatar))continue;
         const key=card.avatar.replace(/\.[^.]+$/,''),overrides=ctx.extensionSettings.expressionOverrides,existing=overrides.find(x=>x.name===key),folder=`${name}/${LABEL}`;
         if(!existing){overrides.push({name:key,path:folder});equipped++;}
@@ -29,7 +30,7 @@ export async function registerOfficialArt(ctx,load=async()=>{const response=awai
     // Subsequent changes made in the wardrobe remain the player's choice.
     prefs.enemyOfficialArtEquipped ??= [];
     for(const name of enemyEquipByDefault){
-        const card=ctx.characters?.find(c=>c.name===name);
+        const card=cardByName(ctx,name);
         if(!card||prefs.enemyOfficialArtEquipped.includes(card.avatar))continue;
         const key=card.avatar.replace(/\.[^.]+$/,''),overrides=ctx.extensionSettings.expressionOverrides,existing=overrides.find(x=>x.name===key),folder=`${name}/${LABEL}`;
         const sets=prefs.outfits[card.avatar] ??= [];

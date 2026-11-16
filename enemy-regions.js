@@ -4,6 +4,7 @@
 // Regions follow where the enemies appear in the open world (the wiki marks common enemies
 // as "Multiple" locations, so this table is curated rather than downloaded).
 import {mediaSettings} from './media-store.js';
+import {cardByAvatar} from './card-index.js';
 
 const MOND='Mondstadt',LIYUE='Liyue',INA='Inazuma',SUMERU='Sumeru',FONT='Fontaine',NATLAN='Natlan',NOD='Nod-Krai',SNEZH='Snezhnaya';
 export const REGIONS=[MOND,LIYUE,INA,SUMERU,FONT,NATLAN,NOD,SNEZH];
@@ -203,7 +204,6 @@ export function enemyNative(name,region){
     const list=ENEMY_REGIONS[name],where=known(region);
     return !list||!where||list.includes(where);
 }
-export const nativeRegions=name=>ENEMY_REGIONS[name] || null;
 
 // Adds the 1.63 enemies to saved pools without touching anything else in them: each enemy once,
 // as soon as its character card is installed. Pools a player emptied or edited keep their own choices.
@@ -226,7 +226,7 @@ export function addNewEnemies(ctx){
 export function alignEnemyPools(ctx){
     const prefs=mediaSettings(ctx);
     if((prefs.enemyPoolsVersion || 0)>=ENEMY_POOLS_VERSION||!ctx.characters?.length)return 0;
-    const avatarOf=name=>ctx.characters.find(c=>c.name===name)?.avatar,nameOf=avatar=>ctx.characters.find(c=>c.avatar===avatar)?.name;
+    const avatarOf=name=>ctx.characters.find(c=>c.name===name)?.avatar,nameOf=avatar=>cardByAvatar(ctx,avatar)?.name;
     const homes=new Set(Object.values(prefs.defaultCharacterLocations || {}));
     let changed=0;
     for(const region of prefs.backgroundRegions || [])for(const location of region.locations || []){

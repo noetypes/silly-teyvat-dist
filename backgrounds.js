@@ -1,5 +1,5 @@
 import {newLocalId} from './local-id.js';
-import {mediaSettings,localMediaPath,createMediaAdapter} from './media-store.js';
+import {mediaSettings,localMediaPath} from './media-store.js';
 import {pageSignature} from './page-sprites.js';
 import {recordTravel,travellingAvatars} from './travel-history.js';
 
@@ -17,10 +17,9 @@ export function visitLocation(ctx,id){
     if(!location)throw new Error('Choose artwork in the selected region first.');
     const from=structuredClone(state.location);state.epoch=newLocalId();state.location=structuredClone(location);state.entry=structuredClone(location);recordTravel(ctx,from,location,{reason:'visit',avatars:travellingAvatars(ctx,location,{automatic:true})});saveTravel(ctx);
 }
-export function mountBackgrounds({host,getContext,adapter=createMediaAdapter(getContext),announce=()=>{},onChange=()=>{}}){
+export function mountBackgrounds({host,getContext,onChange=()=>{}}){
     const layer=document.createElement('div');layer.id='gi-background-stage';layer.hidden=true;layer.setAttribute('aria-hidden','true');host.append(layer);
-    let chatKey='',selection='',request,revision=0,selectedId,active=false,current=null,paintKey='';
-    const failures=new Set();
+    let chatKey='',active=false,current=null,paintKey='';
     const identity=ctx=>`${ctx.groupId || ctx.characterId}:${ctx.getCurrentChatId?.() || ctx.chatId || ''}`;
     const cached=(message)=>message?.extra?.silly_teyvat?.backgrounds?.[String(message.swipe_id ?? 0)];
     function paint(location,regionId=travelState(getContext()).regionId){const path=localMediaPath(location?.path);layer.hidden=!active||!path;layer.style.backgroundImage=path?`url(${JSON.stringify(path)})`:'';layer.dataset.location=location?.label || '';current=active&&location?{location,regionId}:null;const key=JSON.stringify(current);if(key!==paintKey){paintKey=key;onChange();}}
@@ -46,11 +45,10 @@ export function mountBackgrounds({host,getContext,adapter=createMediaAdapter(get
         sync({on,id,generating}){
             const ctx=getContext(),prefs=mediaSettings(ctx),state=travelState(ctx),nextChat=identity(ctx);
             if(nextChat!==chatKey){api.reset();chatKey=nextChat;}
-            active=on&&prefs.backgroundsEnabled!==false;selectedId=id;
-            if(!active){api.refresh();paint(null);return;}
+            active=on&&prefs.backgroundsEnabled!==false;
+            if(!active){paint(null);return;}
             const message=ctx.chat[id];if(!message){paint(state.location);return;}
-            const signature=pageSignature(message.mes || ''),key=`${id}:${message.swipe_id ?? 0}:${signature}:${state.epoch}`;
-            if(key!==selection){request?.abort();request=null;revision++;selection=key;}
+            const signature=pageSignature(message.mes || '');
             const record=cached(message),latest=id===ctx.chat.length-1;
             if(latest&&state.manualAt?.id===id&&state.manualAt.swipe===String(message.swipe_id ?? 0)&&state.manualAt.signature===signature){paint(state.location);return;}
             if(record?.signature===signature&&(!latest||record.epoch===state.epoch)){paint(record.location,record.regionId);return;}
@@ -59,8 +57,7 @@ export function mountBackgrounds({host,getContext,adapter=createMediaAdapter(get
             // Locations only change through the player. Record where this message happened.
             if(region&&latest&&!generating&&!message.is_system&&message.mes?.trim())save(ctx,message,{signature,regionId:region.id,epoch:state.epoch,location:structuredClone(base)});
         },
-        refresh(){request?.abort();request=null;revision++;selection='';failures.clear();},
-        reset(){api.refresh();chatKey='';selectedId=undefined;paint(null);},
+        reset(){chatKey='';paint(null);},
         dispose(){active=false;api.reset();layer.remove();},
     };return api;
 }

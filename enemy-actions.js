@@ -1,6 +1,7 @@
 import {isEnemy} from './character-properties.js';
 import {renderPrompt} from './prompt-templates.js';
 import {enemyFormSprite} from './combat-state.js';
+import {cardByAvatar} from './card-index.js';
 export const ENEMY_ATTACK_MARKER='[enemy_attack]';
 // An enemy can start a fight itself: the phrase below, written in its own reply, starts a battle round
 // once the reply has been read, and the enemy acts first in it. Empty turns this off.
@@ -15,18 +16,28 @@ const markerPhrase=phrase=>/^(\[.+\]|<.+>|\{.+\})$/.test(phrase);
 const escapeRegExp=text=>text.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
 export function combatSpeaker(ctx,message){
     if(!message||message.is_user||message.is_system||message.extra?.type==='narrator')return null;
-    const card=message.original_avatar?ctx.characters?.find(c=>c.avatar===message.original_avatar):ctx.characters?.find(c=>c.name===message.name);
+    const card=message.original_avatar?cardByAvatar(ctx,message.original_avatar):ctx.characters?.find(c=>c.name===message.name);
     return card || null;
 }
 export function enemySpeaker(ctx,message){const card=combatSpeaker(ctx,message);return card&&isEnemy(ctx,card)?card:null;}
+// The patterns that hide the trigger phrase. Pages are split again on every streamed frame, so they are built
+// once per phrase.
+let markerFor,markerCache;
+function markerPatterns(phrase){
+    if(phrase!==markerFor){
+        const hide=markerPhrase(phrase)?new RegExp(escapeRegExp(phrase),'gi'):null;
+        // While the reply streams, a half-written marker at the very end is hidden as well.
+        const partial=hide?new RegExp(`(?:${[...phrase].slice(0,-1).map((_,i)=>escapeRegExp(phrase.slice(0,i+2))).reverse().join('|')})$`,'i'):null;
+        markerFor=phrase;markerCache={hide,partial};
+    }
+    return markerCache;
+}
 // This explicit action token is authored with the enemy's reply. No emotion
 // classifier, keyword search for attack prose or user message chooses its pose.
 export function enemyDialoguePages(pages,message,phrase=DEFAULT_COMBAT_TRIGGER){
     if(message.is_user||message.is_system)return pages;
     const result=[];let attack=false;
-    const hide=markerPhrase(phrase)?new RegExp(escapeRegExp(phrase),'gi'):null;
-    // While the reply streams, a half-written marker at the very end is hidden as well.
-    const partial=hide?new RegExp(`(?:${[...phrase].slice(0,-1).map((_,i)=>escapeRegExp(phrase.slice(0,i+2))).reverse().join('|')})$`,'i'):null;
+    const {hide,partial}=markerPatterns(phrase);
     for(const page of pages){
         const walker=page.ownerDocument.createTreeWalker(page,NodeFilter.SHOW_TEXT);const nodes=[];while(walker.nextNode())nodes.push(walker.currentNode);
         if(message.is_enemy){
@@ -42,12 +53,12 @@ export function enemyDialoguePages(pages,message,phrase=DEFAULT_COMBAT_TRIGGER){
 export function enemySceneAvatar(ctx,sprite){
     // The persona shares an enemy's folder, but is the player, never an NPC to resolve or duplicate.
     if(sprite.avatar==='__user__')return null;
-    const card=ctx.characters?.find(c=>c.avatar===sprite.avatar) || ctx.characters?.find(c=>c.name===sprite.folder?.split('/')[0]);return card&&isEnemy(ctx,card)?card.avatar:null;
+    const card=cardByAvatar(ctx,sprite.avatar) || ctx.characters?.find(c=>c.name===sprite.folder?.split('/')[0]);return card&&isEnemy(ctx,card)?card.avatar:null;
 }
 export async function resolveEnemyScene(ctx,adapter,scene,message,action='neutral'){
     const actor=enemySpeaker(ctx,message),cards=[...new Set([...scene.map(s=>enemySceneAvatar(ctx,s)).filter(Boolean),...(actor?[actor.avatar]:[])])];
     let next=scene;
-    for(const avatar of cards){const card=ctx.characters?.find(c=>c.avatar===avatar);if(!card)continue;const expression=enemyFormSprite(ctx,card) || (actor?.avatar===avatar&&action==='attacking'?'attacking':'neutral');next=(await adapter.resolve(ctx,{name:card.name,original_avatar:avatar},expression,next)).scene;}
+    for(const avatar of cards){const card=cardByAvatar(ctx,avatar);if(!card)continue;const expression=enemyFormSprite(ctx,card) || (actor?.avatar===avatar&&action==='attacking'?'attacking':'neutral');next=(await adapter.resolve(ctx,{name:card.name,original_avatar:avatar},expression,next)).scene;}
     return next;
 }
 // Said to the roleplay model while hostile enemies are present (see combatPrompt).

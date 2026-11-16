@@ -7,6 +7,7 @@ import {TRUST_MAX,presentCharacters,trustOf,trustBand} from './trust.js';
 import {stripTrustTags} from './trust-tags.js';
 import {syncWorldPrompt} from './world-data.js';
 import {renderPrompt} from './prompt-templates.js';
+import {cardByAvatar} from './card-index.js';
 
 export {GIFT_CHANGE};
 export function giftVerdict(name,id,ctx){
@@ -34,7 +35,7 @@ async function appendReply(getContext,card,text,id){
 export async function giveGift(getContext,{id,avatar,onGiven=()=>{}},{loadScript=()=>import('/script.js')}={}){
     const script=await loadScript();let ctx=getContext();
     if(script.isGenerating()||script.isChatSaving)throw new Error('Wait for the current reply to finish before giving a gift.');
-    const item=ITEMS[id],card=ctx.characters?.find(c=>c.avatar===avatar),bag=partyBag(ctx);
+    const item=ITEMS[id],card=cardByAvatar(ctx,avatar),bag=partyBag(ctx);
     if(!item||!(bag[id]>0))throw new Error('That card is no longer in your bag.');
     if(!card||!presentCharacters(ctx).includes(avatar))throw new Error('They are no longer here.');
     const verdict=giftVerdict(card,id,ctx),change=giftChange(ctx,card,id),chat=ctx.getCurrentChatId?.();

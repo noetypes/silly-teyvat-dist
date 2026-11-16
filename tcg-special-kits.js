@@ -181,6 +181,29 @@ export const SPECIAL_KITS={
         skill:{name:'Rebound Hydrotherapy',cost:3,effects:[{type:'addCard',cards:['large-bubblebalm'],to:'deck',at:2},{type:'bond',amount:3,target:'self'}]},
         burst:{name:'Super Saturated Syringing',cost:3,effects:[D(4),{type:'prepare',name:'Medical Intervention of Pure Intention',effects:[D(4)]}]},
     },
+    // ---- Card text the generated kits (tcg-kits.js) cannot hold -------------------------------------------
+    // Golden Chalice's Bounty: only a party of Hydro and Dendro characters and no other element gets the
+    // Bountiful Cores (a summon here). Played always, it made Nilou's Skill half again as strong as others'.
+    'Nilou':{
+        skill:{name:'Dance of Haftkarsvar',cost:3,effects:[D(6),{...SUM('Bountiful',4,1,{element:'Dendro'}),when:'pureTeam',elements:['Hydro','Dendro']}]},
+    },
+    // Skyladder makes the next switch cheaper and Driftcloud Wave hits when Xianyun is switched in; the Burst
+    // heals the whole party, and its Starwicker makes a Normal Attack a Plunging Attack with +1 DMG.
+    'Xianyun':{
+        skill:{name:'White Clouds at Dawn',cost:3,effects:[D(2),{type:'efficientSwitch',amount:1},LISTEN({label:'Driftcloud Wave',on:'switchIn',who:'self',uses:1,do:[D(2)]})]},
+        burst:{name:'Stars Gather at Dusk',cost:3,effects:[D(2),H(2,'party'),H(4,'activeAlly'),TEAM({label:'Starwicker',on:'dealt',kinds:['normal'],amount:2,uses:1})]},
+    },
+    // Reflection takes a hit for the party and deals 1 Hydro at the End Phase; Illusory Bubble doubles the next
+    // Skill's damage (here +4, a typical Skill's 3 TCG damage is 6).
+    'Mona':{
+        skill:{name:'Mirror Reflection of Doom',cost:3,effects:[D(2),SUM('Reflection',2,1,{element:'Hydro',decoy:true})]},
+        burst:{name:'Stellaris Phantasm',cost:3,effects:[D(8),TEAM({label:'Illusory Bubble',on:'dealt',kinds:['skill'],amount:4,uses:1})]},
+    },
+    // Swallow-Wisp Shield: two Shield points (4 here) on the active character, from the Skill and the Burst.
+    'Lan Yan':{
+        skill:{name:'Swallow-Wisp Pinion Dance',cost:3,effects:[D(2),{type:'efficientSwitch',amount:1},SH(4,'activeAlly')]},
+        burst:{name:'Lustrous Moonrise',cost:3,effects:[D(6),SH(4,'activeAlly')]},
+    },
 };
 
 // The Traveler (Aether or Lumine) for each element they resonate with at a Statue of The Seven. Genius

@@ -9,7 +9,6 @@ import {spriteAudioKey,mediaSettings} from './media-store.js';
 import {castMembership,planTeleportParty,commitTeleportParty} from './location-cast.js';
 import {startGroupAtHome} from './character-location.js';
 import {encounterResidents,locationResidents,rollLocationEncounter} from './location-encounters.js';
-import {mountWardrobe} from './wardrobe.js';
 import {mountBattle} from './battle-ui.js';
 import {defaultKit} from './combat-kits.js';
 

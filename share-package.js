@@ -7,10 +7,10 @@ import {newUuid} from './local-id.js';
 import {isBundledPersona,ownPersonaSettings,withBundledPersonas} from './bundled-personas.js';
 const KEY='genshin_dialogue_ui';
 export const FILE_LIST='package-files.json',CONFIG_FILE='configured-settings.json',GAME_MANIFEST='silly-teyvat-game-data.json';
-const FOLDER='genshin-dialogue-ui',FORMAT=1,SET_FOLDERS=['Official Art','Chibi'],THEME='Teyvat Slate',QUICK_REPLIES='Teyvat Choices';
+const FOLDER='genshin-dialogue-ui',FORMAT=1,SET_FOLDERS=['Official Art','Chibi'],THEME='Teyvat Slate',DEFAULT_THEME='Dark Lite',QUICK_REPLIES='Teyvat Choices';
 // Connections belong to the player's own API setup, the signature is personal, and the installed
 // game data release describes this server only.
-const PRIVATE_SETTINGS=['choicesProfile','cgProfile','signature','gameData'];
+const PRIVATE_SETTINGS=['choicesProfile','cgProfile','signature','gameData','nativeLook','activatedLorebooks','graphics'];
 const extensionRoot=new URL('./',import.meta.url);
 const PORTABLE_ROOT='silly-teyvat:/';
 // Packaged assignments refer to this extension, regardless of the Git repository's folder name.
@@ -195,8 +195,16 @@ function uploaders(ctx,signal){
     };
 }
 // Names already on this server, so a repeated or interrupted import only adds what is missing.
+// File names are compared without regard to case or accent encoding. Windows and macOS treat "klee.png" and
+// "Klee.png" as one file, so a card of the player's own must count as present or the game's card would replace it.
+class NameSet extends Set{
+    static key(name){return String(name).normalize('NFC').toLowerCase();}
+    has(name){return super.has(NameSet.key(name));}
+    add(name){return super.add(NameSet.key(name));}
+    delete(name){return super.delete(NameSet.key(name));}
+}
 export async function existingFiles(ctx,paths,{signal,post=api(ctx,signal)}={}){
-    const present=new Set((ctx.characters || []).map(card=>`cards/${card.avatar}`));
+    const present=new NameSet((ctx.characters || []).map(card=>`cards/${card.avatar}`));
     for(const image of (await post('/api/backgrounds/all')).images || [])present.add(`backgrounds/${image.filename ?? image}`);
     for(const avatar of await post('/api/avatars/get'))present.add(`avatars/${avatar}`);
     const uploads=paths.filter(path=>path.startsWith('files/')).map(path=>`/user/files/${path.slice(6)}`);
@@ -236,7 +244,9 @@ function mergeNative(ctx,manifest,replace){
 async function mergeLorebookSettings(manifest,info){
     await info.updateWorldInfoList();
     const world=info.world_info,selected=info.selected_world_info;
-    for(const name of manifest.activeLorebooks || [])if(!selected.includes(name))selected.push(name);
+    // What this switched on is remembered, so that removing the extension can switch it off again.
+    const prefs=manifest.ownSettings;
+    for(const name of manifest.activeLorebooks || [])if(!selected.includes(name)){selected.push(name);if(prefs)prefs.activatedLorebooks=[...new Set([...(prefs.activatedLorebooks || []),name])];}
     world.globalSelect=selected;
     world.charLore ??= [];
     for(const lore of manifest.characterLore || []){
@@ -245,21 +255,61 @@ async function mergeLorebookSettings(manifest,info){
         else world.charLore.push(structuredClone(lore));
     }
 }
+// The look the player had before the game's theme was switched on: the theme's name and every value the
+// game's theme is about to replace. Kept once, in the player's own settings, and never exported.
+function rememberLook(ctx,look){
+    const prefs=ctx.extensionSettings[KEY] ??= {},power=ctx.powerUserSettings;
+    if(prefs.nativeLook||power.theme===THEME)return;
+    prefs.nativeLook={theme:power.theme ?? '',values:Object.fromEntries(Object.keys(look).map(key=>[key,power[key] ?? null]))};
+}
+export const usingGameTheme=ctx=>ctx.powerUserSettings?.theme===THEME;
+// Gives SillyTavern back as it was before the game data: the player's own look in place of the game's
+// theme, and the game's lorebooks no longer sent with every chat. Run when the extension is deleted,
+// which cannot clean up after itself later, and from Settings > Share. Cards, sprites and other files
+// are the player's to keep or delete. A player who has since chosen another theme keeps it.
+export async function restoreSillyTavern(ctx,{fetcher=fetch,loadWorldInfo=()=>import('/scripts/world-info.js'),release=null}={}){
+    const power=ctx.powerUserSettings,prefs=ctx.extensionSettings?.[KEY] || {},done={look:false,lorebooks:[]};
+    if(power&&power.theme===THEME){
+        let saved=prefs.nativeLook;
+        if(!saved){
+            // Installed before looks were remembered: SillyTavern's own default theme stands in.
+            try{
+                const response=await fetcher('/api/settings/get',{method:'POST',headers:ctx.getRequestHeaders(),body:'{}'});
+                const theme=response.ok?named((await response.json()).themes,DEFAULT_THEME):null;
+                if(theme){const {name,...values}=theme;saved={theme:name,values};}
+            }catch(error){console.warn('[Silly Teyvat] Default theme',error);}
+        }
+        // With nothing to go back to, at least take the game's own styling off SillyTavern's panels.
+        saved ??= {theme:'',values:{custom_css:''}};
+        for(const [key,value] of Object.entries(saved.values || {})){if(value==null)delete power[key];else power[key]=value;}
+        power.theme=saved.theme || '';
+        done.look=true;
+        try{await fetcher('/api/themes/delete',{method:'POST',headers:ctx.getRequestHeaders(),body:JSON.stringify({name:THEME})});}catch(error){console.warn('[Silly Teyvat] Theme file',error);}
+    }
+    delete prefs.nativeLook;
+    const names=new Set(prefs.activatedLorebooks || Object.keys(release?.parts || {}).filter(part=>part.startsWith('lorebooks/')).map(part=>part.slice(10)));
+    if(names.size){
+        try{
+            const info=await loadWorldInfo(),selected=info.selected_world_info || [];
+            for(let i=selected.length-1;i>=0;i--)if(names.has(selected[i])){done.lorebooks.push(selected[i]);selected.splice(i,1);}
+            if(info.world_info)info.world_info.globalSelect=selected;
+        }catch(error){console.warn('[Silly Teyvat] Lorebooks',error);}
+    }
+    delete prefs.activatedLorebooks;
+    return done;
+}
 // The theme and quick replies switch on only when they are new here, so a later import cannot undo a player's choice.
 async function importLook(ctx,saved,server,manifest,replace,overwrite){
     if(manifest.theme){
         const isNew=!named(server.themes,manifest.theme.name);
         if(isNew||replace||overwrite.has('theme'))await saved('/api/themes/save',manifest.theme);
         // SillyTavern starts from the look saved in the player's settings, not from the theme file.
-        if(isNew&&ctx.powerUserSettings){const {name,...look}=manifest.theme;Object.assign(ctx.powerUserSettings,look,{theme:name});}
+        if(isNew&&ctx.powerUserSettings){const {name,...look}=manifest.theme;rememberLook(ctx,look);Object.assign(ctx.powerUserSettings,look,{theme:name});}
     }
-    if(manifest.quickReplies){
-        const isNew=!named(server.quickReplyPresets,manifest.quickReplies.name);
-        if(isNew||replace||overwrite.has('quick-replies'))await saved('/api/quick-replies/save',manifest.quickReplies);
-        if(isNew){
-            const quick=ctx.extensionSettings.quickReplyV2 ??= {};quick.isEnabled=true;quick.config ??= {};quick.config.setList ??= [];
-            if(!quick.config.setList.some(item=>item.set===manifest.quickReplies.name))quick.config.setList.push({set:manifest.quickReplies.name,isVisible:true});
-        }
+    // Teyvat Choices is built in, so the bundled set is empty and only clears an old set's scripts.
+    // Never install it fresh or turn Quick Replies on: that shows SillyTavern's Default set as well.
+    if(manifest.quickReplies&&named(server.quickReplyPresets,manifest.quickReplies.name)&&(replace||overwrite.has('quick-replies'))){
+        await saved('/api/quick-replies/save',manifest.quickReplies);
     }
 }
 const KINDS=['cards','sprites','files','backgrounds','avatars'];
@@ -298,7 +348,7 @@ export async function importArchive({ctx,zip,replace=false,overwrite=new Set(),u
     }
     else mergeSettings(prefs,manifest.settings,replace);
     await ctx.getCharacters?.();
-    await mergeLorebookSettings(manifest,await import('/scripts/world-info.js'));
+    await mergeLorebookSettings({...manifest,ownSettings:ctx.extensionSettings[KEY]},await import('/scripts/world-info.js'));
     await (await import('/script.js')).saveSettings();
     return {added,skipped,failed};
 }

@@ -5,6 +5,7 @@ import {personaCard} from './persona-wardrobe.js';
 import {travelState} from './backgrounds.js';
 import {sceneTrustLevels,cgTrustAllowed} from './scene-trust.js';
 import {volumeLevel} from './audio-levels.js';
+import {cardByAvatar} from './card-index.js';
 
 export function createSpriteSoundPlayer({ makeAudio = () => new Audio(), random = Math.random } = {}) {
     const audio = makeAudio(); let sequence = 0;
@@ -65,7 +66,7 @@ export function cgCredits(ctx,avatar,entry,persona=personaCard(ctx)) {
 export function sceneCGs(ctx,message) {
     const prefs = mediaSettings(ctx), cast = sceneCast(ctx,message), present = new Set(cast), location = travelState(ctx).location?.id || '';
     const persona = personaCard(ctx), entries = [], owners = new Map(), level = sceneTrustLevels(ctx,message);
-    const nameOf = avatar => ctx.characters?.find(card=>card.avatar===avatar)?.name || (persona?.avatar===avatar ? persona.name : '') || avatar.replace(/\.[a-z]+$/i,'');
+    const nameOf = avatar => cardByAvatar(ctx,avatar)?.name || (persona?.avatar===avatar ? persona.name : '') || avatar.replace(/\.[a-z]+$/i,'');
     for (const avatar of cast) {
         for (const entry of prefs.characterCGs[avatar] || []) {
             if (!entry.path || entry.blank || !cgAllowed(entry,{present,location}) || owners.has(entry)) continue;
@@ -115,6 +116,8 @@ export function fittedFrame({width,height,extraWidth,extraHeight,ratio,maxWidth,
 // when no dialogue is shown. A page shorter than the longest still leaves the same room above it.
 export function dialogueTop(doc=document){
     const view=doc.defaultView,H=view.innerHeight,state=doc.body.classList;
+    // The classic chat box: a framed CG stands above it.
+    if(state.contains('gi-classic')){const box=doc.querySelector('#sheld')?.getBoundingClientRect();return box?.height?Math.min(H,box.top):H;}
     if(!state.contains('gi-scene')||state.contains('gi-history')||state.contains('gi-hidden'))return H;
     const shown=node=>Boolean(node?.getClientRects().length)&&view.getComputedStyle(node).display!=='none';
     const box=[...doc.querySelectorAll('#chat > .mes.gi-current')].find(shown);
@@ -193,7 +196,8 @@ export function mountSceneMedia({host,getContext,adapter=createMediaAdapter(getC
     function clearFull() { if(!stage.hidden && audioKind==='cg' && frame.hidden)stopSound(); hideStage(); }
     function closeFrame() { if(!frame.hidden && audioKind==='cg' && stage.hidden)stopSound(); hideFrame(); }
     // A saved message keeps a copy of its CG; its current settings still apply unless the CG was removed.
-    const liveCG = (prefs,cg) => Object.values(prefs.characterCGs).flat().find(entry=>entry.id===cg.id) || cg;
+    // Asked on every refresh while a CG is shown, so the lists are searched in place rather than joined into one first.
+    const liveCG = (prefs,cg) => { for (const entries of Object.values(prefs.characterCGs)) { const entry = entries.find(x=>x.id===cg.id); if (entry) return entry; } return cg; };
     const videoSound = (prefs,cg) => ({volume:cgVolume(prefs,cg.videoVolume),sound:prefs.cgAudio !== false});
     function paint(saved, key, fresh=false) {
         const prefs = mediaSettings(getContext());
@@ -318,7 +322,7 @@ export function mountSceneMedia({host,getContext,adapter=createMediaAdapter(getC
         // Every CG this chat has shown. Choosing one previews it the way the game showed it.
         openGallery() {
             const ctx=getContext(),prefs=mediaSettings(ctx),found=discoveredCGs(ctx),select=gallery.querySelector('select');
-            const nameOf=avatar=>ctx.characters?.find(card=>card.avatar===avatar)?.name || (personaCard(ctx)?.avatar===avatar?personaCard(ctx).name:'') || 'Other scenes';
+            const nameOf=avatar=>cardByAvatar(ctx,avatar)?.name || (personaCard(ctx)?.avatar===avatar?personaCard(ctx).name:'') || 'Other scenes';
             const avatars=[...new Set(found.map(x=>x.avatar))].sort((a,b)=>nameOf(a).localeCompare(nameOf(b)));
             const total=avatar=>Object.entries(prefs.characterCGs).flatMap(([owner,entries])=>entries.filter(cg=>cg.path&&!cg.blank&&cgCredits(ctx,owner,cg)[0]===avatar)).length;
             const keep=select.value;

@@ -6,6 +6,7 @@ import {mediaSettings} from './media-store.js';
 import {linkedCard} from './persona-link.js';
 import {syncPromptOrder} from './prompt-order.js';
 import {promptText,renderPrompt} from './prompt-templates.js';
+import {cardByName} from './card-index.js';
 
 export const TWINS=['Aether','Lumine'];
 // Both twins' default home is Traveler's Cove, where their cards open. Playing a twin hides them, and this
@@ -18,7 +19,7 @@ export function twinRoles(ctx){
     const played=playedTwin(ctx),traveler=played || (mediaSettings(ctx).travelerTwin==='Lumine'?'Lumine':'Aether');
     return {traveler,abyss:otherTwin(traveler),played};
 }
-export const abyssAvatar=ctx=>ctx.characters?.find(c=>c.name===twinRoles(ctx).abyss)?.avatar || '';
+export const abyssAvatar=ctx=>cardByName(ctx,twinRoles(ctx).abyss)?.avatar || '';
 // A twin the player is playing already settles who is who, so this note is only for playing someone else.
 export function twinRolesPrompt(ctx){
     const {traveler,abyss,played}=twinRoles(ctx);

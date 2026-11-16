@@ -1,5 +1,6 @@
 import {mediaSettings} from './media-store.js';
 import {newLocalId} from './local-id.js';
+import {hasCard} from './card-index.js';
 
 // Bundled scene artworks (assets/cgs/catalog.json). Each one is added once to its character's
 // Scenes list when that card exists. Editing or removing a starter scene is respected afterwards,
@@ -22,7 +23,7 @@ export function seedStarterCGs(ctx,catalog){
     for(const record of catalog?.cgs || []){
         if(!record?.id||seeded.includes(record.id)||!/^assets\/cgs\/[a-z0-9/-]+\.(webp|png|jpe?g)$/.test(record.path || ''))continue;
         // Wait for the card: a character imported later still receives the scene.
-        if(!ctx.characters?.some(card=>card.avatar===record.avatar))continue;
+        if(!hasCard(ctx,record.avatar))continue;
         const list=prefs.characterCGs[record.avatar] ??= [];
         const path=new URL(record.path,new URL('../../',catalogUrl)).pathname;
         if(!list.some(entry=>entry.path===path||entry.starter===record.id)){

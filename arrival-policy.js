@@ -24,7 +24,8 @@ export function arrivalReply(ctx,plan,residents,defaultHomes){
     const candidates=locals.filter(c=>plan.members.includes(c.avatar)&&!disabled.includes(c.avatar));
     const character=candidates.find(c=>plan.added.includes(c.avatar)) || candidates[0];
     if(!character)return null;
-    const written=arrival.travellers.length===0&&locals.length===1&&defaultHomes[character.avatar]===arrival.locationId;
+    // Meeting one character alone can use their card's greeting for this place (location-greetings.js).
+    const written=arrival.travellers.length===0&&locals.length===1;
     return {key:arrival.key,policyVersion:2,mode:written?'written':'context',avatar:character.avatar,locationId:arrival.locationId,
         reason:arrival.kind==='defeat'?'defeat':undefined,defeatFrom:arrival.defeat?.from,
         defaultLocationId:defaultHomes[character.avatar] || null,travellers:[...arrival.travellers],residents:locals.map(c=>c.avatar),sceneAvatars:[...plan.members]};

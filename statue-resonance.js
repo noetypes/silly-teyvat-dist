@@ -13,6 +13,7 @@ import {travelState,saveTravel} from './backgrounds.js';
 import {mediaSettings} from './media-store.js';
 import {circularCharacterAvatar} from './character-avatars.js';
 import {elementIcon} from './battle-icons.js';
+import {cardByAvatar} from './card-index.js';
 
 export const TRAVELER_ELEMENTS=Object.freeze(Object.keys(TRAVELER_KITS));
 export const isStatue=location=>Boolean(location?.statue);
@@ -27,7 +28,7 @@ export function resonanceTravelers(ctx){
     add(linkedCard(ctx),true);
     const group=activeGroup(ctx),abyss=abyssAvatar(ctx);
     const members=group?(group.members || []).filter(avatar=>!(group.disabled_members || []).includes(avatar)):[ctx.characters?.[ctx.characterId]?.avatar].filter(Boolean);
-    for(const avatar of members)if(avatar!==abyss)add(ctx.characters?.find(c=>c.avatar===avatar),false);
+    for(const avatar of members)if(avatar!==abyss)add(cardByAvatar(ctx,avatar),false);
     return out;
 }
 // Saved on the card, which a persona playing it shares, so the party, the battle and the moveset all follow.
@@ -79,7 +80,7 @@ export function mountStatueResonance({host,getContext,announce=()=>{},onChange=(
     dialog.addEventListener('click',event=>{
         const button=event.target.closest('button');if(!button)return;event.stopPropagation();
         if(button.dataset.statue==='leave'){close();return;}
-        const ctx=getContext(),card=ctx.characters?.find(c=>c.avatar===button.dataset.avatar),element=statueElement(shownFor);
+        const ctx=getContext(),card=cardByAvatar(ctx,button.dataset.avatar),element=statueElement(shownFor);
         if(!card||!element)return;
         try{if(setTravelerElement(ctx,card,element)){announce(`${card.name} resonates with ${element}.`);onChange();}render(shownFor);(dialog.querySelector('.gi-statue-primary') || dialog.querySelector('.gi-statue-leave'))?.focus();}
         catch(error){announce(error.message);}

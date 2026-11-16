@@ -4,9 +4,8 @@ import {combatState,clearEnemy,activeEnemies,combatAllies,allyElement,partyMembe
 import {defaultKit,mergeKit,kitOverrideFor,travelerKit,foeKit,playableKit,burstSplashName} from './combat-kits.js';
 import {characterProperties,isEnemy} from './character-properties.js';
 import {circularCharacterAvatar} from './character-avatars.js';
-import {personaCard} from './persona-wardrobe.js';
+import {personaCard,activePersonaAvatar,personaKey} from './persona-wardrobe.js';
 import {linkedCard} from './persona-link.js';
-import {activePersonaAvatar,personaKey} from './persona-wardrobe.js';
 import {activeGroup} from './party.js';
 import {resonanceOf,planIntent,innateAura,auraList,applyForm} from './battle-engine.js';
 import {addToBag,CARD_DEFS,ITEMS} from './battle-items.js';
@@ -14,6 +13,7 @@ import {formArt} from './battle-icons.js';
 import {combatArt} from './combat-art.js';
 import {journeyBag} from './starter-decks.js';
 import {baseName} from './card-name.js';
+import {cardByAvatar} from './card-index.js';
 
 // Genius Invokation TCG card art, for characters and enemies that have a card of the same name.
 let tcgCards=new Set();
@@ -73,7 +73,7 @@ export function kitForCard(ctx,card){
     return mergeKit(defaultKit(baseName(card),{element:props.element,enemy}),kitOverrideFor(ctx,card.avatar,enemy?'':baseName(card),props.element));
 }
 export function kitForAlly(ctx,ally){
-    if(ally.avatar!==USER_KEY)return kitForCard(ctx,ctx.characters.find(c=>c.avatar===ally.avatar));
+    if(ally.avatar!==USER_KEY)return kitForCard(ctx,cardByAvatar(ctx,ally.avatar));
     const element=allyElement(ctx,ally),card=linkedCard(ctx);
     // Playing an enemy card: its own moveset (with the edits saved for that card), turned into a character's.
     if(card&&isEnemy(ctx,card))return playableKit(kitForCard(ctx,card));
@@ -94,18 +94,18 @@ export function battleSnapshot(ctx,{portrait=()=>'',duel=null,includeEnemies=fal
     const travelerSplash=(name,element)=>{const file=burstSplashName(name,element);return file&&file!==name?new URL(`./assets/splash/${encodeURIComponent(file)}.webp`,import.meta.url).href:'';};
     for(const ally of duel?combatAllies(ctx).filter(a=>a.avatar===USER_KEY):combatAllies(ctx)){
         const kit=kitForAlly(ctx,ally),m=partyMember(ctx,ally.avatar),keep=saved.units[ally.avatar] || {};
-        const card=ally.avatar===USER_KEY?linkedCard(ctx):ctx.characters.find(c=>c.avatar===ally.avatar);
+        const card=ally.avatar===USER_KEY?linkedCard(ctx):cardByAvatar(ctx,ally.avatar);
         const own=combatArt(ctx,ally.avatar===USER_KEY?personaCard(ctx):card);
         units.push({id:ally.avatar,side:'party',name:m.name,card:card?.name || '',img:portrait(ctx,ally.avatar),circle:circularCharacterAvatar(ctx,ally.avatar===USER_KEY?personaCard(ctx):card) || portrait(ctx,ally.avatar),art:own.card || tcgArt(card?.name),customArt:Boolean(own.card),burstArt:own.burst || travelerSplash(card?baseName(card):'',allyElement(ctx,ally)),moveArt:own.moves,element:allyElement(ctx,ally),isUser:ally.avatar===USER_KEY,
             hp:m.hp,maxHp:m.maxHp,shield:keep.shield || 0,energy:keep.energy ?? 0,maxEnergy:Math.max(1,Math.min(5,Number(kit.energy)||2)),aura:keep.aura || null,statuses:keep.statuses || [],evasion:Math.max(0,Math.min(90,Number(kit.evasion)||0)),kit});
     }
     for(const avatar of duel || []){
-        const card=ctx.characters.find(c=>c.avatar===avatar),m=partyMember(ctx,avatar),element=characterProperties(ctx,card).element,kit=foeKit(kitForCard(ctx,card)),own=combatArt(ctx,card);
+        const card=cardByAvatar(ctx,avatar),m=partyMember(ctx,avatar),element=characterProperties(ctx,card).element,kit=foeKit(kitForCard(ctx,card)),own=combatArt(ctx,card);
         units.push({id:avatar,side:'enemy',duel:true,name:m.name,card:card?.name || '',img:portrait(ctx,avatar),circle:circularCharacterAvatar(ctx,card) || portrait(ctx,avatar),art:own.card || tcgArt(card?.name),customArt:Boolean(own.card),burstArt:own.burst || travelerSplash(baseName(card),element),moveArt:own.moves,element:element==='None'?'Physical':element,
             hp:m.hp,maxHp:m.maxHp,shield:0,energy:0,maxEnergy:0,aura:null,statuses:[],cooldowns:{},enraged:false,usedRage:false,intent:null,armor:0,armorBreak:'',weakTo:'',evasion:Number(kit.evasion)||0,kit,visit:'duel'});
     }
     for(const e of enemies){
-        const card=ctx.characters.find(c=>c.avatar===e.avatar),kit=kitForCard(ctx,card),keep=saved.units[e.avatar],own=characterProperties(ctx,card).element,art=combatArt(ctx,card);
+        const card=cardByAvatar(ctx,e.avatar),kit=kitForCard(ctx,card),keep=saved.units[e.avatar],own=characterProperties(ctx,card).element,art=combatArt(ctx,card);
         // An element chosen in the Moveset editor wins over the card's.
         units.push({id:e.avatar,side:'enemy',name:card?.name || 'Enemy',card:card?.name || '',img:portrait(ctx,e.avatar),circle:card?circularCharacterAvatar(ctx,card) || portrait(ctx,e.avatar):'',art:art.card || tcgArt(card?.name),customArt:Boolean(art.card),burstArt:art.burst,moveArt:art.moves,element:kit.custom&&kit.element || (own==='None'?'Physical':own),
             hp:e.hp,maxHp:e.maxHp,shield:keep?keep.shield || 0:Number(kit.shield)||0,energy:0,maxEnergy:0,aura:keep?.aura || null,statuses:keep?.statuses || [],cooldowns:structuredClone(keep?.cooldowns || {}),enraged:Boolean(keep?.enraged),usedRage:Boolean(keep?.usedRage),intent:keep?.intent || null,

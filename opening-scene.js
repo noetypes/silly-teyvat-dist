@@ -1,4 +1,5 @@
 import {playedAvatars} from './persona-link.js';
+import {cardByAvatar} from './card-index.js';
 // Opening solitude is independent of sampled encounters or asynchronous roster loads.
 // Only an actual move to a different location releases it.
 export function beginOpeningScene(ctx,avatar,locationId){
@@ -23,5 +24,5 @@ export function openingScene(ctx,scene,locationId=ctx.chatMetadata?.silly_teyvat
     // Older page caches can contain a phantom copy of an enemy persona. An empty solo
     // opening is player-only, including when that saved opening is reopened.
     if(state?.source?.chatId?.startsWith('solo:')&&encounter?.kind==='open'&&encounter.locationId===locationId&&!encounter.present?.length&&!encounter.enemies?.length&&!encounter.travellers?.length)return scene.filter(s=>s.avatar==='__user__');
-    const avatar=openingCharacter(ctx,locationId);return avatar?scene.filter(s=>s.avatar===avatar||s.avatar==='__user__'||!s.avatar&&s.folder===ctx.characters?.find(c=>c.avatar===avatar)?.name):scene;
+    const avatar=openingCharacter(ctx,locationId);return avatar?scene.filter(s=>s.avatar===avatar||s.avatar==='__user__'||!s.avatar&&s.folder===cardByAvatar(ctx,avatar)?.name):scene;
 }

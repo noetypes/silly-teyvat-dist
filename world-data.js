@@ -10,6 +10,7 @@ import {recordTravel} from './travel-history.js';
 import {promptText,renderPrompt} from './prompt-templates.js';
 import {abyssAvatar} from './twin-roles.js';
 import {leaveDefeatedGuildStaff,isGuildLocation} from './guild.js';
+import {cardByAvatar} from './card-index.js';
 
 // Coordinates are native HoYoLAB map units, not screen pixels or latitude.
 // Waypoint x/y never change with the art version; only the tile grid's size and origin do.
@@ -44,17 +45,18 @@ export function worldScalePrompt(ctx){
     const current=activeWorldLocation(ctx),scale=worldScale(ctx),speed=walkingSpeed(ctx),state=travelState(ctx);
     const region=backgroundRegions(ctx).find(r=>r.id===state.regionId);
     const party=activeGroup(ctx)?.members || [ctx.characters?.[ctx.characterId]?.avatar].filter(Boolean);
+    const abyss=abyssAvatar(ctx);
     const rows=points.flatMap(item=>{
         const distance=mapDistance(current?.point,item.point,scale);
         const minutes=distance==null?null:distance/(speed*1000/60);
-        const residents=residentsAt(ctx,item.location.id).filter(c=>c.avatar!==abyssAvatar(ctx));
+        const residents=residentsAt(ctx,item.location.id).filter(c=>c.avatar!==abyss);
         return [item.location.wilderness?renderPrompt(ctx,'world_wilderness',{location:clean(item.location.label)}):'',
             `- ${clean(item.location.label)} | Region: ${clean(item.region.name)} | ${distance==null?'Distance unknown':`${Math.round(distance)} m; direction ${directionFrom(current.point,item.point)}; baseline walking ${minutes.toFixed(1)} min`} | Coordinates: (${item.point.x.toFixed(1)}, ${item.point.y.toFixed(1)})${item.location.description?` | Description: ${clean(item.location.description)}`:''}${residents.length?` | Linked characters here: ${residents.map(c=>clean(c.name)).join(', ')}`:''}`].filter(Boolean);
     });
     const guildNote=ctx.chatMetadata?.silly_teyvat_cast?.guildStaffReturned&&isGuildLocation(current?.location)?' Katheryne is at the counter again, acting as though the earlier fight never happened; she does not acknowledge or remember it.':'';
     return renderPrompt(ctx,'world',{scale,location:clean(current?.location.label || state.location?.label || 'Unknown'),region:clean(region?.name || 'Unknown'),speed,scope:mediaSettings(ctx).worldPromptAllRegions?'entire world':'current region only',
         guests_note:mediaSettings(ctx).locationEncounters!==false?promptText(ctx,'world_guests'):'',unknown_note:current?'':promptText(ctx,'world_unknown'),
-        party:party.length?`Current party: ${party.filter(a=>!isEnemy(ctx,a)).map(a=>clean(ctx.characters?.find(c=>c.avatar===a)?.name || a)).join(', ')}.`:'',waypoints:rows.join('\n')})+guildNote;
+        party:party.length?`Current party: ${party.filter(a=>!isEnemy(ctx,a)).map(a=>clean(cardByAvatar(ctx,a)?.name || a)).join(', ')}.`:'',waypoints:rows.join('\n')})+guildNote;
 }
 export function syncWorldPrompt(ctx,enabled=true){
     const value=enabled?worldScalePrompt(ctx):'';

@@ -1,21 +1,40 @@
 import {iconAsset} from './hud-icons.js';
 // The switches at the top of Settings, the sets folded under a Features dropdown. "Silly Teyvat" unloads the whole extension, leaving SillyTavern
-// as it would be without it. Each set below switches every setting in it on or off together; the
+// as it would be without it. With every set off the extension is loaded but adds only the Paimon menu. Each set below switches every setting in it on or off together; the
 // settings themselves stay in their tabs, and a set with only some of them on shows as partly on.
 export const FEATURE_GROUPS=[
-    {id:'story',label:'Story view',note:'Dialogue pages over the scene. Off returns the normal chat.',keys:['enabled']},
-    {id:'choices',label:'Choices & HUD',note:'Suggested replies and the icons around the chat.',keys:['choices']},
+    {id:'story',label:'Story view',note:'Replies as visual novel pages. Off shows SillyTavern’s own chat.',keys:['enabled']},
+    {id:'choices',label:'Teyvat Choices',note:'Three suggested replies after each character message.',keys:['choices']},
+    {id:'hud',label:'HUD icons & panels',note:'Genshin icons along the top of the screen, and SillyTavern’s welcome screen and panels in the game’s style.',keys:['hud','shell']},
     {id:'stage',label:'Sprites & staging',note:'Character sprites, their expressions and placement.',keys:['nativeStaging','pageExpressions']},
     {id:'cgs',label:'Scene CGs',note:'Artwork chosen for the scene as replies arrive.',keys:['cgEnabled']},
-    {id:'sound',label:'Sounds',note:'Interface sounds, voices, CG audio and battle sounds.',keys:['uiSound','spriteAudio','cgAudio','burstAudio','battleSound','diceSound']},
-    {id:'world',label:'Location encounters',note:'Meeting the people who live where you travel.',keys:['locationEncounters','randomEncounters']},
-    {id:'combat',label:'Enemies & battles',note:'Enemy encounters, their attacks and Burst effects.',keys:['wildernessEncounters','enemyStrikeBack','battleEffects']},
+    {id:'sound',label:'Sounds',note:'Music, interface sounds, voices, CG audio and battle sounds.',keys:['uiSound','locationMusicEnabled','spriteAudio','cgAudio','burstAudio','battleSound','diceSound']},
+    {id:'world',label:'World map & travel',note:'Places and their backgrounds, the map, travel, loading screens, solo journeys and the people you meet. Off leaves SillyTavern’s own background.',keys:['worldEnabled','locationEncounters','randomEncounters']},
+    {id:'combat',label:'Enemies & battles',note:'The Attack button, battles, the Inventory and Card Search, enemy encounters and Burst effects.',keys:['battles','wildernessEncounters','enemyStrikeBack','battleEffects']},
+    {id:'characters',label:'Character Customization',note:'The Characters screen in the Paimon menu, and playing as a character.',keys:['wardrobe']},
     {id:'trust',label:'Trust',note:'Hearts earned through the roleplay and gifts.',keys:['trustSystem']},
+    {id:'replies',label:'Party replies',note:'One reply voices everyone in the scene, split into a message for each speaker, with stray name tags removed.',keys:['groupReplies','nameTagFilter']},
     {id:'prompts',label:'Roleplay prompts',note:'Silly Teyvat’s writing prompts sent with each reply.',keys:['roleplayPromptsEnabled']},
-    {id:'cardArt',label:'Card art in SillyTavern',note:'Whole Genshin cards in the character, persona and recent chat lists.',keys:['cardArt']},
+    {id:'cardArt',label:'Card art in SillyTavern',note:'Genshin card art in the character, persona and recent chat lists.',keys:['cardArt']},
 ];
-// The Silly Teyvat switch in the Paimon menu turns off, and later back on, the sets linked to it here.
-export const PAIMON_LINKS=['story'];
+// The Silly Teyvat switch in the Paimon menu turns off, and later back on, the sets linked to it here:
+// by default every one, which leaves only the Paimon menu itself.
+export const PAIMON_LINKS=FEATURE_GROUPS.map(group=>group.id);
+// Every setting a set switches. With all of them off, the extension adds nothing but the Paimon menu.
+export const FEATURE_KEYS=FEATURE_GROUPS.flatMap(group=>group.keys);
+export const anyFeatureOn=prefs=>FEATURE_KEYS.some(key=>prefs[key]===true);
+// What an open chat shows, worked out in one place so that a set switched off is off everywhere.
+//   world   places, the map, travel and the cast that goes with them
+//   stage   sprites
+//   scene   the chat is laid out as a scene: as Story view's pages or, without Story view, in a box at the
+//           foot of the screen. Anything drawn around the chat needs that layout to have a place: the
+//           background, sprites, CGs, Teyvat Choices and the Attack button. With none of them on, the chat
+//           is SillyTavern's own, untouched.
+export function featureState(prefs,inChat=true){
+    const on=key=>inChat&&prefs[key]===true;
+    const world=on('worldEnabled'),stage=on('nativeStaging')||on('pageExpressions'),story=on('enabled'),battles=on('battles'),cgs=on('cgEnabled'),choices=on('choices');
+    return {world,stage,story,battles,cgs,choices,scene:world||stage||story||battles||cgs||choices,replies:prefs.groupReplies===true,any:anyFeatureOn(prefs)};
+}
 export function paimonGroups(prefs){
     const links=Array.isArray(prefs.paimonLinks)?prefs.paimonLinks:PAIMON_LINKS;
     return FEATURE_GROUPS.filter(group=>links.includes(group.id));

@@ -114,6 +114,8 @@ export function mountCardSearch({host,getContext,announce=()=>{},onChange=()=>{}
         <footer class="gi-cs-foot"><p class="gi-cs-status" role="status"></p><div class="gi-cs-actions"><button type="button" class="gi-cs-clear" aria-label="Clear selection" title="Clear selection">Clear</button><button type="button" class="gi-cs-stop">Stop search</button><button type="button" class="gi-cs-start">Start search</button></div></footer>`;
     host.append(dialog);
     const $=s=>dialog.querySelector(s),abort=new AbortController(),on=(node,type,fn)=>node.addEventListener(type,fn,{signal:abort.signal});
+    // For elements that are redrawn and thrown away with their listeners: none of the abort signal, which would keep an entry for each one until dispose.
+    const listen=(node,type,fn,opt)=>node.addEventListener(type,fn,opt);
     let selected=new Set(),kind='all',sort='rarity',reversed=false,focus='',sites=new Map(),bag={},guild=null;
     function tile(id){
         const item=ITEMS[id],b=el('button',`gi-cs-card gi-q-${quality(item.rarity)}`),count=sites.get(id)?.length || 0,owned=bag[id] || 0;
@@ -139,7 +141,7 @@ export function mountCardSearch({host,getContext,announce=()=>{},onChange=()=>{}
             body.append(places);
         }
         const toggle=el('button','gi-cs-d-toggle',selected.has(id)?'Remove from search':'Add to search');toggle.type='button';toggle.disabled=!where.length;
-        on(toggle,'click',()=>{flip(id);});
+        listen(toggle,'click',()=>{flip(id);});
         box.append(head,body,toggle);
     }
     function paintFoot(){

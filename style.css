@@ -109,7 +109,7 @@ html:has(> body.gi-scene) {
 }
 
 
-body.gi-shell {
+body.gi-enabled {
     --gi-hud-top: calc(6px + env(safe-area-inset-top, 0px));
     --gi-hud-margin: 4px;
     --gi-hud-gap: clamp(4px, 1vw, 12px);
@@ -611,7 +611,7 @@ body.gi-generating #gi-navigation button[data-gi-action="latest"] svg {
 }
 
 /* Native Quick Replies retain their own events, content and context menus. */
-body.gi-scene:not(.gi-history) :is(#qr--bar, #gi-choices) {
+:is(body.gi-scene:not(.gi-history) :is(#qr--bar, #gi-choices), body.gi-classic #gi-choices) {
     position: fixed !important;
     inset: auto 4vw calc(var(--gi-composer-height) + var(--gi-dialogue-height, 204px) + 102px + env(safe-area-inset-bottom, 0px)) auto !important;
     z-index: 5;
@@ -630,7 +630,7 @@ body.gi-scene:not(.gi-history) :is(#qr--bar, #gi-choices) {
     pointer-events: auto;
 }
 
-body.gi-scene:not(.gi-history) :is(#qr--bar, #gi-choices) > .qr--buttons {
+:is(body.gi-scene:not(.gi-history) :is(#qr--bar, #gi-choices), body.gi-classic #gi-choices) > .qr--buttons {
     display: flex;
     flex-direction: column;
     align-items: stretch;
@@ -643,7 +643,7 @@ body.gi-scene:not(.gi-history) :is(#qr--bar, #gi-choices) > .qr--buttons {
     background: transparent;
 }
 
-body.gi-scene:not(.gi-history) :is(#qr--bar, #gi-choices) .qr--button {
+:is(body.gi-scene:not(.gi-history) :is(#qr--bar, #gi-choices), body.gi-classic #gi-choices) .qr--button {
     display: flex;
     justify-content: flex-start;
     gap: 9px;
@@ -667,7 +667,7 @@ body.gi-scene:not(.gi-history) :is(#qr--bar, #gi-choices) .qr--button {
     transition: background 150ms ease, border-color 150ms ease;
 }
 
-body.gi-scene:not(.gi-history) :is(#qr--bar, #gi-choices) .qr--button::before {
+:is(body.gi-scene:not(.gi-history) :is(#qr--bar, #gi-choices), body.gi-classic #gi-choices) .qr--button::before {
     content: "\2022\2022\2022";
     position: static;
     display: inline-flex;
@@ -687,15 +687,15 @@ body.gi-scene:not(.gi-history) :is(#qr--bar, #gi-choices) .qr--button::before {
     z-index: auto;
 }
 
-body.gi-scene:not(.gi-history) :is(#qr--bar, #gi-choices) .qr--button:hover,
-body.gi-scene:not(.gi-history) :is(#qr--bar, #gi-choices) .qr--button:focus-visible {
+:is(body.gi-scene:not(.gi-history) :is(#qr--bar, #gi-choices), body.gi-classic #gi-choices) .qr--button:hover,
+:is(body.gi-scene:not(.gi-history) :is(#qr--bar, #gi-choices), body.gi-classic #gi-choices) .qr--button:focus-visible {
     border-color: #f0d790;
     background: #4a5667f5;
     outline: 2px solid #f0d79088;
     outline-offset: 2px;
 }
 
-body.gi-scene:not(.gi-history) :is(#qr--bar, #gi-choices) > #qr--popoutTrigger {
+:is(body.gi-scene:not(.gi-history) :is(#qr--bar, #gi-choices), body.gi-classic #gi-choices) > #qr--popoutTrigger {
     position: static;
     float: right;
     min-width: 44px;
@@ -1005,7 +1005,7 @@ body.gi-scene.gi-hidden.gi-generating #form_sheld :is(#qr--bar, #gi-choices) {
         line-height: 1.5;
     }
 
-    body.gi-scene:not(.gi-history) :is(#qr--bar, #gi-choices) {
+    :is(body.gi-scene:not(.gi-history) :is(#qr--bar, #gi-choices), body.gi-classic #gi-choices) {
         right: 4vw !important;
         bottom: calc(var(--gi-composer-height) + var(--gi-dialogue-height, 34vh) + 94px + env(safe-area-inset-bottom, 0px)) !important;
         bottom: calc(var(--gi-composer-height) + var(--gi-dialogue-height, 34dvh) + 94px + env(safe-area-inset-bottom, 0px)) !important;
@@ -1014,7 +1014,7 @@ body.gi-scene.gi-hidden.gi-generating #form_sheld :is(#qr--bar, #gi-choices) {
         max-height: 23dvh;
     }
 
-    body.gi-scene:not(.gi-history) :is(#qr--bar, #gi-choices) .qr--button {
+    :is(body.gi-scene:not(.gi-history) :is(#qr--bar, #gi-choices), body.gi-classic #gi-choices) .qr--button {
         min-height: 46px;
         padding: 10px 15px;
         font-size: 14px;
@@ -1073,7 +1073,7 @@ body.gi-scene.gi-hidden.gi-generating #form_sheld :is(#qr--bar, #gi-choices) {
         max-height: 23dvh;
     }
 
-    body.gi-scene:not(.gi-history) :is(#qr--bar, #gi-choices) {
+    :is(body.gi-scene:not(.gi-history) :is(#qr--bar, #gi-choices), body.gi-classic #gi-choices) {
         bottom: calc(var(--gi-composer-height) + var(--gi-dialogue-height, 110px) + 104px) !important;
         width: min(370px, 42vw) !important;
         max-height: min(28dvh, max(46px, calc(100dvh - var(--gi-composer-height) - var(--gi-dialogue-height, 110px) - 104px - var(--topBarBlockSize, 42px) - 12px)));
@@ -1091,7 +1091,7 @@ body.gi-scene.gi-hidden.gi-generating #form_sheld :is(#qr--bar, #gi-choices) {
    control outside the list of replies. A 44px hit area keeps it usable. */
 #gi-choices[hidden] { display: none !important; }
 #gi-choices { box-sizing: border-box; font-family: "Trebuchet MS", "Avenir Next", system-ui, sans-serif; }
-body.gi-scene:not(.gi-history) #gi-choices { max-height: min(42dvh, max(92px, calc(100dvh - var(--gi-composer-height) - var(--gi-dialogue-height, 160px) - 104px - var(--topBarBlockSize, 42px) - 12px))); }
+body:is(.gi-scene:not(.gi-history), .gi-classic) #gi-choices { max-height: min(42dvh, max(92px, calc(100dvh - var(--gi-composer-height) - var(--gi-dialogue-height, 160px) - 104px - var(--topBarBlockSize, 42px) - 12px))); }
 .gi-choices-heading { display: flex; justify-content: flex-end; align-items: center; gap: 8px; min-height: 44px; margin-bottom: 3px; }
 .gi-choice-status { flex: 1; font-size: 12px; line-height: 1.4; color: #fff9ee; text-shadow: 0 1px 4px #000; }
 .gi-choice-error { padding: 8px 12px; border-radius: 12px; background: #283744ef; }
@@ -1100,12 +1100,12 @@ body.gi-scene:not(.gi-history) #gi-choices { max-height: min(42dvh, max(92px, ca
 #gi-choices button:disabled { opacity: .55; cursor: default; }
 #gi-choices .gi-choice-refresh:hover { background: #536374e8; }
 #gi-choices button:focus-visible { outline: 2px solid #f0d790; outline-offset: 2px; }
-body.gi-choices-enabled #qr--popoutTrigger { display: none !important; }
+body.gi-hud-enabled #qr--popoutTrigger { display: none !important; }
 body.gi-scene.gi-history #gi-choices,
 body.gi-scene.gi-hidden #gi-choices { display: none !important; }
 
 /* Transparent top-right HUD. Keep native drawer elements and their actions. */
-body.gi-choices-enabled #top-bar { background: transparent !important; border: 0 !important; box-shadow: none !important; backdrop-filter: none !important; }
+body.gi-hud-enabled #top-bar { background: transparent !important; border: 0 !important; box-shadow: none !important; backdrop-filter: none !important; }
 body.gi-shell #top-settings-holder {
     position: fixed !important;
     inset: var(--gi-hud-top) calc(env(safe-area-inset-right, 0px) + var(--gi-hud-margin)) auto auto !important;
@@ -1122,33 +1122,32 @@ body.gi-shell #top-settings-holder > .drawer > .drawer-toggle {
 }
 body.gi-shell #top-settings-holder > .drawer > .drawer-toggle { display: grid; place-items: center; cursor: pointer; }
 body.gi-shell #top-settings-holder .drawer-icon { font-size: calc(var(--gi-hud-cell) * .65); }
-body.gi-choices-enabled .gi-hud-target {
+body.gi-hud-enabled .gi-hud-target {
     display: grid !important; place-items: center;
     width: var(--gi-hud-cell) !important; height: var(--gi-hud-cell) !important;
     padding: 0 !important; opacity: 1 !important; color: white !important;
     border: 0 !important; background: transparent !important; box-shadow: none !important;
 }
-body.gi-choices-enabled .gi-hud-target::before { display: none !important; }
+body.gi-hud-enabled .gi-hud-target::before { display: none !important; }
 .gi-hud-icon { display: none; pointer-events: none; }
-body.gi-choices-enabled .gi-hud-icon { display: block; width: 76%; height: 76%; object-fit: contain; fill: currentColor; filter: drop-shadow(0 2px 2px #23333a80); }
-body.gi-choices-enabled .drawer-toggle:hover .gi-hud-icon,
-body.gi-choices-enabled .drawer-toggle:focus-visible .gi-hud-icon,
-body.gi-choices-enabled .gi-hud-target.openIcon .gi-hud-icon { color: #ffdf9d; }
-body.gi-choices-enabled #extensions-settings-button { order: 1; }
-body.gi-choices-enabled #ai-config-button { order: 2; }
-body.gi-choices-enabled #WI-SP-button { order: 3; }
-body.gi-choices-enabled #advanced-formatting-button { order: 4; }
-body.gi-choices-enabled #persona-management-button { order: 5; }
-body.gi-choices-enabled #backgrounds-button { order: 6; }
-body.gi-choices-enabled #sys-settings-button { order: 7; }
-body.gi-choices-enabled #rightNavHolder { order: 8; }
-body.gi-choices-enabled #user-settings-button { order: 9; }
+body.gi-hud-enabled .gi-hud-icon { display: block; width: 76%; height: 76%; object-fit: contain; fill: currentColor; filter: drop-shadow(0 2px 2px #23333a80); }
+body.gi-hud-enabled .drawer-toggle:hover .gi-hud-icon,
+body.gi-hud-enabled .drawer-toggle:focus-visible .gi-hud-icon,
+body.gi-hud-enabled .gi-hud-target.openIcon .gi-hud-icon { color: #ffdf9d; }
+body.gi-hud-enabled #extensions-settings-button { order: 1; }
+body.gi-hud-enabled #ai-config-button { order: 2; }
+body.gi-hud-enabled #WI-SP-button { order: 3; }
+body.gi-hud-enabled #advanced-formatting-button { order: 4; }
+body.gi-hud-enabled #persona-management-button { order: 5; }
+body.gi-hud-enabled #sys-settings-button { order: 7; }
+body.gi-hud-enabled #rightNavHolder { order: 8; }
+body.gi-hud-enabled #user-settings-button { order: 9; }
 
 /* The HUD is a compact row, so its native absolute-positioned drawers must
    use viewport coordinates rather than the row as their containing block.
    Include side drawers and moved/pinned panels by ID; keep native open/close
    and internal flex/grid layouts intact. */
-body.gi-choices-enabled :is(#left-nav-panel, #rm_api_block, #AdvancedFormatting, #WorldInfo, #user-settings-block, #Backgrounds, #rm_extensions_block, #PersonaManagement, #right-nav-panel) {
+body.gi-hud-enabled :is(#left-nav-panel, #rm_api_block, #AdvancedFormatting, #WorldInfo, #user-settings-block, #Backgrounds, #rm_extensions_block, #PersonaManagement, #right-nav-panel) {
     box-sizing: border-box !important;
     position: fixed !important;
     inset: 50dvh auto auto 50vw !important;
@@ -1174,10 +1173,10 @@ body.gi-choices-enabled :is(#left-nav-panel, #rm_api_block, #AdvancedFormatting,
     box-shadow: 0 24px 80px #07111dc2, inset 0 0 0 4px #cdb98c18 !important;
     transition: none !important;
 }
-body.gi-choices-enabled :is(#left-nav-panel, #WorldInfo, #right-nav-panel) > .drag-grabber { display: none !important; }
+body.gi-hud-enabled :is(#left-nav-panel, #WorldInfo, #right-nav-panel) > .drag-grabber { display: none !important; }
 @media (max-width: 560px) {
 
-    body.gi-choices-enabled :is(#left-nav-panel, #rm_api_block, #AdvancedFormatting, #WorldInfo, #user-settings-block, #Backgrounds, #rm_extensions_block, #PersonaManagement, #right-nav-panel) {
+    body.gi-hud-enabled :is(#left-nav-panel, #rm_api_block, #AdvancedFormatting, #WorldInfo, #user-settings-block, #Backgrounds, #rm_extensions_block, #PersonaManagement, #right-nav-panel) {
         width: calc(100vw - 12px) !important;
         max-width: calc(100vw - 12px) !important;
         height: calc(100dvh - 112px) !important;
@@ -1186,7 +1185,7 @@ body.gi-choices-enabled :is(#left-nav-panel, #WorldInfo, #right-nav-panel) > .dr
     }
 }
 @media (max-height: 550px) and (orientation: landscape) {
-    body.gi-choices-enabled :is(#left-nav-panel, #rm_api_block, #AdvancedFormatting, #WorldInfo, #user-settings-block, #Backgrounds, #rm_extensions_block, #PersonaManagement, #right-nav-panel) {
+    body.gi-hud-enabled :is(#left-nav-panel, #rm_api_block, #AdvancedFormatting, #WorldInfo, #user-settings-block, #Backgrounds, #rm_extensions_block, #PersonaManagement, #right-nav-panel) {
         height: calc(100dvh - 120px) !important;
         max-height: calc(100dvh - 120px) !important;
         padding: 12px !important;
@@ -1205,7 +1204,7 @@ body.gi-scene:not(.gi-history) #chat .gi-current .gi-page { cursor: pointer; }
 #gi-sprite-stage img { position: absolute; max-width: none; max-height: none; margin: 0; }
 body.gi-sprite-replay :is(#expression-wrapper, #visual-novel-wrapper) { opacity: 0 !important; pointer-events: none !important; }
 
-body.gi-enabled #chat .mes :is(.name_text, .gi-guest-name, .mes_text, .gi-page),
+body:is(.gi-scene, .gi-classic) #chat .mes :is(.name_text, .gi-guest-name, .mes_text, .gi-page),
 body.gi-scene:not(.gi-history) #chat .gi-current .ch_name,
 body.gi-scene:not(.gi-history) #chat .gi-current :is(.mes_text, .gi-page) {
     font-family: "Silly Teyvat Dialogue", "HYWenHei", sans-serif !important;
@@ -1234,15 +1233,15 @@ body.gi-scene:not(.gi-history) #chat .gi-current.gi-narration .gi-page {
     }
     #gi-position { line-height: 12px; }
     #gi-navigation button[data-gi-action="latest"] svg { width: 21px; height: 21px; }
-    body.gi-scene:not(.gi-history) :is(#qr--bar, #gi-choices) {
+    :is(body.gi-scene:not(.gi-history) :is(#qr--bar, #gi-choices), body.gi-classic #gi-choices) {
         bottom: calc(var(--gi-composer-height) + var(--gi-dialogue-height, 160px) + var(--gi-dialogue-gap) + 16px + env(safe-area-inset-bottom, 0px)) !important;
         width: min(300px, 56vw) !important;
         max-height: min(29dvh, max(44px, calc(100dvh - var(--gi-composer-height) - var(--gi-dialogue-height, 160px) - var(--gi-dialogue-gap) - 16px - var(--gi-hud-cell) - 20px)));
     }
-    body.gi-scene:not(.gi-history) :is(#qr--bar, #gi-choices) .qr--button {
+    :is(body.gi-scene:not(.gi-history) :is(#qr--bar, #gi-choices), body.gi-classic #gi-choices) .qr--button {
         min-height: 38px; padding: 8px 11px; gap: 7px; font-size: 12px; line-height: 1.3;
     }
-    body.gi-scene:not(.gi-history) :is(#qr--bar, #gi-choices) .qr--button::before {
+    :is(body.gi-scene:not(.gi-history) :is(#qr--bar, #gi-choices), body.gi-classic #gi-choices) .qr--button::before {
         flex-basis: 17px; width: 17px; height: 15px; font-size: 8px;
     }
     #gi-choices .gi-choices-heading:has(.gi-choice-status:empty) { position: absolute; top: 2px; right: 4px; z-index: 1; margin: 0; }
@@ -1262,7 +1261,7 @@ body.gi-scene:not(.gi-history) #chat .gi-current.gi-narration .gi-page {
     body.gi-scene:not(.gi-history):not(.gi-hidden):not(.gi-compose):not(.gi-generating) #gi-navigation { bottom: calc(9px + env(safe-area-inset-bottom, 0px)); }
     #gi-navigation button, #gi-navigation button[data-gi-action="latest"] { min-height: 25px; height: 25px; padding-block: 1px; }
     #gi-position { font-size: 10px; line-height: 10px; }
-    body.gi-scene:not(.gi-history) :is(#qr--bar, #gi-choices) {
+    :is(body.gi-scene:not(.gi-history) :is(#qr--bar, #gi-choices), body.gi-classic #gi-choices) {
         bottom: calc(var(--gi-composer-height) + var(--gi-dialogue-height, 90px) + var(--gi-dialogue-gap) + 6px + env(safe-area-inset-bottom, 0px)) !important;
         max-height: min(35dvh, max(44px, calc(100dvh - var(--gi-composer-height) - var(--gi-dialogue-height, 90px) - var(--gi-dialogue-gap) - 6px - var(--gi-hud-cell) - 20px)));
     }
@@ -1425,13 +1424,13 @@ body.gi-scene:not(.gi-history) #chat > .mes.gi-current .mes_block { animation: t
 #gi-review-heading:not([hidden]) { animation: ty-drop 300ms var(--ty-ease) both; }
 #gi-notice:not([hidden]) { animation: ty-rise 320ms var(--ty-ease) both; }
 @keyframes ty-drop { from { opacity: 0; translate: 0 -12px; } to { opacity: 1; translate: 0 0; } }
-#gi-choices .qr--button, body.gi-enabled #qr--bar .qr--button { animation: ty-choice 340ms var(--ty-ease) both; }
-#gi-choices .qr--button:nth-child(2), body.gi-enabled #qr--bar .qr--button:nth-child(2) { animation-delay: 60ms; }
-#gi-choices .qr--button:nth-child(3), body.gi-enabled #qr--bar .qr--button:nth-child(3) { animation-delay: 120ms; }
-#gi-choices .qr--button:nth-child(4), body.gi-enabled #qr--bar .qr--button:nth-child(4) { animation-delay: 180ms; }
+#gi-choices .qr--button, body:is(.gi-scene, .gi-classic) #qr--bar .qr--button { animation: ty-choice 340ms var(--ty-ease) both; }
+#gi-choices .qr--button:nth-child(2), body:is(.gi-scene, .gi-classic) #qr--bar .qr--button:nth-child(2) { animation-delay: 60ms; }
+#gi-choices .qr--button:nth-child(3), body:is(.gi-scene, .gi-classic) #qr--bar .qr--button:nth-child(3) { animation-delay: 120ms; }
+#gi-choices .qr--button:nth-child(4), body:is(.gi-scene, .gi-classic) #qr--bar .qr--button:nth-child(4) { animation-delay: 180ms; }
 @keyframes ty-choice { from { opacity: 0; translate: 24px 0; } to { opacity: 1; translate: 0 0; } }
-#gi-choices .qr--button, body.gi-enabled #qr--bar .qr--button { transition: background 180ms ease, translate 220ms var(--ty-ease), box-shadow 180ms ease; }
-#gi-choices .qr--button:hover, body.gi-enabled #qr--bar .qr--button:hover { translate: 6px 0; }
+#gi-choices .qr--button, body:is(.gi-scene, .gi-classic) #qr--bar .qr--button { transition: background 180ms ease, translate 220ms var(--ty-ease), box-shadow 180ms ease; }
+#gi-choices .qr--button:hover, body:is(.gi-scene, .gi-classic) #qr--bar .qr--button:hover { translate: 6px 0; }
 
 /* ---------- Combat: attack toggle ---------- */
 #gi-attack-controls #gi-attack-toggle { transition: color 200ms ease, background 200ms ease, box-shadow 260ms ease, transform 240ms var(--ty-ease); }
@@ -1600,9 +1599,9 @@ body.gi-scene:not(.gi-history) #chat > .mes.gi-current .mes_block { animation: t
 }
 
 /* ---------- Native drawers & popups: open motion ---------- */
-body.gi-enabled .drawer-content.openDrawer { animation: ty-drawer 300ms var(--ty-ease) both; }
+body.gi-shell .drawer-content.openDrawer { animation: ty-drawer 300ms var(--ty-ease) both; }
 @keyframes ty-drawer { from { opacity: 0; translate: 0 -10px; } to { opacity: 1; translate: 0 0; } }
-body.gi-enabled dialog.popup[open] { animation: ty-popup 260ms var(--ty-ease) both; }
+body.gi-shell dialog.popup[open] { animation: ty-popup 260ms var(--ty-ease) both; }
 @keyframes ty-popup { from { opacity: 0; scale: .96; } to { opacity: 1; scale: 1; } }
 /* Popup buttons wrap onto a second row instead of running past the dialog edge (e.g. Install extension). */
 body .popup .popup-controls { max-width: 100%; flex-wrap: wrap; justify-content: center; }
@@ -2206,20 +2205,20 @@ body.gi-card-art-on .avatar.avatar_collage.gi-card-collage:is(.collage_3, .colla
 @media (max-height: 560px) { #gi-toolbar.gi-paimon, body.gi-scene.gi-hidden #gi-toolbar.gi-paimon { width: min(500px, 78vw); } }
 
 /* ---------- Top-right HUD: SillyTavern's own drawer order, larger icons, tighter spacing ---------- */
-body.gi-shell {
+body.gi-enabled {
     --gi-hud-gap: clamp(2px, .45vw, 6px);
     --gi-hud-cell: min(50px, calc((100vw - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px) - 2 * var(--gi-hud-margin) - var(--gi-hud-count) * var(--gi-hud-gap)) / (var(--gi-hud-count) + 1)));
 }
-body.gi-choices-enabled .gi-hud-icon { width: 86%; height: 86%; }
-body.gi-choices-enabled #ai-config-button { order: 1; }
-body.gi-choices-enabled #sys-settings-button { order: 2; }
-body.gi-choices-enabled #advanced-formatting-button { order: 3; }
-body.gi-choices-enabled #WI-SP-button { order: 4; }
-body.gi-choices-enabled #user-settings-button { order: 5; }
-body.gi-choices-enabled #backgrounds-button { order: 6; }
-body.gi-choices-enabled #extensions-settings-button { order: 7; }
-body.gi-choices-enabled #persona-management-button { order: 8; }
-body.gi-choices-enabled #rightNavHolder { order: 9; }
+body.gi-hud-enabled .gi-hud-icon { width: 86%; height: 86%; }
+body.gi-hud-enabled #ai-config-button { order: 1; }
+body.gi-hud-enabled #sys-settings-button { order: 2; }
+body.gi-hud-enabled #advanced-formatting-button { order: 3; }
+body.gi-hud-enabled #WI-SP-button { order: 4; }
+body.gi-hud-enabled #user-settings-button { order: 5; }
+body.gi-hud-enabled #backgrounds-button { order: 6; }
+body.gi-hud-enabled #extensions-settings-button { order: 7; }
+body.gi-hud-enabled #persona-management-button { order: 8; }
+body.gi-hud-enabled #rightNavHolder { order: 9; }
 
 /* ---------- Attack toggle: a labelled pill that lights up when armed ---------- */
 #gi-attack-controls { width: max-content; }
@@ -2374,7 +2373,7 @@ body.gi-choices-enabled #rightNavHolder { order: 9; }
 #gi-attack-controls[hidden] { display: none !important; }
 #gi-attack-dock { position: fixed; z-index: 5; right: 4vw; bottom: calc(var(--gi-composer-height, 0px) + var(--gi-dialogue-height, 204px) + 102px + env(safe-area-inset-bottom, 0px)); display: flex; justify-content: flex-end; pointer-events: none; }
 #gi-attack-dock > * { pointer-events: auto; }
-body:not(.gi-scene) #gi-attack-dock, body.gi-history #gi-attack-dock { display: none; }
+body:not(.gi-scene):not(.gi-classic) #gi-attack-dock, body.gi-history #gi-attack-dock { display: none; }
 #gi-choices .gi-choices-heading:has(#gi-attack-controls:not([hidden])) { position: static !important; }
 
 /* The roster scrolls sideways, which clips vertically too: pad it so the enlarged selected portrait, its ring and glow stay whole. */
@@ -2383,7 +2382,7 @@ body:not(.gi-scene) #gi-attack-dock, body.gi-history #gi-attack-dock { display: 
 /* ---------- Party health ---------- */
 #gi-party-health { position: fixed; z-index: 31; left: 3vw; bottom: calc(var(--gi-composer-height, 0px) + var(--gi-dialogue-height, 204px) + 102px + env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: column; gap: 6px; width: min(240px, 42vw); pointer-events: none; font-family: var(--ty-font); }
 #gi-party-health[hidden] { display: none !important; }
-body:not(.gi-scene) #gi-party-health, body.gi-history #gi-party-health, body.gi-hidden #gi-party-health { display: none; }
+body:not(.gi-scene):not(.gi-classic) #gi-party-health, body.gi-history #gi-party-health, body.gi-hidden #gi-party-health { display: none; }
 .gi-party-member { display: grid; grid-template-columns: 1fr auto; gap: 3px 10px; align-items: baseline; padding: 6px 12px 8px; border-radius: 12px; background: #141b2ad9; box-shadow: inset 0 0 0 1px #d3bc8e44, 0 3px 10px #0007; color: var(--ty-cream); }
 .gi-party-member strong { font-size: 13px; font-weight: normal; text-shadow: 0 1px 3px #000; }
 .gi-party-member > span { font-size: 11px; color: var(--ty-cream-2, #d9cdb4); }
@@ -2471,7 +2470,6 @@ body:not(.gi-scene) #gi-party-health, body.gi-history #gi-party-health, body.gi-
 .tb-plate { position: absolute; left: 1.4%; display: grid; grid-template-columns: auto auto; grid-template-rows: auto auto; column-gap: 12px; align-items: center; padding: 6px 48px 6px 6px; border-radius: 40px 10px 10px 40px; background: linear-gradient(90deg, #2e4a6acc, #2e4a6a99 70%, #0000); z-index: 3; }
 .tb-plate-foe { top: 1.6%; }
 .tb-plate-you { bottom: 1.6%; }
-#gi-battle[data-turn="party"] .tb-plate-you, #gi-battle[data-turn="enemy"] .tb-plate-foe { background: linear-gradient(90deg, #b48a3dee, #b48a3d99 70%, #0000); }
 .tb-plate-img { grid-row: span 2; width: 52px; height: 52px; border-radius: 50%; overflow: hidden; background: #24364a; box-shadow: 0 0 0 2px #f5e6c0, 0 0 0 4px #6f5330, 0 4px 10px #0008; }
 .tb-plate-img img { width: 100%; height: 100%; object-fit: cover; object-position: 50% 15%; }
 .tb-plate strong { font-size: 20px; font-weight: 400; line-height: 1.1; text-shadow: 0 2px 2px #0008; white-space: nowrap; }
@@ -2575,7 +2573,6 @@ body:not(.gi-scene) #gi-party-health, body.gi-history #gi-party-health, body.gi-
 .tb-enemy.tb-targeted { transform: scale(1.08); z-index: 3; }
 .tb-enemy.tb-targeted .tb-art { box-shadow: 0 0 0 3px #fff4ea, 0 0 0 6px #ff7a5c99, 0 0 38px 12px #ff6a48cc, 0 12px 26px #000b; animation: tb-aim 1.6s ease-in-out 380ms infinite alternate; }
 @keyframes tb-aim { to { box-shadow: 0 0 0 3px #fff4ea, 0 0 0 7px #ff8a6cbb, 0 0 52px 18px #ff6a48ee, 0 12px 26px #000b; } }
-.tb-choosable .tb-art { animation: tb-choose 800ms ease-in-out infinite alternate; }
 @keyframes tb-choose { to { box-shadow: 0 0 0 3px #fff, 0 0 30px 8px #f6e7bd; } }
 .tb-card.tb-down, .tb-card.tb-downed { filter: grayscale(1) brightness(.55); }
 .tb-card.tb-down:not(.tb-choosable) { cursor: default; }
@@ -3036,7 +3033,7 @@ body:not(.gi-scene) #gi-party-health, body.gi-history #gi-party-health, body.gi-
 /* Left rail: Paimon sits above it, then back and settings, version at the foot. */
 .gi-pm-rail { display: flex; flex-direction: column; align-items: center; gap: 14px; padding: calc(env(safe-area-inset-top, 0px) + 78px) 0 max(16px, env(safe-area-inset-bottom, 0px)); background: linear-gradient(90deg, #2c3343, #353d4f); box-shadow: inset -1px 0 0 #ffffff14; }
 /* With the menu open, Paimon centres over the rail so it lines up with back and settings. */
-body.gi-shell { --pm-rail-width: 68px; }
+body.gi-enabled { --pm-rail-width: 68px; }
 #gi-launcher { transition: transform 280ms var(--ty-ease), filter 280ms ease, left 280ms var(--ty-ease); }
 #gi-launcher[aria-expanded="true"] { left: calc(env(safe-area-inset-left, 0px) + (var(--pm-rail-width) - var(--gi-hud-cell)) / 2); }
 #gi-toolbar .gi-pm-rail button { width: 46px; height: 46px; min-height: 0; padding: 0; border: 0; border-radius: 50%; color: #ece5d8; background: #ffffff10; box-shadow: inset 0 0 0 1.5px #ece5d833; text-shadow: none; transition: background 180ms ease, color 180ms ease, transform 220ms var(--ty-ease); }
@@ -3112,7 +3109,7 @@ body.gi-shell { --pm-rail-width: 68px; }
 
 /* Small and short screens. */
 @media (max-width: 520px) {
-    #gi-toolbar.gi-paimon, body.gi-scene.gi-hidden #gi-toolbar.gi-paimon { --pm-rail: 54px; } body.gi-shell { --pm-rail-width: 54px; }
+    #gi-toolbar.gi-paimon, body.gi-scene.gi-hidden #gi-toolbar.gi-paimon { --pm-rail: 54px; } body.gi-enabled { --pm-rail-width: 54px; }
     #gi-toolbar .gi-pm-rail button { width: 40px; height: 40px; }
     #gi-toolbar .gi-pm-card { grid-template-columns: minmax(0, 1fr); padding: calc(env(safe-area-inset-top, 0px) + 16px) 16px 14px; }
     .gi-pm-who { justify-items: start; padding-top: 0; }
@@ -3137,21 +3134,34 @@ body.gi-shell { --pm-rail-width: 68px; }
 /* Top-right SillyTavern icons switched off: the toggle is hidden, its panel still opens from the menu. */
 body.gi-shell #top-settings-holder > .drawer.gi-hud-tucked { flex: 0 0 0 !important; width: 0 !important; margin: 0 !important; overflow: visible; }
 body.gi-shell #top-settings-holder > .drawer.gi-hud-tucked > .drawer-toggle { display: none !important; }
-/* Story view or Choices & HUD off: the SillyTavern icons centre at the top middle, where SillyTavern opens their panels.
+/* HUD icons off: the SillyTavern icons centre at the top middle, where SillyTavern opens their panels.
    The row is sized to clear the Paimon launcher on the left. */
-body.gi-shell:is(:not(.gi-enabled), :not(.gi-choices-enabled)) {
+body.gi-shell:not(.gi-hud-enabled) {
     --gi-hud-cell: min(50px, calc((100vw - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px) - 2 * var(--gi-hud-margin) - (var(--gi-hud-count) + 1) * var(--gi-hud-gap)) / (var(--gi-hud-count) + 2)));
 }
 /* The row spans the screen like SillyTavern's own, so each panel centres under it; only the icons and panels take clicks,
    leaving the Paimon launcher beside the row usable. */
-body.gi-shell:is(:not(.gi-enabled), :not(.gi-choices-enabled)) #top-settings-holder {
+body.gi-shell:not(.gi-hud-enabled) #top-settings-holder {
     inset: var(--gi-hud-top) 0 auto 0 !important;
     width: auto !important;
     margin: 0 !important;
     justify-content: center;
     pointer-events: none;
 }
-body.gi-shell:is(:not(.gi-enabled), :not(.gi-choices-enabled)) #top-settings-holder > .drawer { pointer-events: auto; }
+body.gi-shell:not(.gi-hud-enabled) #top-settings-holder > .drawer { pointer-events: auto; }
+/* SillyTavern's blurred bar sits behind exactly that row: as wide as the icons and their gaps, and as tall as one icon, with a small margin. */
+body.gi-shell:not(.gi-hud-enabled) #top-bar {
+    position: fixed !important;
+    inset: calc(var(--gi-hud-top) - 4px) auto auto 50% !important;
+    translate: -50% 0;
+    width: calc(var(--gi-hud-count) * var(--gi-hud-cell) + (var(--gi-hud-count) - 1) * var(--gi-hud-gap) + 16px) !important;
+    max-width: calc(100vw - 2 * var(--gi-hud-margin)) !important;
+    height: calc(var(--gi-hud-cell) + 8px) !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    border-radius: 14px !important;
+    pointer-events: none;
+}
 .gi-pm-tavern { margin: 18px 20px 0; }
 #gi-toolbar.gi-pm-picking .gi-pm-tavern { display: none; }
 .gi-pm-tavern h3 { margin: 0 0 8px; font-size: 15px; font-weight: normal; color: var(--pm-ink); opacity: .8; }
@@ -3472,9 +3482,9 @@ body.gi-enabled #chat > .mes.gi-combat-log { display: none !important; }
 }
 
 /* ---------- Teyvat Choices: Genshin dialogue options ---------- */
-#gi-choices, body.gi-scene:not(.gi-history) #gi-choices .qr--button { font-family: var(--ty-font); }
-body.gi-scene:not(.gi-history) #gi-choices > .qr--buttons { align-items: flex-start; gap: 8px; }
-body.gi-scene:not(.gi-history) #gi-choices .qr--button {
+#gi-choices, body:is(.gi-scene:not(.gi-history), .gi-classic) #gi-choices .qr--button { font-family: var(--ty-font); }
+body:is(.gi-scene:not(.gi-history), .gi-classic) #gi-choices > .qr--buttons { align-items: flex-start; gap: 8px; }
+body:is(.gi-scene:not(.gi-history), .gi-classic) #gi-choices .qr--button {
     position: relative; align-items: center; gap: 12px; width: fit-content; max-width: 100%; min-height: 48px;
     padding: 8px 22px 8px 9px; border: 0; border-radius: 26px;
     color: #f7f3ea; background: linear-gradient(90deg, #262c38d9, #2d3442c7);
@@ -3483,23 +3493,23 @@ body.gi-scene:not(.gi-history) #gi-choices .qr--button {
     transition: background 160ms ease, box-shadow 160ms ease, color 160ms ease, translate 220ms var(--ty-ease);
 }
 /* The white speech bubble with three dots. */
-body.gi-scene:not(.gi-history) #gi-choices .qr--button::before {
+body:is(.gi-scene:not(.gi-history), .gi-classic) #gi-choices .qr--button::before {
     content: ""; flex: 0 0 30px; width: 30px; height: 30px; border-radius: 50%;
     background: center / 30px 30px no-repeat url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 30'%3E%3Cpath fill='%23f6f2ea' d='M15 3.5C8.1 3.5 2.5 8.2 2.5 14c0 3.1 1.6 5.9 4.2 7.8l-1.3 4.6 5.3-2.6c1.3.4 2.8.6 4.3.6 6.9 0 12.5-4.7 12.5-10.4S21.9 3.5 15 3.5Z'/%3E%3Ccircle cx='9.5' cy='14' r='1.9' fill='%233b4253'/%3E%3Ccircle cx='15' cy='14' r='1.9' fill='%233b4253'/%3E%3Ccircle cx='20.5' cy='14' r='1.9' fill='%233b4253'/%3E%3C/svg%3E");
     filter: drop-shadow(0 1px 1px #0006); font-size: 0; color: transparent;
 }
-body.gi-scene:not(.gi-history) #gi-choices .qr--button:is(:hover, :focus-visible):not(:disabled) {
+body:is(.gi-scene:not(.gi-history), .gi-classic) #gi-choices .qr--button:is(:hover, :focus-visible):not(:disabled) {
     translate: 4px 0; outline: none; color: #fff;
     background: linear-gradient(90deg, #e6d4a2f2, #cdb47fe6 60%, #b99d68d9);
     box-shadow: inset 0 0 0 1.5px #fff3cf, 0 0 14px #f2dca066, 0 2px 10px #0005; text-shadow: 0 1px 2px #5a4320cc;
 }
-body.gi-scene:not(.gi-history) #gi-choices .qr--button:active:not(:disabled) { translate: 2px 0; filter: brightness(.95); }
+body:is(.gi-scene:not(.gi-history), .gi-classic) #gi-choices .qr--button:active:not(:disabled) { translate: 2px 0; filter: brightness(.95); }
 #gi-choices .gi-choice-status { font-family: var(--ty-font); font-size: 13px; color: #f4ecd8; }
 #gi-choices .gi-choice-refresh { width: 40px; height: 40px; flex-basis: 40px; color: #ece5d8; background: #262c38d9; box-shadow: inset 0 0 0 1.5px #ffffff26, 0 2px 8px #0005; transition: background 160ms ease, rotate 300ms var(--ty-ease); }
 #gi-choices .gi-choice-refresh:hover:not(:disabled) { color: #3d4557; background: #ece5d8; rotate: -60deg; }
 @media (max-width: 760px) {
-    body.gi-scene:not(.gi-history) #gi-choices .qr--button { min-height: 42px; padding: 6px 16px 6px 7px; gap: 9px; font-size: 14.5px; }
-    body.gi-scene:not(.gi-history) #gi-choices .qr--button::before { flex-basis: 26px; width: 26px; height: 26px; background-size: 26px 26px; }
+    body:is(.gi-scene:not(.gi-history), .gi-classic) #gi-choices .qr--button { min-height: 42px; padding: 6px 16px 6px 7px; gap: 9px; font-size: 14.5px; }
+    body:is(.gi-scene:not(.gi-history), .gi-classic) #gi-choices .qr--button::before { flex-basis: 26px; width: 26px; height: 26px; background-size: 26px 26px; }
 }
 
 /* ---------- Composer: the reply box in the same slate, ivory and gold, in scenes, Review and the welcome page ---------- */
@@ -3752,47 +3762,47 @@ body #gi-attack-controls #gi-attack-toggle:disabled { opacity: .45; cursor: defa
 #gi-choices .gi-choices-heading { gap: 8px; }
 
 /* Enemy health: a slim bar and name at the top centre, as on Genshin's boss bars. */
-body.gi-scene #gi-combat {
+body:is(.gi-scene, .gi-classic) #gi-combat {
     position: fixed; z-index: 31; top: calc(env(safe-area-inset-top, 0px) + 12px); left: 50%; right: auto; translate: -50% 0;
     width: min(44vw, 330px); max-width: none; display: flex; flex-direction: column; gap: 7px; pointer-events: none;
 }
-body.gi-scene #gi-combat[hidden] { display: none; }
-body.gi-scene #gi-combat .gi-enemy-health {
+body:is(.gi-scene, .gi-classic) #gi-combat[hidden] { display: none; }
+body:is(.gi-scene, .gi-classic) #gi-combat .gi-enemy-health {
     position: relative; display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-rows: auto 5px; align-items: end; gap: 3px 8px; min-width: 0; width: auto;
     padding: 0; border: 0; border-radius: 0; background: none; box-shadow: none; overflow: visible;
 }
-body.gi-scene #gi-combat .gi-enemy-health img { display: none; }
-body.gi-scene #gi-combat .gi-enemy-health strong { grid-column: 1; grid-row: 1; font: 13px/1.1 var(--ty-font); letter-spacing: .02em; color: #fff; text-shadow: 0 1px 3px #000, 0 0 8px #0009; }
-body.gi-scene #gi-combat .gi-enemy-health > span:not(.gi-sr-only) { grid-column: 2; grid-row: 1; font: 11px/1.1 var(--ty-font); font-variant-numeric: tabular-nums; color: #f2dca0d9; text-shadow: 0 1px 3px #000; }
-body.gi-scene #gi-combat .gi-enemy-health .gi-hp { grid-column: 1 / -1; grid-row: 2; height: 5px; margin: 0; border-radius: 3px; overflow: hidden; background: #0b0f179e; box-shadow: 0 0 0 1px #ffffff2e, 0 1px 4px #0007; }
-body.gi-scene #gi-combat .gi-enemy-health .gi-hp::before, body.gi-scene #gi-combat .gi-enemy-health .gi-hp::after { display: none; }
-body.gi-scene #gi-combat .gi-enemy-health .gi-hp i { inset: 0 auto 0 0; max-width: 100%; border-radius: inherit; }
-body.gi-scene #gi-combat .gi-damage-pop { top: -6px; }
+body:is(.gi-scene, .gi-classic) #gi-combat .gi-enemy-health img { display: none; }
+body:is(.gi-scene, .gi-classic) #gi-combat .gi-enemy-health strong { grid-column: 1; grid-row: 1; font: 13px/1.1 var(--ty-font); letter-spacing: .02em; color: #fff; text-shadow: 0 1px 3px #000, 0 0 8px #0009; }
+body:is(.gi-scene, .gi-classic) #gi-combat .gi-enemy-health > span:not(.gi-sr-only) { grid-column: 2; grid-row: 1; font: 11px/1.1 var(--ty-font); font-variant-numeric: tabular-nums; color: #f2dca0d9; text-shadow: 0 1px 3px #000; }
+body:is(.gi-scene, .gi-classic) #gi-combat .gi-enemy-health .gi-hp { grid-column: 1 / -1; grid-row: 2; height: 5px; margin: 0; border-radius: 3px; overflow: hidden; background: #0b0f179e; box-shadow: 0 0 0 1px #ffffff2e, 0 1px 4px #0007; }
+body:is(.gi-scene, .gi-classic) #gi-combat .gi-enemy-health .gi-hp::before, body:is(.gi-scene, .gi-classic) #gi-combat .gi-enemy-health .gi-hp::after { display: none; }
+body:is(.gi-scene, .gi-classic) #gi-combat .gi-enemy-health .gi-hp i { inset: 0 auto 0 0; max-width: 100%; border-radius: inherit; }
+body:is(.gi-scene, .gi-classic) #gi-combat .gi-damage-pop { top: -6px; }
 
 /* Party health: Genshin's party column. Small portraits down the right edge, each with a thin bar; names and numbers on hover. */
-body.gi-scene #gi-party-health {
+body:is(.gi-scene, .gi-classic) #gi-party-health {
     position: fixed; z-index: 31; top: calc(env(safe-area-inset-top, 0px) + 66px); right: calc(env(safe-area-inset-right, 0px) + 10px); left: auto; bottom: auto;
     width: auto; max-width: none; display: flex; flex-direction: column; align-items: center; gap: 8px; pointer-events: none;
 }
-body.gi-scene #gi-party-health[hidden] { display: none; }
-body.gi-scene #gi-party-health .gi-party-member {
+body:is(.gi-scene, .gi-classic) #gi-party-health[hidden] { display: none; }
+body:is(.gi-scene, .gi-classic) #gi-party-health .gi-party-member {
     position: relative; display: grid; grid-template-columns: 34px; grid-template-rows: 34px 4px; justify-items: stretch; gap: 3px; width: 34px; padding: 0;
     border: 0; border-radius: 0; background: none; box-shadow: none; overflow: visible; pointer-events: auto; opacity: .92;
 }
-body.gi-scene #gi-party-health .gi-party-member .gi-circle-face { grid-column: 1; grid-row: 1; width: 34px; height: 34px; }
-body.gi-scene #gi-party-health .gi-party-member strong, body.gi-scene #gi-party-health .gi-party-member > span:not(.gi-circle-face) { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
-body.gi-scene #gi-party-health .gi-party-member .gi-hp { grid-column: 1; grid-row: 2; width: 100%; height: 4px; margin: 0; border-radius: 2px; overflow: hidden; background: #0b0f179e; box-shadow: 0 0 0 1px #ffffff2e; }
-body.gi-scene #gi-party-health .gi-party-member .gi-hp::before, body.gi-scene #gi-party-health .gi-party-member .gi-hp::after { display: none; }
-body.gi-scene #gi-party-health .gi-party-member .gi-hp i { inset: 0 auto 0 0; max-width: 100%; border-radius: inherit; }
-body.gi-scene #gi-party-health .gi-party-member.gi-downed { opacity: .6; }
-body.gi-scene #gi-party-health .gi-party-member.gi-downed strong::after { content: none; }
+body:is(.gi-scene, .gi-classic) #gi-party-health .gi-party-member .gi-circle-face { grid-column: 1; grid-row: 1; width: 34px; height: 34px; }
+body:is(.gi-scene, .gi-classic) #gi-party-health .gi-party-member strong, body:is(.gi-scene, .gi-classic) #gi-party-health .gi-party-member > span:not(.gi-circle-face) { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+body:is(.gi-scene, .gi-classic) #gi-party-health .gi-party-member .gi-hp { grid-column: 1; grid-row: 2; width: 100%; height: 4px; margin: 0; border-radius: 2px; overflow: hidden; background: #0b0f179e; box-shadow: 0 0 0 1px #ffffff2e; }
+body:is(.gi-scene, .gi-classic) #gi-party-health .gi-party-member .gi-hp::before, body:is(.gi-scene, .gi-classic) #gi-party-health .gi-party-member .gi-hp::after { display: none; }
+body:is(.gi-scene, .gi-classic) #gi-party-health .gi-party-member .gi-hp i { inset: 0 auto 0 0; max-width: 100%; border-radius: inherit; }
+body:is(.gi-scene, .gi-classic) #gi-party-health .gi-party-member.gi-downed { opacity: .6; }
+body:is(.gi-scene, .gi-classic) #gi-party-health .gi-party-member.gi-downed strong::after { content: none; }
 @media (max-height: 520px) {
-    body.gi-scene #gi-combat { top: calc(env(safe-area-inset-top, 0px) + 8px); width: min(40vw, 300px); gap: 5px; }
-    body.gi-scene #gi-combat .gi-enemy-health strong { font-size: 12px; }
-    body.gi-scene #gi-party-health { top: calc(env(safe-area-inset-top, 0px) + 12px); gap: 5px; }
-    body.gi-scene #gi-party-health .gi-party-member { grid-template-columns: 28px; grid-template-rows: 28px 3px; width: 28px; gap: 2px; }
-    body.gi-scene #gi-party-health .gi-party-member .gi-circle-face { width: 28px; height: 28px; }
-    body.gi-scene #gi-party-health .gi-party-member .gi-hp { height: 3px; }
+    body:is(.gi-scene, .gi-classic) #gi-combat { top: calc(env(safe-area-inset-top, 0px) + 8px); width: min(40vw, 300px); gap: 5px; }
+    body:is(.gi-scene, .gi-classic) #gi-combat .gi-enemy-health strong { font-size: 12px; }
+    body:is(.gi-scene, .gi-classic) #gi-party-health { top: calc(env(safe-area-inset-top, 0px) + 12px); gap: 5px; }
+    body:is(.gi-scene, .gi-classic) #gi-party-health .gi-party-member { grid-template-columns: 28px; grid-template-rows: 28px 3px; width: 28px; gap: 2px; }
+    body:is(.gi-scene, .gi-classic) #gi-party-health .gi-party-member .gi-circle-face { width: 28px; height: 28px; }
+    body:is(.gi-scene, .gi-classic) #gi-party-health .gi-party-member .gi-hp { height: 3px; }
 }
 
 /* Round character cutouts use the Sprite wardrobe's circular icons, cropped the way its roster crops them. */
@@ -4172,12 +4182,10 @@ body.gi-keyboard :is(#gi-background-stage,#gi-sprite-stage,#gi-cg-stage,#gi-lett
 @media (max-width: 600px) and (orientation: portrait) {
     #gi-wardrobe header { grid-template-columns: minmax(0, 1fr) auto; }
     #gi-wardrobe header > button[data-w="close"] { grid-column: 2; }
-    #gi-wardrobe header > .gi-cs-key { display: none; }
     #gi-wardrobe header .gi-roster { max-width: none; height: 56px; }
     #gi-wardrobe .gi-cs-side { margin-inline: 8px; }
 }
 @media (max-height: 550px) and (orientation: landscape) {
-    #gi-wardrobe header { min-height: 46px; }
     #gi-wardrobe .gi-cs-emblem { width: 40px; height: 40px; }
     #gi-wardrobe header .gi-roster button { width: 44px; }
     #gi-wardrobe header .gi-roster .gi-roster-face { left: 5px; width: 34px; height: 34px; }
@@ -4647,14 +4655,21 @@ body.gi-keyboard :is(#gi-background-stage,#gi-sprite-stage,#gi-cg-stage,#gi-lett
 }
 #gi-wardrobe [data-panel="moveset"] > .gi-combat-art { margin-bottom: 14px; }
 @media (min-width: 901px) and (min-height: 551px) { #gi-wardrobe .gi-cs-side { padding-top: 14px; } }
-/* Profile: the card's name, then its SillyTavern details in a drawer. */
+/* Profile: the card's name and home, its greetings, then its SillyTavern details in drawers. */
 #gi-wardrobe .gi-card-profile { display: grid; gap: 10px; margin: 0 0 14px; }
-#gi-wardrobe .gi-card-profile .gi-card-name { display: grid; gap: 6px; margin: 0; }
-#gi-wardrobe .gi-card-profile .gi-card-details { margin: 0; }
-#gi-wardrobe .gi-card-details-body { display: grid; gap: 10px; padding-top: 4px; }
-#gi-wardrobe .gi-card-details-body label { display: grid; gap: 6px; margin: 0; }
-#gi-wardrobe .gi-card-details-body textarea { min-height: 60px; max-height: 40dvh; resize: vertical; }
+#gi-wardrobe .gi-card-profile :is(.gi-card-name, .gi-card-home) { display: grid; gap: 6px; margin: 0; }
+#gi-wardrobe .gi-card-profile .gi-card-home[hidden] { display: none; }
+#gi-wardrobe .gi-card-profile select { width: 100%; min-width: 0; }
+#gi-wardrobe .gi-card-profile :is(.gi-card-details, .gi-card-greetings) { margin: 0; }
+#gi-wardrobe :is(.gi-card-details-body, .gi-card-greetings-body) { display: grid; gap: 10px; padding-top: 4px; }
+#gi-wardrobe :is(.gi-card-details-body, .gi-card-greetings-body) label { display: grid; gap: 6px; margin: 0; }
+#gi-wardrobe :is(.gi-card-details-body, .gi-card-greetings-body) textarea { min-height: 60px; max-height: 40dvh; resize: vertical; }
 #gi-wardrobe .gi-card-details-body > button { justify-self: start; }
+#gi-wardrobe .gi-greeting-nav { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+#gi-wardrobe .gi-greeting-nav button { flex: none; width: 34px; height: 30px; padding: 0; font-size: 20px; line-height: 1; }
+#gi-wardrobe .gi-greeting-nav button:disabled { opacity: .35; }
+#gi-wardrobe .gi-greeting-nav span { flex: 1 1 auto; text-align: center; color: #ead6a3; font-size: .92em; }
+#gi-wardrobe .gi-greeting-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 #gi-wardrobe .gi-card-portrait { display: flex; align-items: center; gap: 12px; }
 #gi-wardrobe .gi-card-portrait img { flex: none; width: 64px; height: 96px; object-fit: cover; border: 1px solid #d3bc8e55; border-radius: 6px; background: #0003; }
 #gi-wardrobe .gi-card-portrait label { flex: 1 1 auto; min-width: 0; }
@@ -4672,6 +4687,14 @@ body.gi-card-art-on #gi-wardrobe .gi-card-portrait.gi-card-portrait-tcg img { as
 #gi-wardrobe[data-tab="cgs"] .gi-wardrobe-preview > :is(img, .gi-cg-video-preview) { object-position: 50% 50%; transform: var(--cs-camera); transform-origin: 50% 50%; transition: transform 420ms var(--ty-ease); }
 #gi-wardrobe[data-tab="cgs"] .gi-cs-zoom,
 #gi-wardrobe[data-tab="cgs"] .gi-wardrobe-preview:has(> .gi-cg-video-preview) .gi-cs-zoom { display: grid; }
+/* Profile: card art is a picture of its own, beside the portrait (the character's icon). */
+#gi-wardrobe .gi-card-art-row { margin-top: 10px; }
+#gi-wardrobe .gi-card-art-row img[hidden] { display: none; }
+#gi-wardrobe .gi-card-art-row.gi-card-portrait-card img { width: auto; height: 96px; aspect-ratio: 208 / 248; object-fit: contain; border: 0; border-radius: 0; background: none; filter: drop-shadow(0 3px 5px #000a); }
+#gi-wardrobe .gi-card-art-row.gi-card-portrait-tcg img { aspect-ratio: 420 / 720; }
+#gi-wardrobe .gi-card-art-controls { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
+#gi-wardrobe .gi-card-art-controls label { align-self: stretch; }
+#gi-wardrobe .gi-card-art-controls span { font-size: .85em; opacity: .75; }
 
 /* 1.59: Scene Gallery and scene conditions */
 #gi-cg-gallery{position:fixed;inset:0;box-sizing:border-box;width:min(960px,calc(100vw - 32px));height:min(680px,calc(100dvh - 32px));max-width:none;max-height:none;margin:auto;padding:0;border:0;border-radius:18px;overflow:hidden;color:#ece5d8;font-family:var(--ty-font,"Silly Teyvat Dialogue",sans-serif);background:radial-gradient(ellipse 80% 60% at 70% 0%,#d7bd8426,transparent 70%),linear-gradient(160deg,#2a3147f7,#1b2030fa);box-shadow:0 0 0 1px #d3bc8e66,0 24px 60px #0009}
@@ -4764,6 +4787,8 @@ body.gi-card-art-on #gi-wardrobe .gi-card-portrait.gi-card-portrait-tcg img { as
 /* 1.59.2: the controls column scrolls, so a focus ring on its left edge was cut off. A little
    padding, taken back with a negative margin, leaves room for it without moving anything. */
 #gi-wardrobe .gi-wardrobe-controls { padding-left: 6px; margin-left: -6px; }
+/* A line under a setting that says what it is doing now (Graphics quality: the level Auto chose and why). */
+#gi-settings .gi-note { margin: 2px 4px 8px; font-size: .82em; font-weight: normal; line-height: 1.35; opacity: .78; }
 
 /* ==========================================================================
    Silly Teyvat 1.61 — the battle board played like Genius Invokation TCG:
@@ -5437,7 +5462,7 @@ body #gi-attack-controls #gi-attack-toggle[aria-pressed="true"]::after {
 /* Beams: a large square centred on the crest, so turning it keeps them on the crest. */
 #gi-battle .tb-result[data-outcome="victory"] .tb-result-rays { inset: auto; left: var(--cx, 50%); top: var(--cy, 40%); width: 260vmax; height: 260vmax; translate: -50% -50%; opacity: 0;
     background: conic-gradient(from 0deg at 50% 50%, #0000 0 4deg, #ffb54a66 4deg 6deg, #0000 6deg 22deg, #ffcf6b44 22deg 25deg, #0000 25deg 47deg, #ffb54a55 47deg 49deg, #0000 49deg 70deg, #ffd78a44 70deg 73deg, #0000 73deg 101deg, #ffb54a66 101deg 103deg, #0000 103deg 140deg, #ffcf6b44 140deg 143deg, #0000 143deg 181deg, #ffb54a55 181deg 183deg, #0000 183deg 222deg, #ffd78a44 222deg 225deg, #0000 225deg 262deg, #ffb54a66 262deg 264deg, #0000 264deg 300deg, #ffcf6b44 300deg 303deg, #0000 303deg 338deg, #ffb54a55 338deg 340deg, #0000 340deg);
-    mask: radial-gradient(circle at 50% 50%, #000 0 1.2%, #0000 26%); animation: tb-rays-in 1600ms 150ms ease-out both, tb-rays-turn 48s 1750ms linear infinite; }
+    mask: radial-gradient(circle at 50% 50%, #000 0 1.2%, #0000 26%); animation: tb-result-rays-in 1600ms 150ms ease-out both, tb-rays-turn 48s 1750ms linear infinite; }
 /* Title: lands from a blur (tb-victory), then a shine sweeps across the letters. */
 #gi-battle .tb-result[data-outcome="victory"] h3 { color: transparent; text-shadow: none; -webkit-background-clip: text; background-clip: text;
     background-image: linear-gradient(100deg, #fff3d0 0 42%, #ffffff 48%, #ffe29a 52%, #fff3d0 58% 100%); background-size: 320% 100%; background-position: 100% 0;
@@ -5488,7 +5513,8 @@ body #gi-attack-controls #gi-attack-toggle[aria-pressed="true"]::after {
 @keyframes tb-crest-in { 0% { opacity: 0; transform: rotate(-200deg) scale(.2); } 60% { opacity: 1; transform: rotate(12deg) scale(1.12); } to { opacity: .9; transform: rotate(0) scale(1); } }
 @keyframes tb-crest-glow { 50% { filter: drop-shadow(0 0 28px #ffcf6bee); } }
 @keyframes tb-band { from { opacity: 0; transform: scaleX(0); } to { opacity: 1; transform: scaleX(1); } }
-@keyframes tb-rays-in { 0% { opacity: 0; transform: scale(.3) rotate(-25deg); } 30% { opacity: 1; } to { opacity: .6; transform: scale(1) rotate(0); } }
+/* Not tb-rays-in: that name is the Burst build-up (battle.css), and a second definition would replace it. */
+@keyframes tb-result-rays-in { 0% { opacity: 0; transform: scale(.3) rotate(-25deg); } 30% { opacity: 1; } to { opacity: .6; transform: scale(1) rotate(0); } }
 @keyframes tb-rays-turn { to { rotate: 360deg; } }
 @keyframes tb-shine { from { background-position: 100% 0; } to { background-position: 0 0; } }
 @keyframes tb-twinkle { 0%, 100% { opacity: 0; scale: .4; } 40% { opacity: 1; scale: 1.1; } 60% { opacity: .9; scale: .9; } }
@@ -5807,3 +5833,186 @@ body #gi-attack-controls #gi-attack-toggle[aria-pressed="true"]::after {
 #gi-world-map .gi-map-waypoint-list button[data-quest="true"] { box-shadow: inset 3px 0 0 #4fc3ff; }
 #gi-world-map .gi-map-quest h4 { display: flex; align-items: center; gap: 6px; }
 #gi-world-map .gi-map-quest h4::before { content: ""; width: 16px; height: 18px; background: url("assets/icons/map-badge-quest.webp") center / contain no-repeat; }
+
+/* Story view off: the classic SillyTavern chat, every message with its own avatar, swipes and buttons,
+   in a frosted box at the foot of the scene. The place, sprites, map, HUD and battles stay as they are;
+   whatever stands behind the box shows through it blurred and a little darker. */
+html:has(> body.gi-classic) { height: 100vh; height: 100dvh; overflow: hidden !important; overscroll-behavior: none !important; }
+body.gi-classic {
+    --gi-classic-width: min(max(var(--sheldWidth, 50vw), 760px), calc(100vw - 24px));
+    --gi-classic-height: clamp(280px, 42dvh, 560px);
+    --gi-classic-bottom: max(10px, env(safe-area-inset-bottom, 0px));
+    position: fixed !important; inset: 0 !important; width: 100% !important; height: 100dvh !important; min-height: 0 !important; max-height: 100dvh !important;
+    margin: 0 !important; overflow: hidden !important; overscroll-behavior: none !important;
+}
+body.gi-classic #sheld {
+    position: fixed !important;
+    z-index: 3 !important;
+    inset: auto 0 var(--gi-classic-bottom) 0 !important;
+    display: flex !important;
+    flex-direction: column;
+    width: var(--gi-classic-width) !important;
+    height: var(--gi-classic-height) !important;
+    min-width: 0; min-height: 0;
+    max-width: none !important; max-height: none !important;
+    margin: 0 auto !important;
+    padding: 0 !important;
+    border: 1px solid #e5ca8770 !important;
+    border-radius: 16px !important;
+    overflow: hidden !important;
+    background: rgb(22 30 40 / calc(var(--gi-scrim-opacity, .8) * .62)) !important;
+    box-shadow: inset 0 0 0 1px #e5ca8714, 0 18px 60px #0008 !important;
+    backdrop-filter: blur(16px) brightness(.72) saturate(1.1) !important;
+    -webkit-backdrop-filter: blur(16px) brightness(.72) saturate(1.1) !important;
+    transform: none !important;
+    pointer-events: auto;
+}
+body.gi-classic #sheldheader { display: none !important; }
+body.gi-classic #chat {
+    position: relative !important;
+    inset: auto !important;
+    flex: 1 1 auto;
+    width: 100% !important;
+    height: auto !important;
+    min-height: 0;
+    max-height: none !important;
+    margin: 0 !important;
+    padding: 4px 10px 8px !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    scrollbar-color: #b9ac8673 transparent;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    box-shadow: none !important;
+}
+body.gi-classic #chat > .mes { background: transparent !important; }
+body.gi-classic #form_sheld {
+    position: relative !important;
+    inset: auto !important;
+    flex: 0 0 auto;
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 6px 10px 10px;
+    transform: none !important;
+    border-top: 1px solid #d7c8a42b;
+    background: transparent;
+}
+body.gi-classic #send_form {
+    border: 1px solid #d7c8a440;
+    border-radius: 14px;
+    background: #1d2a36b8 !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+}
+
+/* Teyvat Choices, the attack dock and party health stand above the box, as they stand above the dialogue. */
+body.gi-classic #gi-root #gi-choices {
+    position: fixed !important;
+    inset: auto max(16px, calc((100vw - var(--gi-classic-width)) / 2)) calc(var(--gi-classic-height) + var(--gi-classic-bottom) + 14px) auto !important;
+    width: min(430px, 34vw) !important;
+    max-height: min(30dvh, calc(100dvh - var(--gi-classic-height) - var(--gi-classic-bottom) - var(--topBarBlockSize, 42px) - 40px));
+}
+body.gi-classic #gi-attack-dock { right: max(16px, calc((100vw - var(--gi-classic-width)) / 2)); bottom: calc(var(--gi-classic-height) + var(--gi-classic-bottom) + 14px); }
+body.gi-classic #gi-party-health { bottom: calc(var(--gi-classic-height) + var(--gi-classic-bottom) + 14px); }
+
+@media (max-width: 760px), (max-height: 560px) {
+    body.gi-classic {
+        --gi-classic-width: calc(100vw - 16px - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px));
+        --gi-classic-height: clamp(220px, 46dvh, 440px);
+        --gi-classic-bottom: max(8px, env(safe-area-inset-bottom, 0px));
+    }
+    body.gi-classic #sheld { border-radius: 14px !important; }
+    body.gi-classic #gi-root #gi-choices { width: min(360px, calc(100vw - 32px)) !important; }
+}
+
+/* Graphics quality (graphics.js). Generated by tools/build-performance-css.py: do not edit by hand.
+   Balanced and Low put gi-gfx-balanced on <body>; Low adds gi-gfx-low as well. */
+
+/* Balanced and Low: no frosted glass. A blur of what is behind a panel is repainted whenever anything
+   under it changes, and without a graphics card it is drawn on the processor. Panels keep their tint. */
+body.gi-gfx-balanced #gi-toolbar,
+body.gi-gfx-balanced.gi-scene #sheld,
+body.gi-gfx-balanced.gi-scene:not(.gi-history) #chat,
+body.gi-gfx-balanced.gi-scene:not(.gi-history) #send_form,
+body.gi-gfx-balanced.gi-scene.gi-history #sheld,
+body.gi-gfx-balanced.gi-scene.gi-history #chat,
+body.gi-gfx-balanced.gi-scene.gi-history #send_form,
+body.gi-gfx-balanced.gi-hud-enabled #top-bar,
+body.gi-gfx-balanced.gi-shell #top-settings-holder,
+body.gi-gfx-balanced #gi-elemental-roll::backdrop,
+body.gi-gfx-balanced #gi-menu-scrim,
+body.gi-gfx-balanced #gi-toolbar.gi-paimon,
+body.gi-gfx-balanced.gi-scene.gi-hidden #gi-toolbar.gi-paimon,
+body.gi-gfx-balanced #gi-world-map::backdrop,
+body.gi-gfx-balanced #gi-world-map.gi-map-moving :is(.gi-map-round, .gi-map-region-current),
+body.gi-gfx-balanced #gi-world-map .gi-map-round,
+body.gi-gfx-balanced #gi-world-map .gi-map-zoom,
+body.gi-gfx-balanced #gi-attack-controls #gi-attack-toggle,
+body.gi-gfx-balanced #gi-world-map .gi-map-region-current,
+body.gi-gfx-balanced #gi-battle::backdrop,
+body.gi-gfx-balanced .gi-music-dialog::backdrop,
+body.gi-gfx-balanced #gi-inventory::backdrop,
+body.gi-gfx-balanced #gi-trust::backdrop,
+body.gi-gfx-balanced.gi-shell #chat > .welcomePanel,
+body.gi-gfx-balanced.gi-shell.gi-welcome #sheld,
+body.gi-gfx-balanced.gi-shell.gi-welcome #chat,
+body.gi-gfx-balanced.gi-shell.gi-welcome #sheld :is(#form_sheld, #send_form),
+body.gi-gfx-balanced #gi-combat-ask::backdrop,
+body.gi-gfx-balanced .gi-wilderness-menu::backdrop,
+body.gi-gfx-balanced #gi-wardrobe .gi-cs-archive,
+body.gi-gfx-balanced #gi-wardrobe .gi-cs-side,
+body.gi-gfx-balanced #gi-cg-gallery::backdrop,
+body.gi-gfx-balanced #gi-battle .tb-result[data-outcome="victory"],
+body.gi-gfx-balanced #gi-battle .tb-result[data-outcome="wipe"],
+body.gi-gfx-balanced #gi-statue::backdrop,
+body.gi-gfx-balanced #gi-card-search::backdrop,
+body.gi-gfx-balanced.gi-classic #sheld,
+body.gi-gfx-balanced.gi-classic #chat,
+body.gi-gfx-balanced.gi-classic #send_form {
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+}
+
+/* Low: looping glows, pulses and bobbing stop. Only animations that are nothing but a loop are listed,
+   so nothing that waits for an animation to finish is affected. */
+body.gi-gfx-low #gi-navigation button[data-gi-action="latest"] svg,
+body.gi-gfx-low.gi-generating #gi-navigation button[data-gi-action="latest"] svg,
+body.gi-gfx-low #gi-launcher img,
+body.gi-gfx-low #gi-attack-controls #gi-attack-toggle[aria-pressed="true"],
+body.gi-gfx-low #gi-elemental-roll::before,
+body.gi-gfx-low .gi-roll-confirm.gi-ready,
+body.gi-gfx-low .gi-cs-pedestal,
+body.gi-gfx-low .gi-waypoint-selected .gi-waypoint-halo,
+body.gi-gfx-low .gi-waypoint-boss::after,
+body.gi-gfx-low .gi-map-player-pulse,
+body.gi-gfx-low #gi-elemental-roll .gi-roll-picks .gi-die-pick[aria-pressed="true"],
+body.gi-gfx-low .tb-card.tb-ready .tb-energy i,
+body.gi-gfx-low .tb-aura-el.tb-innate,
+body.gi-gfx-low #gi-battle[data-mode="plan"] .tb-party.tb-pending:not(.tb-active) .tb-plan,
+body.gi-gfx-low .tb-end.tb-go:not(:disabled),
+body.gi-gfx-low .tb-enemy.tb-targeted .tb-art,
+body.gi-gfx-low .tb-end:not(:disabled),
+body.gi-gfx-low .tb-move-burst:not(.tb-unaffordable) .tb-medal,
+body.gi-gfx-low .tb-card.tb-bursting::before,
+body.gi-gfx-low .gb-proj[data-el="Electro"],
+body.gi-gfx-low .gi-thought-wait i,
+body.gi-gfx-low #gi-wardrobe .gi-cs-nebula,
+body.gi-gfx-low .tb-choosable .tb-art,
+body.gi-gfx-low #gi-battle .tb-pick-die.tb-tunable,
+body.gi-gfx-low .tb-move.tb-picked .tb-medal,
+body.gi-gfx-low #gi-battle .gw-orb::before,
+body.gi-gfx-low #gi-attack-controls #gi-attack-toggle[aria-pressed="true"]:hover:not(:disabled),
+body.gi-gfx-low #gi-attack-controls #gi-attack-toggle[aria-pressed="true"]::before,
+body.gi-gfx-low #gi-battle .tb-flee:hover:not(:disabled) svg,
+body.gi-gfx-low #gi-battle .tb-result-stars i,
+body.gi-gfx-low #gi-battle .tb-auto.tb-auto-on,
+body.gi-gfx-low #gi-battle .tb-st-preparing,
+body.gi-gfx-low .gi-waypoint-quest {
+    animation: none !important;
+}

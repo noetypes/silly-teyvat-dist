@@ -15,6 +15,7 @@ import {ABYSS_HOME,abyssAvatar} from './twin-roles.js';
 import {NARRATOR_AVATAR,narratorAvatar} from './narrator.js';
 import {isGuildStaff} from './guild.js';
 import {companionSide,playingEnemy} from './enemy-persona.js';
+import {cardByAvatar,hasCard} from './card-index.js';
 
 export const castIdentity=ctx=>`${ctx.groupId || ctx.characterId}:${ctx.getCurrentChatId?.() || ctx.chatId || ''}`;
 export function locationCastState(ctx){
@@ -25,7 +26,7 @@ const locations=ctx=>backgroundRegions(ctx).flatMap(r=>r.locations);
 export function rememberDefaultLocations(ctx){
     const prefs=mediaSettings(ctx);prefs.defaultCharacterLocations ??= {};let changed=false;
     for(const location of locations(ctx))for(const avatar of location.residents || []){
-        if(!Object.hasOwn(prefs.defaultCharacterLocations,avatar)){prefs.defaultCharacterLocations[avatar]=location.id;changed=true;}
+        if(prefs.defaultCharacterLocations[avatar]==null){prefs.defaultCharacterLocations[avatar]=location.id;changed=true;}
     }
     if(changed)ctx.saveSettingsDebounced();return prefs.defaultCharacterLocations;
 }
@@ -44,7 +45,7 @@ export function defaultCharacterLocation(ctx,avatar){
     return locations(ctx).find(l=>l.id===id) || locations(ctx).find(l=>l.id===defaults[avatar]) || null;
 }
 export function placeResident(ctx,avatar,locationId){
-    if(!ctx.characters?.some(c=>c.avatar===avatar))throw new Error('This character card is no longer installed.');
+    if(!hasCard(ctx,avatar))throw new Error('This character card is no longer installed.');
     if(isEnemy(ctx,avatar)&&locationId)throw new Error('Enemy cards belong in Wilderness encounters, not tied characters.');
     const target=locations(ctx).find(l=>l.id===locationId);if(locationId&&!target)throw new Error('This location no longer exists.');
     if(target)requireLocationCapacity(ctx,target,[...new Set([...assignedResidents(ctx,target),avatar])]);
@@ -54,13 +55,19 @@ export function placeResident(ctx,avatar,locationId){
     if(target)target.residents.push(avatar);
     delete locationCastState(ctx).placements[avatar];delete locationCastState(ctx).leftBehind?.[avatar];ctx.saveSettingsDebounced();saveTravel(ctx);
 }
+// Profile's Home waypoint: where the character lives, and where a greeting with no waypoint of its own
+// starts. None (null) is remembered too, so the bundled home is not given back on the next start.
+export function setCharacterHome(ctx,avatar,locationId){
+    placeResident(ctx,avatar,locationId || null);
+    rememberDefaultLocations(ctx)[avatar]=locationId || null;ctx.saveSettingsDebounced();
+}
 export function residentsAt(ctx,id){
     return id?encounterResidents(ctx,id):[];
 }
 export function assignResidents(ctx,locationId,avatars){
     const target=locations(ctx).find(l=>l.id===locationId);if(!target)throw new Error('Choose a location first.');
     const defaults=rememberDefaultLocations(ctx),state=locationCastState(ctx);
-    const selected=[...new Set(avatars)].filter(a=>ctx.characters.some(c=>c.avatar===a));
+    const selected=[...new Set(avatars)].filter(a=>hasCard(ctx,a));
     if(selected.some(a=>isEnemy(ctx,a)))throw new Error('Enemy cards cannot be tied characters.');
     requireLocationCapacity(ctx,target,selected);
     for(const avatar of selected)if(!Object.hasOwn(defaults,avatar))defaults[avatar]=locationId;
@@ -76,7 +83,7 @@ export function castMembership(ctx){
     const original=(group?group.members:[ctx.characters?.[ctx.characterId]?.avatar]).filter(a=>a&&a!==NARRATOR_AVATAR),played=playedAvatars(ctx);
     const members=original.filter(a=>!played.has(a)),taken=original.filter(a=>played.has(a));
     const opening=openingCharacter(ctx);
-    if(opening){const next=members.includes(opening)?[opening]:ctx.characters?.some(c=>c.avatar===opening)?[opening]:members.slice(0,1);const removed=original.filter(a=>!next.includes(a)),added=next.filter(a=>!members.includes(a));return {core:[...next],members:next,managed:[],added,removed,changed:added.length>0||removed.length>0,forced:null};}
+    if(opening){const next=members.includes(opening)?[opening]:hasCard(ctx,opening)?[opening]:members.slice(0,1);const removed=original.filter(a=>!next.includes(a)),added=next.filter(a=>!members.includes(a));return {core:[...next],members:next,managed:[],added,removed,changed:added.length>0||removed.length>0,forced:null};}
     let core=[...(state.core || members.filter(a=>!state.managed.includes(a)))].filter(a=>companionSide(ctx,a)&&!played.has(a));
     const wanted=[...(mediaSettings(ctx).locationEncounters===false?members.filter(a=>companionSide(ctx,a)):residentsAt(ctx,travelState(ctx).location?.id).map(c=>c.avatar)),...activeEnemies(ctx).map(e=>e.avatar),...friendlyEnemies(ctx)].filter(a=>!played.has(a));
     // Katheryne is part of the scene only at a Guild branch, even when a chat began with her.
@@ -226,11 +233,14 @@ export function mountLocationCast({host,getContext,adapter=createLocationCastAda
             const state=locationCastState(ctx),avatar=ctx.characters?.[ctx.characterId]?.avatar;if(!inPartyChat(ctx)&&avatar&&!state.opening&&!state.encounter&&!state.arrival)beginOpeningScene(ctx,avatar,travelState(ctx).location?.id);
             if(api.chatKey&&key!==api.chatKey){revision++;finishAnswer(null);failed='';signature='';}api.chatKey=key;
             if(!enabled){finishAnswer(null);return;}
+            // Nothing is reconciled while a reply is written or a change is under way, so the roster (every
+            // waypoint and card) is not read on each streamed frame.
+            if(busy||generating)return;
             rememberDefaultLocations(ctx);
             const next=signatureFor(ctx);
-            if(!busy&&!generating&&next!==signature&&next!==failed){signature=next;void api.reconcile(next);}
+            if(next!==signature&&next!==failed){signature=next;void api.reconcile();}
         },
-        async reconcile(nextSignature=''){
+        async reconcile(){
             if(disposed||busy||generating||!enabled)return;
             const ctx=getContext(),key=castIdentity(ctx),token=revision,plan=castMembership(ctx),state=locationCastState(ctx);
             if(!travelState(ctx).location?.id)return;
@@ -240,7 +250,7 @@ export function mountLocationCast({host,getContext,adapter=createLocationCastAda
                 // when an existing journey is reopened after this upgrade.
                 state.pendingGreetings=(state.pendingGreetings || []).filter(entry=>entry.policyVersion===2);
                 const arrival=state.arrival?.locationId===travelState(ctx).location.id&&!state.arrival.handled?state.arrival:null;
-                const sceneResidents=[...(mediaSettings(ctx).locationEncounters===false?[]:residentsAt(ctx,arrival?.locationId)),...activeEnemies(ctx).map(e=>ctx.characters.find(c=>c.avatar===e.avatar)).filter(Boolean),...friendlyEnemies(ctx).map(a=>ctx.characters.find(c=>c.avatar===a)).filter(Boolean)];
+                const sceneResidents=[...(mediaSettings(ctx).locationEncounters===false?[]:residentsAt(ctx,arrival?.locationId)),...activeEnemies(ctx).map(e=>cardByAvatar(ctx,e.avatar)).filter(Boolean),...friendlyEnemies(ctx).map(a=>cardByAvatar(ctx,a)).filter(Boolean)];
                 const reply=arrival?narratorArrival(ctx,plan,arrival) || arrivalReply(ctx,plan,sceneResidents,homeDefaults(ctx)):null;
                 plan.greetings=reply?[reply]:[];
                 if(plan.changed){
@@ -249,7 +259,7 @@ export function mountLocationCast({host,getContext,adapter=createLocationCastAda
                     if(applied.converted){signature='';onChange({converted:true});return;}
                     if(!current(key,token))return;
                     state.core=plan.core;state.managed=plan.managed;if(plan.forced)state.placements[plan.forced]=travelState(ctx).location.id;
-                    const names=list=>list.filter(a=>a!==NARRATOR_AVATAR).map(a=>ctx.characters.find(c=>c.avatar===a)?.name || a).join(', ');
+                    const names=list=>list.filter(a=>a!==NARRATOR_AVATAR).map(a=>cardByAvatar(ctx,a)?.name || a).join(', ');
                     announce([names(plan.added)?`${names(plan.added)} joined the party.`:'',names(plan.removed)?`${names(plan.removed)} left the scene.`:''].filter(Boolean).join(' '));
                     onChange({added:plan.added,removed:plan.removed});
                 }else if(!state.core){state.core=plan.core;saveTravel(ctx);}

@@ -12,7 +12,8 @@ export function compareVersions(a,b){
     for(let i=0;i<3;i++)if(x[i]!==y[i])return x[i]<y[i]?-1:1;
     return 0;
 }
-const validEntry=entry=>entry&&typeof entry.since==='string'&&typeof entry.sha256==='string'&&Number.isSafeInteger(entry.size)&&Number.isSafeInteger(entry.offset);
+// A checksum prefix of at least 16 digits: an empty one would match any file (see verified).
+const validEntry=entry=>entry&&typeof entry.since==='string'&&/^[a-f0-9]{16,64}$/.test(entry.sha256 || '')&&Number.isSafeInteger(entry.size)&&Number.isSafeInteger(entry.offset);
 const https=url=>typeof url==='string'&&/^https:\/\//.test(url);
 function validChunks(release){
     if(release.chunks===undefined)return true;

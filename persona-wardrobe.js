@@ -1,5 +1,6 @@
 import {mediaSettings} from './media-store.js';
 import {linkedPersonaAvatars,linkPersona,linkedCard,personaLinks,takeoverAvatar} from './persona-link.js';
+import {cardByAvatar} from './card-index.js';
 
 let nativePersonas;
 export async function loadPersonaSupport(ctx) {
@@ -76,7 +77,7 @@ export function personaPortrait(ctx, card) {
 }
 export function stageCharacter(ctx,sprite) {
     if (sprite.avatar==='__user__') return personaCard(ctx,sprite.personaAvatar || activePersonaAvatar(ctx));
-    return ctx.characters?.find(c=>c.avatar===sprite.avatar) || ctx.characters?.find(c=>c.name===sprite.folder?.split('/')[0]);
+    return cardByAvatar(ctx,sprite.avatar) || ctx.characters?.find(c=>c.name===sprite.folder?.split('/')[0]);
 }
 export function savePersonaProfile(ctx, card, values) {
     if (!card?.isPersona) throw new Error('Select your persona first.');
@@ -219,20 +220,4 @@ export function mountPersonaProfile({panel,getContext,getCharacter,adapter=creat
         }catch(error){status(error.message);}finally{button.disabled=false;}
     },{signal:abort.signal});
     return {refresh,dispose(){abort.abort();}};
-}
-
-// Clicking the Traveler icon swaps to the other Traveler and, when a persona
-// carries that name, makes it the active persona.
-export const otherTraveler = icon => icon === 'Lumine' ? 'Aether' : 'Lumine';
-export function findPersonaAvatar(ctx, name) {
-    const personas = ctx.powerUserSettings?.personas || {};
-    return Object.keys(personas).find(avatar => String(personas[avatar]).trim().toLowerCase() === name.toLowerCase()) || '';
-}
-export async function activatePersonaByName(ctx, name) {
-    const avatar = findPersonaAvatar(ctx, name);
-    if (!avatar) return false;
-    if (avatar === activePersonaAvatar(ctx)) return true;
-    nativePersonas ??= await import('/scripts/personas.js');
-    await nativePersonas.setUserAvatar(avatar, { toastPersonaNameChange: false });
-    return true;
 }

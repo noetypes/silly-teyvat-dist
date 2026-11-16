@@ -19,7 +19,6 @@ export function setFrameCap(fps){
     const next=fps>0?1000/fps:0;
     if(next!==interval){interval=next;nextTick=0;}
 }
-export const currentFrameCap=()=>interval?Math.round(1000/interval):0;
 function pump(now){
     frame=0;
     // A frame up to 1 ms early still counts, so a 60 Hz screen capped at 60 never skips one.

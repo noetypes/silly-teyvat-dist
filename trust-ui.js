@@ -7,7 +7,8 @@ import {circularCharacterAvatar} from './character-avatars.js';
 import {startingTrustList,setStartingTrust,resetStartingTrust} from './relationship-trust.js';
 import {isEnemy} from './character-properties.js';
 import {ITEMS,KIND_LABELS,itemArt,kindLabel} from './battle-items.js';
-import {GIFT_CHANGE,LIKED_MAX,defaultGiftChange,defaultGiftVerdict,giftTrustOverrides,setGiftTrust,resetGiftTrust} from './gift-tastes.js';
+import {GIFT_CHANGE,defaultGiftChange,defaultGiftVerdict,giftTrustOverrides,setGiftTrust,resetGiftTrust} from './gift-tastes.js';
+import {cardByAvatar} from './card-index.js';
 
 const CLOSE='<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round"><path d="m6 6 12 12M18 6 6 18"/></svg>';
 const el=(tag,cls,text)=>{const n=document.createElement(tag);if(cls)n.className=cls;if(text!==undefined)n.textContent=text;return n;};
@@ -75,6 +76,8 @@ export function mountTrust({host,getContext,announce=()=>{}}){
     host.append(dialog);
     const toasts=el('div','gi-trust-toasts');toasts.setAttribute('aria-hidden','true');host.append(toasts);
     const abort=new AbortController(),on=(node,type,fn)=>node.addEventListener(type,fn,{signal:abort.signal}),$=s=>dialog.querySelector(s);
+    // For elements that are redrawn and thrown away with their listeners: none of the abort signal, which would keep an entry for each one until dispose.
+    const listen=(node,type,fn,opt)=>node.addEventListener(type,fn,opt);
     const noted=new Set();let selected='',asking='',token=0;
     function thoughtBox(entry,card){
         const box=el('article','gi-thought');
@@ -94,7 +97,7 @@ export function mountTrust({host,getContext,announce=()=>{}}){
         const meter=el('div','gi-trust-meter');meter.append(heartRow(level),el('b','',`${level} / ${TRUST_MAX}`));
         const ask=el('button','gi-trust-ask');ask.type='button';ask.textContent=asking===card.avatar?'Thinking...':'What do they think of you?';ask.disabled=Boolean(asking);
         ask.setAttribute('aria-busy',String(asking===card.avatar));
-        on(ask,'click',()=>void ask_(card));
+        listen(ask,'click',()=>void ask_(card));
         box.append(head,meter,el('p','gi-trust-hint',band.hint),ask);
         if(asking===card.avatar){const wait=el('div','gi-thought gi-thought-wait');wait.append(el('i'),el('i'),el('i'));wait.setAttribute('role','status');wait.setAttribute('aria-label',`${card.name} is thinking`);box.append(wait);}
         else{const saved=thoughtBox(savedThoughts(getContext(),card.avatar),card);if(saved)box.append(saved);}
@@ -106,7 +109,7 @@ export function mountTrust({host,getContext,announce=()=>{}}){
             const b=el('button','gi-trust-person');b.type='button';b.setAttribute('aria-pressed',String(avatar===selected));
             const img=el('img');img.alt='';img.draggable=false;img.loading='lazy';img.src=portrait(ctx,card);
             const text=el('span');text.append(el('b','',card.name),heartRow(level));if(present)text.append(el('small','','With you'));
-            b.append(img,text);on(b,'click',()=>{selected=avatar;paint();});
+            b.append(img,text);listen(b,'click',()=>{selected=avatar;paint();});
             return b;
         }));
         if(!roster.length)list.append(el('p','gi-trust-empty','Nobody yet. Meet someone on your travels and they will appear here.'));
@@ -138,7 +141,7 @@ export function mountTrust({host,getContext,announce=()=>{}}){
             const ctx=getContext();if(!trustEnabled(ctx)||id!==(ctx.chat?.length || 0)-1)return;
             const message=ctx.chat[id],step=messageTrust(ctx,message);if(!step)return;
             const key=`${ctx.getCurrentChatId?.()}:${id}:${message.swipe_id ?? 0}:${step.change}`;if(noted.has(key))return;noted.add(key);
-            toast(ctx.characters?.find(c=>c.avatar===step.avatar)?.name || 'Trust',step.change);
+            toast(cardByAvatar(ctx,step.avatar)?.name || 'Trust',step.change);
         },
         dispose(){token++;abort.abort();if(dialog.open)dialog.close();dialog.remove();toasts.remove();},
     };
@@ -189,7 +192,7 @@ const signed=n=>n>0?`+${n}`:String(n);
 const VERDICT_WORD={liked:'Liked',disliked:'Disliked',neutral:'No strong feelings'};
 export function mountGiftTrust({panel,getContext,getCharacter,status=()=>{}}){
     panel.classList.add('gi-gift-trust');
-    panel.innerHTML=`<summary>Gifts</summary><small>How much each card raises or lowers trust when you give it as a gift. Cards start at this character's tastes: a liked card gives up to +${LIKED_MAX[3]} if it is 5★ and up to +${LIKED_MAX[1]} otherwise, a disliked card down to ${GIFT_CHANGE.disliked}, and anything else adds ${GIFT_CHANGE.neutral}.</small>
+    panel.innerHTML=`<summary>Gifts</summary>
         <div class="gi-gift-trust-tools"><input type="search" maxlength="60" placeholder="Find a card" aria-label="Find a gift card"><select aria-label="Card type"><option value="">All cards</option>${Object.entries(KIND_LABELS).filter(([kind])=>Object.values(ITEMS).some(item=>item.kind===kind)).map(([kind,label])=>`<option value="${kind}">${label}</option>`).join('')}<option value="up">Raise trust</option><option value="down">Lower trust</option><option value="changed">Changed</option></select></div>
         <div class="gi-gift-trust-list" role="list" aria-label="Gift cards"></div>
         <button type="button" data-gift-trust-reset>Reset to their tastes</button>`;

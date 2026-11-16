@@ -98,7 +98,6 @@ const SLOTS = [
     {id:'character',key:'silly_teyvat_rp_character',text:DEFAULT_CHARACTER_PROMPT,position:0,depth:0},
     {id:'systems',key:'silly_teyvat_rp_systems',text:DEFAULT_SYSTEMS_PROMPT,position:0,depth:0},
 ];
-export const ROLEPLAY_PROMPT_IDS = SLOTS.map(s=>s.id);
 
 const settingsOf = ctx => ctx.extensionSettings?.genshin_dialogue_ui;
 function store(ctx) {
@@ -181,14 +180,14 @@ export function bindRoleplayPrompts(getContext, signal) {
         if (!input) return;
         const ctx = getContext();
         setRoleplayPrompt(ctx, input.dataset.giPrompt, input.value);
-        ctx.saveSettingsDebounced();syncRoleplayPrompts(ctx, settingsOf(ctx)?.enabled);
+        ctx.saveSettingsDebounced();syncRoleplayPrompts(ctx, true);
     }, {signal});
     document.addEventListener('click', event => {
         const button = event.target.closest?.('#gi-settings [data-gi-prompt-reset]');
         if (!button) return;
         const ctx = getContext(), id = button.dataset.giPromptReset;
         setRoleplayPrompt(ctx, id, null);
-        ctx.saveSettingsDebounced();syncRoleplayPrompts(ctx, settingsOf(ctx)?.enabled);
+        ctx.saveSettingsDebounced();syncRoleplayPrompts(ctx, true);
         const input = document.querySelector(`#gi-settings [data-gi-prompt="${id}"]`);
         if (input) input.value = roleplayPromptText(ctx, id);
     }, {signal});

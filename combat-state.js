@@ -7,13 +7,14 @@ import {playedAvatars,linkedCard} from './persona-link.js';
 import {NARRATOR_AVATAR} from './narrator.js';
 import {personaCard} from './persona-wardrobe.js';
 import {syncPromptOrder} from './prompt-order.js';
-import {DIFFICULTY,partyScale,encounterHp} from './battle-engine.js';
+import {DIFFICULTY,encounterHp} from './battle-engine.js';
 import {isTcgBoss} from './boss-kits.js';
 import {restockBag} from './battle-items.js';
 import {journeyBag} from './starter-decks.js';
 import {COMBAT_COMPANIONS,defaultKit} from './combat-kits.js';
 import {hostileEnemy,playingEnemy} from './enemy-persona.js';
 import {baseName} from './card-name.js';
+import {cardByAvatar,hasCard} from './card-index.js';
 export const DICE_FACES=[...ELEMENTS,'Omni'];
 export const combatIdentity=ctx=>`${ctx.groupId || ctx.characterId}:${ctx.getCurrentChatId?.() || ctx.chatId || ''}`;
 // Version 2 is the turn-based system. Health and battles saved by the older dice combat are discarded.
@@ -60,7 +61,7 @@ export function activeEnemies(ctx){
     const avatars=[...new Set([...listed,...sceneMembers(ctx).filter(a=>isEnemy(ctx,a)&&!cast.managed?.includes(a)&&!elsewhere(a))])];
     const visit=store.visits[key] ??= {locationId,enemies:{}},played=playedAvatars(ctx);
     // Playing an enemy, only bosses are hostile; the other enemies are friends (friendlyEnemies).
-    return avatars.filter(a=>!played.has(a)&&isEnemy(ctx,a)&&hostileEnemy(ctx,a)&&ctx.characters?.some(c=>c.avatar===a)).map(avatar=>{
+    return avatars.filter(a=>!played.has(a)&&isEnemy(ctx,a)&&hostileEnemy(ctx,a)&&hasCard(ctx,a)).map(avatar=>{
         let enemy=visit.enemies[avatar];
         if(!enemy){const props=characterProperties(ctx,avatar),max=enemyMaxHp(ctx,avatar);enemy=visit.enemies[avatar]={avatar,hp:max,maxHp:max,deathMessage:props.deathMessage,defeated:false};}
         return {...enemy,key};
@@ -71,11 +72,11 @@ export function friendlyEnemies(ctx){
     if(!playingEnemy(ctx))return [];
     const encounter=ctx.chatMetadata?.silly_teyvat_cast?.encounter,locationId=ctx.chatMetadata?.silly_teyvat_world?.location?.id;
     const listed=encounter&&encounter.locationId===locationId?[...(encounter.enemies || []),...(encounter.travellers || [])]:[];
-    return [...new Set(listed)].filter(a=>isEnemy(ctx,a)&&!hostileEnemy(ctx,a)&&ctx.characters?.some(c=>c.avatar===a));
+    return [...new Set(listed)].filter(a=>isEnemy(ctx,a)&&!hostileEnemy(ctx,a)&&hasCard(ctx,a));
 }
 // Enemy health is set when it first appears, scaled by difficulty and the size of the party it meets.
 export const combatDifficulty=ctx=>DIFFICULTY[mediaSettings(ctx).combatDifficulty]?mediaSettings(ctx).combatDifficulty:'normal';
-export function enemyMaxHp(ctx,avatar){const card=ctx.characters?.find(c=>c.avatar===avatar);return encounterHp(characterProperties(ctx,avatar).maxHp,{boss:isTcgBoss(card?.name),members:combatAllies(ctx).length,difficulty:combatDifficulty(ctx)});}
+export function enemyMaxHp(ctx,avatar){const card=cardByAvatar(ctx,avatar);return encounterHp(characterProperties(ctx,avatar).maxHp,{boss:isTcgBoss(card?.name),members:combatAllies(ctx).length,difficulty:combatDifficulty(ctx)});}
 // The player's own character fights too: their element comes from the persona, or from the card they are playing.
 export const userAlly=ctx=>({avatar:USER_KEY,name:ctx.name1 || 'You',isUser:true});
 export function allyElement(ctx,ally){
@@ -85,7 +86,7 @@ export function allyElement(ctx,ally){
 }
 export function combatAllies(ctx){const disabled=activeGroup(ctx)?.disabled_members || [],played=playedAvatars(ctx);// An enemy fights alone: the characters around it are hostile to it.
     return [userAlly(ctx),...(playingEnemy(ctx)?[]:combatCompanions(ctx,disabled,played))];}
-function combatCompanions(ctx,disabled,played){return sceneMembers(ctx).filter(a=>!disabled.includes(a)&&!played.has(a)&&!isEnemy(ctx,a)).map(a=>ctx.characters.find(c=>c.avatar===a)).filter(c=>c&&(characterProperties(ctx,c).playable||COMBAT_COMPANIONS.has(String(c.name).trim().toLowerCase())));}
+function combatCompanions(ctx,disabled,played){return sceneMembers(ctx).filter(a=>!disabled.includes(a)&&!played.has(a)&&!isEnemy(ctx,a)).map(a=>cardByAvatar(ctx,a)).filter(c=>c&&(characterProperties(ctx,c).playable||COMBAT_COMPANIONS.has(String(c.name).trim().toLowerCase())));}
 // ---- Party health -------------------------------------------------------------
 // You and every non-hostile scene member have health. Enemies strike back with their
 // own elemental dice; health is saved per chat and restored at an Adventurers' Guild.
@@ -96,14 +97,14 @@ export const partyStore=ctx=>combatState(ctx).party ??= {};
 export function partyMaxHp(ctx,avatar){if(avatar!==USER_KEY)return characterProperties(ctx,avatar).maxHp;const card=linkedCard(ctx);if(!card)return 34;const hp=characterProperties(ctx,card).maxHp;return isEnemy(ctx,card)?Math.max(24,Math.min(40,hp)):hp;}
 export function partyMembers(ctx){
     const disabled=activeGroup(ctx)?.disabled_members || [],played=playedAvatars(ctx);
-    return [USER_KEY,...sceneMembers(ctx).filter(a=>!isEnemy(ctx,a)&&!disabled.includes(a)&&!played.has(a)&&ctx.characters?.some(c=>c.avatar===a))];
+    return [USER_KEY,...sceneMembers(ctx).filter(a=>!isEnemy(ctx,a)&&!disabled.includes(a)&&!played.has(a)&&hasCard(ctx,a))];
 }
 export function partyMember(ctx,avatar){
     const max=partyMaxHp(ctx,avatar),entry=partyStore(ctx)[avatar] ??= {hp:max,maxHp:max};
     // A member at full health stays full when their maximum changes (for example a new moveset HP).
     if(entry.maxHp!==max&&entry.hp>=entry.maxHp)entry.hp=max;
     entry.maxHp=max;entry.hp=Math.max(0,Math.min(max,entry.hp));
-    const name=avatar===USER_KEY?(ctx.name1 || 'You'):ctx.characters?.find(c=>c.avatar===avatar)?.name || avatar;
+    const name=avatar===USER_KEY?(ctx.name1 || 'You'):cardByAvatar(ctx,avatar)?.name || avatar;
     return {avatar,name,hp:entry.hp,maxHp:max,downed:entry.hp<=0};
 }
 export const partyStatus=ctx=>partyMembers(ctx).map(a=>partyMember(ctx,a));
@@ -113,6 +114,6 @@ const partyLine=ctx=>partyStatus(ctx).map(m=>`${m.name}: ${m.hp}/${m.maxHp} HP${
 export function combatPrompt(ctx){
     const disabled=activeGroup(ctx)?.disabled_members || [],enemies=activeEnemies(ctx).filter(e=>!disabled.includes(e.avatar));if(!enemies.length)return '';
     const phrase=combatTrigger(ctx);
-    return renderPrompt(ctx,'combat',{trigger_exception:phrase?' except through the combat trigger phrase below':'',enemy_poses:promptText(ctx,'combat_poses'),trigger:combatTriggerPrompt(phrase,ctx),enemies:enemies.map(e=>`${ctx.characters.find(c=>c.avatar===e.avatar)?.name}: ${e.hp}/${e.maxHp} HP. Openly hostile to the party, aggressive and threatening, though still able to communicate.`).join('\n'),party:partyLine(ctx)});
+    return renderPrompt(ctx,'combat',{trigger_exception:phrase?' except through the combat trigger phrase below':'',enemy_poses:promptText(ctx,'combat_poses'),trigger:combatTriggerPrompt(phrase,ctx),enemies:enemies.map(e=>`${cardByAvatar(ctx,e.avatar)?.name}: ${e.hp}/${e.maxHp} HP. Openly hostile to the party, aggressive and threatening, though still able to communicate.`).join('\n'),party:partyLine(ctx)});
 }
 export function syncCombatPrompt(ctx,on=true){const text=on?combatPrompt(ctx):'';const injected=syncPromptOrder(ctx,{silly_teyvat_combat:text})?'':text;if(ctx.extensionPrompts?.silly_teyvat_combat?.value!==injected)ctx.setExtensionPrompt?.('silly_teyvat_combat',injected,1,0,false,0);return text;}
