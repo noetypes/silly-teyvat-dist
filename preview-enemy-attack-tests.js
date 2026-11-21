@@ -1,7 +1,7 @@
 import {autoBattle} from './preview-battle-auto.js';
 import {mountCombat} from './combat.js';
 import {combatState,partyStatus,healParty,USER_KEY} from './combat-state.js';
-import {battleSnapshot,commitRound} from './battle-state.js';
+import {battleSnapshot,commitRound,partyBag,partyDeck} from './battle-state.js';
 import {resolveRound} from './battle-engine.js';
 import {nearestGuild,resolveDefeat,findKatheryne,isGuildLocation} from './defeat.js';
 import {travelState} from './backgrounds.js';
@@ -50,6 +50,13 @@ export async function runEnemyAttackTests(){
         check('the same round cannot be applied twice',commitRound(ctx,snap,round,'round-1')===null&&event.kind==='round');
         let stale=false;try{commitRound(ctx,snap,round,'round-2');}catch{stale=true;}check('a round resolved against old health is rejected',stale);
         healParty(ctx);check('healing restores everyone',partyStatus(ctx).every(m=>m.hp===m.maxHp));
+        // Played cards are not used up: they sit out the rest of the battle, then return to the deck.
+        {const c=fixture(),bag=partyBag(c),id=Object.keys(partyDeck(c))[0],had=bag[id],inDeck=partyDeck(c)[id];
+        const s1=battleSnapshot(c);commitRound(c,s1,resolveRound(s1,[],{random:()=>.5}),'card-1',{items:[id]});
+        const s2=battleSnapshot(c);
+        check('a card played stays in the bag but leaves this battle\'s deck',partyBag(c)[id]===had&&partyDeck(c)[id]===inDeck&&(s2.bag[id] || 0)===inDeck-1);
+        commitRound(c,s2,{...resolveRound(s2,[],{random:()=>.5}),victory:true},'card-2');
+        check('the next battle deals every played card again',(battleSnapshot(c).bag[id] || 0)===inDeck&&partyBag(c)[id]===had);}
         {const statueCtx=fixture(),regions=statueCtx.extensionSettings.genshin_dialogue_ui.backgroundRegions;
         regions[0].locations.push(place('statue','Statue of The Seven',50,50,{wilderness:true,statue:'Anemo'}),place('wilds-2','Deeper Wilds',80,80,{wilderness:true}));
         const hurt=()=>{partyStatus(statueCtx);for(const entry of Object.values(combatState(statueCtx).party))entry.hp=1;};
